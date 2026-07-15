@@ -7,6 +7,32 @@
 
     <include layout="@layout/newtivi_sidebar" />
 
+    <!-- Colonne des categories (facon TiviMate) -->
+    <LinearLayout
+        android:layout_width="182dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/bg2"
+        android:paddingStart="14dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="20dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CAT\u00c9GORIES"
+            android:textColor="@color/muted"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:layout_marginBottom="10dp" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/catRv"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="20dp" />
+    </LinearLayout>
+
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"

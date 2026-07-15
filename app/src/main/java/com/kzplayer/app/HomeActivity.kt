@@ -50,7 +50,6 @@ class HomeActivity : AppCompatActivity() {
         moviesCard = findViewById(R.id.moviesCard)
         seriesCard = findViewById(R.id.seriesCard)
         expTv = findViewById(R.id.expTv)
-        val accountBtn = findViewById<View>(R.id.accountBtn)
 
         if (Session.current == null && Session.playlists.isNotEmpty()) {
             Session.current = Session.playlists[0]
@@ -68,12 +67,11 @@ class HomeActivity : AppCompatActivity() {
         findViewById<View>(R.id.favorisCard).setOnClickListener { open("favorites", "Favoris") }
         findViewById<View>(R.id.reloadCard).setOnClickListener { reloadPlaylists() }
         findViewById<View>(R.id.settingsCard).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
-        accountBtn.setOnClickListener { startActivity(Intent(this, PlaylistActivity::class.java)) }
 
         // ---------- Adaptation boitier / TV Android ----------
         applyTvOverscan()
         val focusables = listOf<View>(
-            liveCard, moviesCard, seriesCard, accountBtn,
+            liveCard, moviesCard, seriesCard,
             findViewById(R.id.favorisCard),
             findViewById(R.id.reloadCard), findViewById(R.id.settingsCard), findViewById(R.id.subCard)
         )

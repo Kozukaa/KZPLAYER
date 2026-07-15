@@ -1,83 +1,82 @@
 package com.kzplayer.app
 
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
+import org.json.JSONArray
+import java.io.File
 import java.net.URLEncoder
+import java.util.zip.GZIPInputStream
 
-// Acces a la base de sous-titres OpenSubtitles (API v1).
-// Reutilise le client OkHttp permissif de Api (Api.imageClient()).
+// Base de sous-titres OpenSubtitles.org (API "historique", comptee par IP).
+// Aucune cle API : le quota est compte par appareil/IP, donc chaque utilisateur
+// a son propre quota. Convient a un player partage entre plusieurs personnes.
 object SubtitlesApi {
-    data class SubOption(val fileId: Int, val lang: String, val release: String, val format: String)
+    data class SubOption(
+        val downloadUrl: String,
+        val lang: String,
+        val release: String,
+        val format: String
+    )
 
-    private const val BASE = "https://api.opensubtitles.com/api/v1"
-    private val JSON = "application/json; charset=utf-8".toMediaType()
+    // rest.opensubtitles.org attend un User-Agent qui identifie l'app.
+    private const val UA = "KZPlayer v1.0"
+    private const val BASE = "https://rest.opensubtitles.org/search"
 
-    // Recherche de sous-titres par titre + langues (ex: "fr,en,es").
+    // langs : codes ISO 639-2 (3 lettres) separes par des virgules, ex "fre,eng,spa".
     suspend fun search(query: String, langs: String): List<SubOption> = withContext(Dispatchers.IO) {
-        val key = SubtitlesConfig.OPENSUBTITLES_API_KEY
-        if (key.isBlank() || query.isBlank()) return@withContext emptyList<SubOption>()
-        val q = URLEncoder.encode(query, "UTF-8")
-        val url = "$BASE/subtitles?query=$q&languages=$langs&order_by=download_count&order_direction=desc"
+        if (query.isBlank()) return@withContext emptyList<SubOption>()
+        val q = URLEncoder.encode(query.trim(), "UTF-8").replace("+", "%20")
+        val url = "$BASE/query-$q/sublanguageid-$langs"
         val req = Request.Builder().url(url)
-            .header("Api-Key", key)
-            .header("User-Agent", "KZPlayer v1.0")
-            .header("Accept", "application/json")
+            .header("User-Agent", UA)
+            .header("X-User-Agent", UA)
             .get().build()
         val out = ArrayList<SubOption>()
         try {
             Api.imageClient().newCall(req).execute().use { resp ->
                 val body = resp.body?.string()
-                if (resp.isSuccessful && body != null) {
-                    val data = JSONObject(body).optJSONArray("data")
-                    if (data != null) {
-                        for (i in 0 until data.length()) {
-                            val attr = data.optJSONObject(i)?.optJSONObject("attributes") ?: continue
-                            val files = attr.optJSONArray("files") ?: continue
-                            val f = files.optJSONObject(0) ?: continue
-                            val fid = f.optInt("file_id", 0)
-                            if (fid == 0) continue
-                            out.add(
-                                SubOption(
-                                    fileId = fid,
-                                    lang = attr.optString("language", "und"),
-                                    release = attr.optString("release", ""),
-                                    format = attr.optString("format", "srt").ifBlank { "srt" }
-                                )
+                if (resp.isSuccessful && body != null && body.trimStart().startsWith("[")) {
+                    val arr = JSONArray(body)
+                    for (i in 0 until arr.length()) {
+                        val o = arr.optJSONObject(i) ?: continue
+                        val link = o.optString("SubDownloadLink")
+                        if (link.isBlank()) continue
+                        out.add(
+                            SubOption(
+                                downloadUrl = link,
+                                lang = o.optString("ISO639", "und").ifBlank { "und" },
+                                release = o.optString("MovieReleaseName", o.optString("SubFileName", "")),
+                                format = o.optString("SubFormat", "srt").ifBlank { "srt" }
                             )
-                        }
+                        )
                     }
                 }
             }
         } catch (e: Exception) {
         }
-        out.take(30)
+        out.take(40)
     }
 
-    // Recupere l'URL directe du fichier de sous-titres pour un file_id donne.
-    suspend fun downloadUrl(fileId: Int): String? = withContext(Dispatchers.IO) {
-        val key = SubtitlesConfig.OPENSUBTITLES_API_KEY
-        if (key.isBlank()) return@withContext null
-        val bodyJson = JSONObject().put("file_id", fileId).toString()
-        val req = Request.Builder().url("$BASE/download")
-            .header("Api-Key", key)
-            .header("User-Agent", "KZPlayer v1.0")
-            .header("Accept", "application/json")
-            .post(bodyJson.toRequestBody(JSON))
-            .build()
-        var link: String? = null
+    // Telecharge le fichier (.gz), le decompresse et l'ecrit dans le cache local.
+    // Retourne un URI file:// utilisable directement par ExoPlayer.
+    suspend fun downloadToFile(ctx: Context, opt: SubOption): String? = withContext(Dispatchers.IO) {
         try {
+            val req = Request.Builder().url(opt.downloadUrl)
+                .header("User-Agent", UA)
+                .get().build()
             Api.imageClient().newCall(req).execute().use { resp ->
-                val body = resp.body?.string()
-                if (resp.isSuccessful && body != null) {
-                    link = JSONObject(body).optString("link").ifBlank { null }
-                }
+                if (!resp.isSuccessful) return@use null
+                val raw = resp.body?.bytes() ?: return@use null
+                val data = try { GZIPInputStream(raw.inputStream()).readBytes() } catch (e: Exception) { raw }
+                val ext = opt.format.lowercase().ifBlank { "srt" }
+                val f = File(ctx.cacheDir, "kzsub_${System.currentTimeMillis()}.$ext")
+                f.writeBytes(data)
+                android.net.Uri.fromFile(f).toString()
             }
         } catch (e: Exception) {
+            null
         }
-        link
     }
 }

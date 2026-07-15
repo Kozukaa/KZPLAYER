@@ -145,10 +145,13 @@ class PlayerActivity : AppCompatActivity() {
         }
         findViewById<TextView>(R.id.titleTv).text = title
         findViewById<ImageButton>(R.id.backBtn).setOnClickListener { finish() }
-        // Bouton "Sous-titres" : uniquement pour les films/series (VOD). Ouvre la recherche multilangue.
-        findViewById<View>(R.id.subBtn).apply {
-            visibility = if (isVod) View.VISIBLE else View.GONE
-            setOnClickListener { showSubtitleDialog() }
+        // Roue dentee (parametres) du lecteur : pour les films/series, on remplace le menu
+        // par notre propre menu (Audio + Sous-titres), afin que le bouton sous-titres soit
+        // DANS la roue dentee, juste sous "Audio", comme demande.
+        if (isVod) {
+            findViewById<View?>(androidx.media3.ui.R.id.exo_settings)?.setOnClickListener {
+                showSettingsMenu()
+            }
         }
 
         if (url.isBlank()) {
@@ -402,30 +405,87 @@ class PlayerActivity : AppCompatActivity() {
         return b.build()
     }
 
-    private fun showSubtitleDialog() {
-        val labels = arrayOf("Chercher des sous-titres en ligne\u2026", "D\u00e9sactiver les sous-titres")
+    // Menu de la roue dentee : Audio puis Sous-titres (comme demande).
+    private fun showSettingsMenu() {
+        val items = arrayOf("Audio", "Sous-titres")
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Sous-titres")
-            .setItems(labels) { d, which ->
-                if (which == 0) searchSubtitlesOnline() else disableSubtitles()
+            .setTitle("Param\u00e8tres")
+            .setItems(items) { d, which ->
                 d.dismiss()
+                if (which == 0) showAudioMenu() else showSubtitleMenu()
             }
             .show()
     }
 
+    // Choix de la piste audio presente dans le flux.
+    private fun showAudioMenu() {
+        val p = player ?: return
+        val groups = p.currentTracks.groups.filter { it.type == androidx.media3.common.C.TRACK_TYPE_AUDIO }
+        if (groups.isEmpty()) {
+            Toast.makeText(this, "Aucune piste audio.", Toast.LENGTH_SHORT).show(); return
+        }
+        val labels = ArrayList<String>()
+        val actions = ArrayList<() -> Unit>()
+        groups.forEachIndexed { gi, g ->
+            for (ti in 0 until g.length) {
+                val fmt = g.getTrackFormat(ti)
+                val base = langName(fmt.language ?: "").ifBlank { "Piste ${gi + 1}" }
+                val ch = if (fmt.channelCount > 0) " (${fmt.channelCount}ch)" else ""
+                labels.add((if (g.isTrackSelected(ti)) "\u25cf " else "") + base + ch)
+                actions.add { selectTrack(androidx.media3.common.C.TRACK_TYPE_AUDIO, g, ti) }
+            }
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Audio")
+            .setItems(labels.toTypedArray()) { d, which -> actions[which](); d.dismiss() }
+            .show()
+    }
+
+    // Menu Sous-titres : d'abord les pistes integrees au flux (comme TiViMate),
+    // puis la recherche en ligne (OpenSubtitles par IP) pour tout le reste.
+    private fun showSubtitleMenu() {
+        val p = player ?: return
+        val groups = p.currentTracks.groups.filter { it.type == androidx.media3.common.C.TRACK_TYPE_TEXT }
+        val labels = ArrayList<String>()
+        val actions = ArrayList<() -> Unit>()
+        labels.add("D\u00e9sactiver"); actions.add { disableSubtitles() }
+        groups.forEach { g ->
+            for (ti in 0 until g.length) {
+                val fmt = g.getTrackFormat(ti)
+                val name = fmt.label ?: langName(fmt.language ?: "").ifBlank { "Piste" }
+                labels.add((if (g.isTrackSelected(ti)) "\u25cf " else "") + name + "  (flux)")
+                actions.add { selectTrack(androidx.media3.common.C.TRACK_TYPE_TEXT, g, ti) }
+            }
+        }
+        labels.add("Chercher en ligne\u2026"); actions.add { searchSubtitlesOnline() }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Sous-titres")
+            .setItems(labels.toTypedArray()) { d, which -> actions[which](); d.dismiss() }
+            .show()
+    }
+
+    // Selectionne une piste precise (audio ou texte) presente dans le flux.
+    private fun selectTrack(type: Int, g: androidx.media3.common.Tracks.Group, trackIndex: Int) {
+        val p = player ?: return
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(type, false)
+            .setOverrideForType(androidx.media3.common.TrackSelectionOverride(g.mediaTrackGroup, trackIndex))
+            .build()
+        if (type == androidx.media3.common.C.TRACK_TYPE_TEXT) {
+            currentSubUrl = null
+            Toast.makeText(this, "Sous-titres du flux activ\u00e9s", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun searchSubtitlesOnline() {
-        if (SubtitlesConfig.OPENSUBTITLES_API_KEY.isBlank()) {
-            androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Sous-titres")
-                .setMessage("Aucune cl\u00e9 OpenSubtitles configur\u00e9e.\n\nCr\u00e9e un compte gratuit sur opensubtitles.com, r\u00e9cup\u00e8re ta \"Api Key\" (profil > API consumers) et colle-la dans le fichier SubtitlesConfig.kt, puis recompile.")
-                .setPositiveButton("OK", null)
-                .show()
+        val query = watchSeriesName.ifBlank { watchTitle }
+        if (query.isBlank()) {
+            Toast.makeText(this, "Titre inconnu pour la recherche.", Toast.LENGTH_SHORT).show()
             return
         }
-        val query = watchSeriesName.ifBlank { watchTitle }
         Toast.makeText(this, "Recherche de sous-titres\u2026", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
-            val results = SubtitlesApi.search(query, SubtitlesConfig.LANGUAGES)
+            val results = SubtitlesApi.search(query, SubtitlesConfig.SUBLANGUAGE_IDS)
             if (results.isEmpty()) {
                 Toast.makeText(this@PlayerActivity, "Aucun sous-titre trouv\u00e9 pour ce titre.", Toast.LENGTH_LONG).show()
                 return@launch
@@ -441,12 +501,12 @@ class PlayerActivity : AppCompatActivity() {
     private fun applyOnlineSubtitle(opt: SubtitlesApi.SubOption) {
         Toast.makeText(this, "T\u00e9l\u00e9chargement des sous-titres\u2026", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
-            val link = SubtitlesApi.downloadUrl(opt.fileId)
-            if (link.isNullOrBlank()) {
+            val local = SubtitlesApi.downloadToFile(this@PlayerActivity, opt)
+            if (local.isNullOrBlank()) {
                 Toast.makeText(this@PlayerActivity, "\u00c9chec du t\u00e9l\u00e9chargement des sous-titres.", Toast.LENGTH_LONG).show()
                 return@launch
             }
-            currentSubUrl = link
+            currentSubUrl = local
             currentSubLang = opt.lang
             currentSubFormat = opt.format
             reloadWithSubtitle()
@@ -598,7 +658,7 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { seekBy(30000); playerView.showController(); return true }
                 KeyEvent.KEYCODE_MEDIA_REWIND -> { seekBy(-10000); playerView.showController(); return true }
                 KeyEvent.KEYCODE_CAPTIONS, KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_INFO -> {
-                    showSubtitleDialog(); return true
+                    showSubtitleMenu(); return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                     // Si le controleur n'est pas affiche : OK = lecture/pause + affiche les boutons

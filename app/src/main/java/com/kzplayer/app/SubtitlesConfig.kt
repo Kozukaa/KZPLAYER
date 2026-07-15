@@ -1,23 +1,19 @@
 package com.kzplayer.app
 
 // ============================================================================
-//  BASE DE SOUS-TITRES EXTERNE MULTILANGUE (OpenSubtitles)
+//  BASE DE SOUS-TITRES EXTERNE MULTILANGUE (OpenSubtitles.org, par IP)
 // ============================================================================
-//  Pour activer les sous-titres en ligne (n'importe quel film / serie, meme
-//  ceux qui ne sont PAS sous-titres a la base) :
+//  Les sous-titres en ligne fonctionnent SANS cle API : le quota est compte
+//  par appareil (par IP), donc chaque utilisateur du player a son propre
+//  quota. C'est ce qu'il faut quand le player est partage entre plusieurs
+//  personnes (pas de quota commun qui se vide d'un coup).
 //
-//   1. Cree un compte GRATUIT sur https://www.opensubtitles.com
-//   2. Va sur ton profil -> "API consumers" -> "New consumer"
-//   3. Recopie la valeur "Api Key" et colle-la entre les guillemets ci-dessous.
-//   4. Recompile l'app (git push -> Actions).
-//
-//  Sans cle : le bouton "Sous-titres" reste present mais indique qu'aucune cle
-//  n'est configuree (aucun plantage). Rien d'autre n'est impacte.
+//  Rien a configurer ici. On peut juste ajuster la liste des langues.
 // ============================================================================
 object SubtitlesConfig {
-    // >>> COLLE TA CLE OPENSUBTITLES ICI <<<
-    const val OPENSUBTITLES_API_KEY = ""
-
-    // Langues proposees lors de la recherche (codes ISO 639-1, separes par des virgules).
-    const val LANGUAGES = "fr,en,es,ar,pt,de,it"
+    // Langues proposees lors de la recherche en ligne.
+    // Codes ISO 639-2 (3 lettres), separes par des virgules :
+    //   fre = Francais, eng = Anglais, spa = Espagnol, ara = Arabe,
+    //   por = Portugais, ger = Allemand, ita = Italien
+    const val SUBLANGUAGE_IDS = "fre,eng,spa,ara,por,ger,ita"
 }

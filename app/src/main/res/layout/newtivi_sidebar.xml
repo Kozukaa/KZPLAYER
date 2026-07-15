@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/ntSidebar"
+    android:layout_width="84dp"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg2"
+    android:gravity="center_horizontal"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp">
+
+    <ImageView
+        android:id="@+id/logoIv"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginTop="18dp"
+        android:layout_marginBottom="22dp"
+        android:src="@drawable/kz_logo_icon"
+        android:scaleType="fitCenter"
+        android:contentDescription="@null" />
+
+    <LinearLayout
+        android:id="@+id/navGuide"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_nav_item">
+        <ImageView
+            android:id="@+id/navGuideImg"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_epg"
+            android:contentDescription="@null" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navMovies"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_nav_item">
+        <ImageView
+            android:id="@+id/navMoviesImg"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_movie"
+            android:contentDescription="@null" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navSeries"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_nav_item">
+        <ImageView
+            android:id="@+id/navSeriesImg"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_tv"
+            android:contentDescription="@null" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:id="@+id/navSearch"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_nav_item">
+        <ImageView
+            android:id="@+id/navSearchImg"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_search"
+            android:contentDescription="@null" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navSettings"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_nav_item">
+        <ImageView
+            android:id="@+id/navSettingsImg"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_settings"
+            android:contentDescription="@null" />
+    </LinearLayout>
+</LinearLayout>

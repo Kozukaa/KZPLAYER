@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_margin="7dp"
+    android:padding="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:background="@drawable/bg_tile">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="178dp">
+
+        <ImageView
+            android:id="@+id/posterIv"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:background="@color/bg2"
+            android:contentDescription="@null" />
+
+        <TextView
+            android:id="@+id/qualityBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="6dp"
+            android:background="@drawable/bg_badge_dark"
+            android:textColor="@color/text"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:visibility="gone" />
+
+        <FrameLayout
+            android:id="@+id/progressWrap"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_gravity="bottom"
+            android:background="#66000000"
+            android:visibility="gone">
+            <View
+                android:id="@+id/progressFill"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:background="@color/accent" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/nameTv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:paddingTop="8dp"
+        android:paddingBottom="2dp" />
+
+    <TextView
+        android:id="@+id/serverChip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_fav_chip"
+        android:textColor="@color/accent"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="2dp"
+        android:visibility="gone" />
+</LinearLayout>

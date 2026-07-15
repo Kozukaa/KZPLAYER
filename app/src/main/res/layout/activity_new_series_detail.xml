@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg">
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="320dp">
+        <ImageView
+            android:id="@+id/heroImg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="@null" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_scrim_hero" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_scrim_bottom" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="30dp">
+            <TextView
+                android:id="@+id/backBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="\u2190 Retour"
+                android:textColor="@color/text"
+                android:textSize="14sp"
+                android:background="@drawable/bg_fav_chip"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="7dp"
+                android:paddingBottom="7dp" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+            <TextView
+                android:id="@+id/seriesTitle"
+                android:layout_width="620dp"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end" />
+            <TextView
+                android:id="@+id/heroMeta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/accent"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:layout_marginTop="6dp" />
+            <TextView
+                android:id="@+id/heroDesc"
+                android:layout_width="620dp"
+                android:layout_height="wrap_content"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:layout_marginTop="10dp" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp">
+                <Button
+                    android:id="@+id/playBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:text="\u25B6 Lecture"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_button_focus"
+                    android:paddingStart="28dp"
+                    android:paddingEnd="28dp" />
+                <Button
+                    android:id="@+id/favBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:text="\uFF0B Ma liste"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text"
+                    android:background="@drawable/bg_ghost_btn"
+                    android:layout_marginStart="12dp"
+                    android:paddingStart="22dp"
+                    android:paddingEnd="22dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:padding="18dp">
+        <LinearLayout
+            android:id="@+id/seasonTabs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="18dp">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/episodeRv"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false" />
+        <ProgressBar
+            android:id="@+id/progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+        <TextView
+            android:id="@+id/msgTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textColor="@color/muted" />
+    </FrameLayout>
+</LinearLayout>

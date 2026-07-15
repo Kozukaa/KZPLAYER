@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Focus lecteur subtil : halo rouge léger, pas de gros rond agressif -->
+    <item android:state_focused="true">
+        <shape android:shape="oval">
+            <solid android:color="#44E50914" />
+            <stroke android:width="2dp" android:color="@color/danger" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="#66E50914" />
+            <stroke android:width="2dp" android:color="@color/danger" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#22000000" />
+        </shape>
+    </item>
+</selector>

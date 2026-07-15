@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="260dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginEnd="14dp"
+    android:padding="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:background="@drawable/bg_tile">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="146dp">
+        <ImageView
+            android:id="@+id/epThumb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:background="@color/bg2"
+            android:src="@drawable/ic_movie"
+            android:contentDescription="@null" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_scrim_bottom" />
+        <TextView
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_gravity="center"
+            android:text="\u25B6"
+            android:gravity="center"
+            android:textColor="@color/text"
+            android:textSize="16sp"
+            android:background="@drawable/bg_now_badge" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/epCode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/accent"
+        android:textStyle="bold"
+        android:textSize="11sp"
+        android:letterSpacing="0.05"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="8dp" />
+    <TextView
+        android:id="@+id/epTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="2dp" />
+    <TextView
+        android:id="@+id/epSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/muted"
+        android:textSize="12sp"
+        android:lineSpacingExtra="2dp"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="10dp" />
+</LinearLayout>

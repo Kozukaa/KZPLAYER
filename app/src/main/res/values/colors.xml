@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palette KZ Player : noir profond + rouge signature -->
+    <color name="bg">#0A0A0C</color>
+    <color name="bg2">#121218</color>
+    <color name="card">#17171E</color>
+    <color name="accent">#E50914</color>
+    <color name="accent2">#B0060F</color>
+    <color name="pink">#FF4D6A</color>
+    <color name="danger">#FF3B4E</color>
+    <color name="text">#FFFFFF</color>
+    <color name="muted">#9AA0A6</color>
+    <color name="black">#000000</color>
+    <color name="stroke">#262630</color>
+    <color name="gold">#FF5A36</color>
+    <color name="blue">#E50914</color>
+    <color name="teal">#FF5A36</color>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tablettes / TV / boitiers Android (grand ecran) -->
+    <dimen name="home_cards_h">250dp</dimen>
+    <dimen name="tile_poster_h">240dp</dimen>
+    <dimen name="tile_logo_h">120dp</dimen>
+    <dimen name="detail_poster_w">270dp</dimen>
+</resources>

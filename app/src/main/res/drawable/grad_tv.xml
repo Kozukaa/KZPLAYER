@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- CIBLEE A LA TELECOMMANDE : degrade plus lumineux + fine bordure coloree (pas de blanc) -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#FF3B49"
+                android:centerColor="#C8101C"
+                android:endColor="#3A0509"
+                android:angle="315"
+                android:type="linear" />
+            <corners android:radius="22dp" />
+            <stroke android:width="2dp" android:color="#FF7A82" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#FF3B49"
+                android:centerColor="#C8101C"
+                android:endColor="#3A0509"
+                android:angle="315"
+                android:type="linear" />
+            <corners android:radius="22dp" />
+            <stroke android:width="2dp" android:color="#FF7A82" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#E50914"
+                android:centerColor="#A00610"
+                android:endColor="#2E0205"
+                android:angle="315"
+                android:type="linear" />
+            <corners android:radius="22dp" />
+        </shape>
+    </item>
+</selector>

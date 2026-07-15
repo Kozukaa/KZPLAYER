@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@color/bg"
+    android:padding="28dp">
+
+    <!-- AFFICHE : taille propre, pas pleine hauteur, pas de crop violent -->
+    <ImageView
+        android:id="@+id/posterIv"
+        android:layout_width="170dp"
+        android:layout_height="255dp"
+        android:scaleType="fitCenter"
+        android:adjustViewBounds="true"
+        android:background="@drawable/bg_tile"
+        android:padding="4dp"
+        android:src="@drawable/ic_movie" />
+
+    <!-- INFOS -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="28dp">
+
+        <TextView
+            android:id="@+id/backBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="← Retour"
+            android:textColor="@color/muted"
+            android:textSize="14sp"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:id="@+id/detailTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/text"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <Button
+                android:id="@+id/favBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="☆ Favori"
+                android:textAllCaps="false"
+                android:textColor="@color/text"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:includeFontPadding="false"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:background="@drawable/bg_fav_chip"
+                android:stateListAnimator="@null"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_marginStart="12dp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/detailMeta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/gold"
+            android:textSize="14sp"
+            android:layout_marginTop="6dp" />
+
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="14dp">
+
+            <TextView
+                android:id="@+id/detailDesc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/muted"
+                android:textSize="15sp"
+                android:lineSpacingExtra="4dp" />
+        </ScrollView>
+
+        <ProgressBar
+            android:id="@+id/detailProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/playBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="▶  LIRE"
+            android:textColor="@color/text"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:background="@drawable/bg_button_focus"
+            android:stateListAnimator="@null"
+            android:focusable="true"
+            android:clickable="true"
+            android:layout_marginTop="14dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

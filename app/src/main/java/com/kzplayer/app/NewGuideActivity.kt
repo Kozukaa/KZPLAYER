@@ -1,6 +1,7 @@
 package com.kzplayer.app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,6 +13,9 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import coil.load
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -27,6 +31,12 @@ import java.util.Locale
 open class NewGuideActivity : NtBase() {
     protected open val navTag: String = "guide"
     protected open val headerTitle: String = "Guide"
+    // Si true (ecran TV), le lecteur reduit s'affiche dans l'apercu en haut au lieu d'ouvrir une page.
+    protected open val playsInline: Boolean = false
+    private var inlinePlayer: ExoPlayer? = null
+    private var heroPlayer: PlayerView? = null
+    private var playingUrl: String = ""
+    private var playingItem: Item? = null
     private lateinit var catRv: RecyclerView
     private lateinit var channelRv: RecyclerView
     private lateinit var progress: ProgressBar
@@ -71,6 +81,8 @@ open class NewGuideActivity : NtBase() {
         heroTitle = findViewById(R.id.heroTitle)
         heroTime = findViewById(R.id.heroTime)
         heroDesc = findViewById(R.id.heroDesc)
+        heroPlayer = findViewById(R.id.heroPlayer)
+        heroPlayer?.useController = false
         catRv.layoutManager = LinearLayoutManager(this)
         channelRv.layoutManager = LinearLayoutManager(this)
         channelRv.setItemViewCacheSize(20)
@@ -88,7 +100,14 @@ open class NewGuideActivity : NtBase() {
         }
     }
 
-    override fun onDestroy() { super.onDestroy(); clockHandler.removeCallbacks(clockRunnable) }
+    override fun onDestroy() { super.onDestroy(); clockHandler.removeCallbacks(clockRunnable); inlinePlayer?.release(); inlinePlayer = null }
+    override fun onStop() { super.onStop(); inlinePlayer?.release(); inlinePlayer = null }
+    override fun onStart() {
+        super.onStart()
+        if (playsInline && inlinePlayer == null && playingUrl.isNotBlank()) {
+            heroImg.visibility = View.INVISIBLE; heroPlayer?.visibility = View.VISIBLE; buildAndPlay(playingUrl)
+        }
+    }
 
     private fun setLoading(b: Boolean) { progress.visibility = if (b) View.VISIBLE else View.GONE }
 
@@ -190,6 +209,10 @@ open class NewGuideActivity : NtBase() {
     }
 
     private fun playChannel(item: Item) {
+        // 2e clic sur la chaine deja en lecture -> plein ecran
+        if (playsInline && isPlayingSame(item) && playingUrl.isNotBlank()) {
+            openFullscreen(item.name, playingUrl, item.logo); return
+        }
         val pl = Session.current ?: return
         if (pl.type == "stalker") {
             val cmd = item.cmd
@@ -198,12 +221,61 @@ open class NewGuideActivity : NtBase() {
             lifecycleScope.launch {
                 val link = try { Api.stalkerLink(pl, cmd, "live") } catch (e: Exception) { null }
                 setLoading(false)
-                if (!link.isNullOrBlank()) openPreview(link, item) else msgTv.text = "Impossible d'obtenir le flux."
+                if (!link.isNullOrBlank()) route(item, link) else msgTv.text = "Impossible d'obtenir le flux."
             }
             return
         }
         val url = item.directUrl ?: return
-        openPreview(url, item)
+        route(item, url)
+    }
+
+    private fun route(item: Item, url: String) {
+        if (playsInline) startInline(item, url) else openPreview(url, item)
+    }
+
+    private fun isPlayingSame(item: Item): Boolean {
+        val cur = playingItem ?: return false
+        return (item.streamId ?: item.name) == (cur.streamId ?: cur.name)
+    }
+
+    private fun startInline(item: Item, url: String) {
+        playingItem = item
+        playingUrl = url
+        Session.liveChannels = channels.filter { it.kind == "live" }
+        heroImg.visibility = View.INVISIBLE
+        heroPlayer?.visibility = View.VISIBLE
+        buildAndPlay(url)
+        chAdapter?.notifyDataSetChanged()
+    }
+
+    private fun buildAndPlay(u: String) {
+        inlinePlayer?.release(); inlinePlayer = null
+        if (u.isBlank()) return
+        val httpFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+        val plCur = Session.current
+        if (plCur != null && plCur.type == "stalker") {
+            val ua = Api.stalkerHeaders(plCur)["User-Agent"]; if (!ua.isNullOrBlank()) httpFactory.setUserAgent(ua)
+        } else httpFactory.setUserAgent("VLC/3.0.20 LibVLC/3.0.20")
+        val extractors = androidx.media3.extractor.DefaultExtractorsFactory().setTsExtractorFlags(
+            androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
+                androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS)
+        val msf = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
+        val rf = androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)
+            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        val p = ExoPlayer.Builder(this, rf).setMediaSourceFactory(msf).build()
+        inlinePlayer = p
+        heroPlayer?.player = p
+        p.setMediaItem(MediaItem.fromUri(Uri.parse(u)))
+        p.playWhenReady = true
+        p.prepare(); p.play()
+    }
+
+    private fun openFullscreen(t: String, u: String, lg: String) {
+        startActivity(
+            Intent(this, PlayerActivity::class.java)
+                .putExtra("url", u).putExtra("title", t).putExtra("logo", lg)
+                .putExtra("historyKind", "live").putExtra("mode", "live")
+        )
     }
 
     private fun openPreview(url: String, item: Item) {
@@ -250,7 +322,8 @@ open class NewGuideActivity : NtBase() {
         override fun getItemCount() = data.size
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = data[position]
-            holder.name.text = item.name
+            val isPlaying = isPlayingSame(item) && playingUrl.isNotBlank()
+            holder.name.text = (if (isPlaying) "\u25b6 " else "") + item.name
             holder.number.text = (position + 1).toString()
             val q = when {
                 Regex("(?i)(4k|uhd|2160)").containsMatchIn(item.name) -> "4K"

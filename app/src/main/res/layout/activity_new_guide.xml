@@ -116,13 +116,22 @@
             android:layout_height="132dp"
             android:orientation="horizontal"
             android:layout_marginTop="14dp">
-            <ImageView
-                android:id="@+id/heroImg"
+            <FrameLayout
                 android:layout_width="228dp"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:background="@drawable/bg_tile"
-                android:contentDescription="@null" />
+                android:background="@drawable/bg_tile">
+                <ImageView
+                    android:id="@+id/heroImg"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@null" />
+                <androidx.media3.ui.PlayerView
+                    android:id="@+id/heroPlayer"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone" />
+            </FrameLayout>
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"

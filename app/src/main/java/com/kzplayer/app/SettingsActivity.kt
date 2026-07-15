@@ -6,29 +6,29 @@ import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
-// Ecran Parametres : choix du theme (Classique / NewTivi).
+// Ecran Parametres : menu avec 2 sous-menus (Theme + Liste de lecture).
+// Le meme ecran est ouvert par les 2 themes.
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         findViewById<View>(R.id.backBtn).setOnClickListener { finish() }
-        val classicState = findViewById<TextView>(R.id.classicState)
-        val newState = findViewById<TextView>(R.id.newState)
-        fun mark() {
-            val cur = ThemePref.get(this)
-            classicState.text = if (cur == ThemePref.CLASSIC) "\u2713 Actuel" else ""
-            newState.text = if (cur == ThemePref.NEWTIVI) "\u2713 Actuel" else ""
+        findViewById<View>(R.id.themeMenu).setOnClickListener {
+            startActivity(Intent(this, ThemeActivity::class.java))
         }
-        mark()
-        findViewById<View>(R.id.themeClassic).setOnClickListener { apply(ThemePref.CLASSIC) }
-        findViewById<View>(R.id.themeNew).setOnClickListener { apply(ThemePref.NEWTIVI) }
-        findViewById<View>(R.id.themeClassic).requestFocus()
+        findViewById<View>(R.id.playlistMenu).setOnClickListener {
+            startActivity(Intent(this, PlaylistSettingsActivity::class.java))
+        }
+        findViewById<View>(R.id.themeMenu).requestFocus()
     }
 
-    private fun apply(v: String) {
-        ThemePref.set(this, v)
-        val cls = if (v == ThemePref.NEWTIVI) NewLiveActivity::class.java else HomeActivity::class.java
-        startActivity(Intent(this, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
-        finish()
+    override fun onResume() {
+        super.onResume()
+        // Met a jour les libelles avec les valeurs actuelles (theme + liste active).
+        val themeName = if (ThemePref.isNew(this)) "NewTivi" else "Classique"
+        findViewById<TextView>(R.id.themeStateTv).text = "Actuel : $themeName"
+        val plName = Session.current?.nom
+        findViewById<TextView>(R.id.playlistStateTv).text =
+            if (!plName.isNullOrBlank()) "Active : $plName" else "Choisir le serveur / la liste active"
     }
 }

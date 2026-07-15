@@ -21,6 +21,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class PlayerActivity : AppCompatActivity() {
     private var player: ExoPlayer? = null
@@ -40,6 +42,10 @@ class PlayerActivity : AppCompatActivity() {
     private var watchSourceContainerExt: String = ""
     private var didRestorePosition: Boolean = false
     private var isLiveMode: Boolean = false
+    // Sous-titres externes (OpenSubtitles) charges par-dessus la video en cours.
+    private var currentSubUrl: String? = null
+    private var currentSubLang: String = ""
+    private var currentSubFormat: String = "srt"
 
     // Barre du haut (titre + bouton X) : masquee automatiquement en direct.
     private var topBar: View? = null
@@ -115,6 +121,8 @@ class PlayerActivity : AppCompatActivity() {
         watchSourceCmd = intent.getStringExtra("historySourceCmd") ?: ""
         watchSourceStreamId = intent.getStringExtra("historySourceStreamId") ?: ""
         watchSourceContainerExt = intent.getStringExtra("historySourceContainerExt") ?: ""
+        // Lecture a la suite : on ne conserve la file d'episodes que si on vient d'une liste d'episodes.
+        if (!intent.getBooleanExtra("queued", false)) { Session.episodeQueue = emptyList(); Session.episodeIndex = -1 }
         // mode = "live" par defaut ; "vod" pour films/episodes.
         // Securite : on detecte aussi automatiquement les VOD par URL, au cas ou un ecran
         // n'envoie pas l'extra mode=vod (ex: series M3U /series/... ou fichiers mp4/mkv/avi).
@@ -137,6 +145,11 @@ class PlayerActivity : AppCompatActivity() {
         }
         findViewById<TextView>(R.id.titleTv).text = title
         findViewById<ImageButton>(R.id.backBtn).setOnClickListener { finish() }
+        // Bouton "Sous-titres" : uniquement pour les films/series (VOD). Ouvre la recherche multilangue.
+        findViewById<View>(R.id.subBtn).apply {
+            visibility = if (isVod) View.VISIBLE else View.GONE
+            setOnClickListener { showSubtitleDialog() }
+        }
 
         if (url.isBlank()) {
             Toast.makeText(this, "Flux introuvable", Toast.LENGTH_LONG).show()
@@ -284,6 +297,7 @@ class PlayerActivity : AppCompatActivity() {
                 }
                 if (playbackState == Player.STATE_ENDED) {
                     saveWatchProgress(forceCompleted = true)
+                    playNextEpisodeIfAny()
                 }
             }
 
@@ -322,10 +336,161 @@ class PlayerActivity : AppCompatActivity() {
         val u = candidates.getOrNull(candIdx) ?: return
         // On laisse ExoPlayer auto-detecter le format (extension + Content-Type + redirections).
         // Forcer le MIME pouvait casser un .ts qui redirige en realite vers du HLS.
-        p.setMediaItem(MediaItem.fromUri(Uri.parse(u)))
+        p.setMediaItem(buildMediaItem(u))
         p.playWhenReady = true
         p.prepare()
         p.play()
+    }
+
+    // Lecture a la suite : a la fin d'un episode, on enchaine automatiquement sur le suivant
+    // de la file (Session.episodeQueue) sans repasser par la fiche serie. Marche sur les 2 themes.
+    private fun playNextEpisodeIfAny() {
+        if (watchKind != "series") return
+        val q = Session.episodeQueue
+        val nextIdx = Session.episodeIndex + 1
+        if (q.isEmpty() || nextIdx < 0 || nextIdx >= q.size) return
+        Session.episodeIndex = nextIdx
+        val ep = q[nextIdx]
+        val series = Session.seriesItem
+        val epTitle = if (series != null) "${series.name} - ${ep.name}" else ep.name
+        val direct = ep.directUrl
+        if (!direct.isNullOrBlank()) { switchToVod(direct, epTitle, ep.logo); return }
+        val cmd = ep.cmd
+        val pl = Session.current
+        if (cmd.isNullOrBlank() || pl == null) return
+        lifecycleScope.launch {
+            val link = try { Api.stalkerLink(pl, cmd, "movie") } catch (e: Exception) { null }
+            if (!link.isNullOrBlank()) switchToVod(link, epTitle, ep.logo)
+        }
+    }
+
+    // Bascule le lecteur en cours sur un nouveau flux VOD (episode suivant) sans recreer l'activite.
+    private fun switchToVod(url: String, title: String, logo: String) {
+        val p = player ?: return
+        watchUrl = url
+        watchTitle = title
+        if (logo.isNotBlank()) watchLogo = logo
+        findViewById<TextView>(R.id.titleTv).text = title
+        WatchHistory.touch(this, watchUrl, watchTitle, watchLogo, "series", watchSeriesName, watchSeriesLogo, watchSeriesId, watchSeriesCmd, watchSourceCmd, watchSourceStreamId, watchSourceContainerExt)
+        // Nouvel episode : on ne reprend pas une position sauvegardee, et on reactive la recup audio.
+        didRestorePosition = true
+        audioRecoveryDone = false
+        currentSubUrl = null
+        candidates = buildVodCandidates(url)
+        candIdx = 0
+        playCurrent()
+    }
+
+    // ---- Sous-titres externes multilangues (OpenSubtitles) ----
+    // Construit le MediaItem en y greffant, si demande, une piste de sous-titres externe.
+    private fun buildMediaItem(u: String): MediaItem {
+        val b = MediaItem.Builder().setUri(Uri.parse(u))
+        val sub = currentSubUrl
+        if (!sub.isNullOrBlank()) {
+            val mime = when (currentSubFormat.lowercase()) {
+                "vtt" -> androidx.media3.common.MimeTypes.TEXT_VTT
+                "ass", "ssa" -> androidx.media3.common.MimeTypes.TEXT_SSA
+                else -> androidx.media3.common.MimeTypes.APPLICATION_SUBRIP
+            }
+            val subCfg = MediaItem.SubtitleConfiguration.Builder(Uri.parse(sub))
+                .setMimeType(mime)
+                .setLanguage(currentSubLang.ifBlank { "und" })
+                .setSelectionFlags(androidx.media3.common.C.SELECTION_FLAG_DEFAULT)
+                .build()
+            b.setSubtitleConfigurations(listOf(subCfg))
+        }
+        return b.build()
+    }
+
+    private fun showSubtitleDialog() {
+        val labels = arrayOf("Chercher des sous-titres en ligne\u2026", "D\u00e9sactiver les sous-titres")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Sous-titres")
+            .setItems(labels) { d, which ->
+                if (which == 0) searchSubtitlesOnline() else disableSubtitles()
+                d.dismiss()
+            }
+            .show()
+    }
+
+    private fun searchSubtitlesOnline() {
+        if (SubtitlesConfig.OPENSUBTITLES_API_KEY.isBlank()) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Sous-titres")
+                .setMessage("Aucune cl\u00e9 OpenSubtitles configur\u00e9e.\n\nCr\u00e9e un compte gratuit sur opensubtitles.com, r\u00e9cup\u00e8re ta \"Api Key\" (profil > API consumers) et colle-la dans le fichier SubtitlesConfig.kt, puis recompile.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        val query = watchSeriesName.ifBlank { watchTitle }
+        Toast.makeText(this, "Recherche de sous-titres\u2026", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val results = SubtitlesApi.search(query, SubtitlesConfig.LANGUAGES)
+            if (results.isEmpty()) {
+                Toast.makeText(this@PlayerActivity, "Aucun sous-titre trouv\u00e9 pour ce titre.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val labels = results.map { "${langName(it.lang)}  \u2014  ${it.release.take(45)}" }.toTypedArray()
+            androidx.appcompat.app.AlertDialog.Builder(this@PlayerActivity)
+                .setTitle("Choisir la langue")
+                .setItems(labels) { d, which -> applyOnlineSubtitle(results[which]); d.dismiss() }
+                .show()
+        }
+    }
+
+    private fun applyOnlineSubtitle(opt: SubtitlesApi.SubOption) {
+        Toast.makeText(this, "T\u00e9l\u00e9chargement des sous-titres\u2026", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val link = SubtitlesApi.downloadUrl(opt.fileId)
+            if (link.isNullOrBlank()) {
+                Toast.makeText(this@PlayerActivity, "\u00c9chec du t\u00e9l\u00e9chargement des sous-titres.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            currentSubUrl = link
+            currentSubLang = opt.lang
+            currentSubFormat = opt.format
+            reloadWithSubtitle()
+        }
+    }
+
+    private fun reloadWithSubtitle() {
+        val p = player ?: return
+        val u = candidates.getOrNull(candIdx) ?: watchUrl
+        val pos = p.currentPosition
+        p.setMediaItem(buildMediaItem(u))
+        p.prepare()
+        if (pos > 0) p.seekTo(pos)
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
+            .setPreferredTextLanguage(currentSubLang.ifBlank { "und" })
+            .build()
+        p.playWhenReady = true
+        p.play()
+        Toast.makeText(this, "Sous-titres activ\u00e9s (${langName(currentSubLang)})", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun disableSubtitles() {
+        currentSubUrl = null
+        val p = player ?: return
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .setPreferredTextLanguage(null)
+            .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
+            .build()
+        Toast.makeText(this, "Sous-titres d\u00e9sactiv\u00e9s", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun langName(code: String): String = when (code.lowercase().take(2)) {
+        "fr" -> "Fran\u00e7ais"
+        "en" -> "Anglais"
+        "es" -> "Espagnol"
+        "ar" -> "Arabe"
+        "pt" -> "Portugais"
+        "de" -> "Allemand"
+        "it" -> "Italien"
+        "nl" -> "N\u00e9erlandais"
+        "ru" -> "Russe"
+        "tr" -> "Turc"
+        else -> code
     }
 
     // Rebranche le direct : on rejoue l'URL (pour un portail Stalker, re-hit du lien create_link
@@ -432,6 +597,9 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_MEDIA_PAUSE -> { p.pause(); return true }
                 KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> { seekBy(30000); playerView.showController(); return true }
                 KeyEvent.KEYCODE_MEDIA_REWIND -> { seekBy(-10000); playerView.showController(); return true }
+                KeyEvent.KEYCODE_CAPTIONS, KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_INFO -> {
+                    showSubtitleDialog(); return true
+                }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                     // Si le controleur n'est pas affiche : OK = lecture/pause + affiche les boutons
                     if (!controllerVisible) { togglePlay(); playerView.showController(); return true }

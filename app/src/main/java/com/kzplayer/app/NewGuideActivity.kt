@@ -209,8 +209,10 @@ open class NewGuideActivity : NtBase() {
     }
 
     private fun playChannel(item: Item) {
+        // Ecran GUIDE : on ne lance AUCUNE chaine, on affiche seulement l'EPG.
+        if (!playsInline) { updateHero(item); return }
         // 2e clic sur la chaine deja en lecture -> plein ecran
-        if (playsInline && isPlayingSame(item) && playingUrl.isNotBlank()) {
+        if (isPlayingSame(item) && playingUrl.isNotBlank()) {
             openFullscreen(item.name, playingUrl, item.logo); return
         }
         val pl = Session.current ?: return

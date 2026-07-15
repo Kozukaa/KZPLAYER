@@ -25,98 +25,60 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Choisis ton th\u00e8me d'interface"
+        android:text="Choisis une cat\u00e9gorie"
         android:textColor="@color/muted"
         android:textSize="14sp"
         android:layout_marginTop="4dp"
         android:layout_marginBottom="24dp" />
+
     <LinearLayout
+        android:id="@+id/themeMenu"
         android:layout_width="match_parent"
-        android:layout_height="220dp"
-        android:orientation="horizontal">
-        <LinearLayout
-            android:id="@+id/themeClassic"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginEnd="12dp"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/grad_tv"
-            android:clickable="true"
-            android:focusable="true"
-            android:padding="18dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Th\u00e8me 1"
-                android:textColor="@color/text"
-                android:textSize="16sp" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Classique"
-                android:textColor="@color/text"
-                android:textStyle="bold"
-                android:textSize="24sp"
-                android:layout_marginTop="4dp" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="L'interface actuelle"
-                android:textColor="#CCFFFFFF"
-                android:textSize="13sp"
-                android:layout_marginTop="6dp" />
-            <TextView
-                android:id="@+id/classicState"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/accent"
-                android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginTop="10dp" />
-        </LinearLayout>
-        <LinearLayout
-            android:id="@+id/themeNew"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/grad_movies"
-            android:clickable="true"
-            android:focusable="true"
-            android:padding="18dp">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Th\u00e8me 2"
-                android:textColor="@color/text"
-                android:textSize="16sp" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="NewTivi"
-                android:textColor="@color/text"
-                android:textStyle="bold"
-                android:textSize="24sp"
-                android:layout_marginTop="4dp" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Guide TV, grand visuel, menu lat\u00e9ral"
-                android:textColor="#CCFFFFFF"
-                android:textSize="13sp"
-                android:gravity="center"
-                android:layout_marginTop="6dp" />
-            <TextView
-                android:id="@+id/newState"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/accent"
-                android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginTop="10dp" />
-        </LinearLayout>
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_tile"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="20dp"
+        android:layout_marginBottom="14dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="\ud83c\udfa8  Th\u00e8me"
+            android:textColor="@color/text"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/themeStateTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/muted"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/playlistMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_tile"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="20dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="\ud83d\udcfa  Liste de lecture"
+            android:textColor="@color/text"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/playlistStateTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/muted"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp" />
     </LinearLayout>
 </LinearLayout>

@@ -83,6 +83,10 @@ class SeriesActivity : AppCompatActivity() {
     }
 
     private fun playEpisode(item: Item) {
+        // File d'attente = tous les episodes jouables de la serie -> lecture a la suite.
+        val queue = rows.filter { it.kind == "episode" || it.directUrl != null || it.cmd != null }
+        Session.episodeQueue = queue
+        Session.episodeIndex = queue.indexOf(item)
         val pl = Session.current ?: return
         val direct = item.directUrl
         if (!direct.isNullOrBlank()) { play(direct, item.name, item.logo); return }
@@ -116,6 +120,7 @@ class SeriesActivity : AppCompatActivity() {
                 .putExtra("seriesId", seriesId)
                 .putExtra("seriesCmd", seriesCmd)
                 .putExtra("mode", "vod")
+                .putExtra("queued", true)
         )
     }
 

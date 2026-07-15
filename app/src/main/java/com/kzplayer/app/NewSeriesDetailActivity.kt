@@ -126,6 +126,10 @@ class NewSeriesDetailActivity : AppCompatActivity() {
     }
 
     private fun playEpisode(item: Item) {
+        // File d'attente = tous les episodes de la saison affichee -> lecture a la suite.
+        val seasonList = seasons.getOrNull(selectedSeason)?.second ?: emptyList()
+        Session.episodeQueue = seasonList
+        Session.episodeIndex = seasonList.indexOf(item)
         val pl = Session.current ?: return
         val direct = item.directUrl
         if (!direct.isNullOrBlank()) { play(direct, item.name, item.logo); return }
@@ -152,6 +156,7 @@ class NewSeriesDetailActivity : AppCompatActivity() {
                 .putExtra("historyKind", "series").putExtra("seriesName", seriesName)
                 .putExtra("seriesLogo", seriesLogo).putExtra("seriesId", series?.seriesId ?: "")
                 .putExtra("seriesCmd", series?.cmd ?: "").putExtra("mode", "vod")
+                .putExtra("queued", true)
         )
     }
 

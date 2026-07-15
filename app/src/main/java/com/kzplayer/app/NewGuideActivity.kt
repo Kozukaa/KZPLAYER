@@ -24,7 +24,9 @@ import java.util.Date
 import java.util.Locale
 
 // Ecran GUIDE (theme NewTivi) : categories a gauche, grille EPG (chaine + programmes) a droite.
-class NewGuideActivity : NtBase() {
+open class NewGuideActivity : NtBase() {
+    protected open val navTag: String = "guide"
+    protected open val headerTitle: String = "Guide"
     private lateinit var catRv: RecyclerView
     private lateinit var channelRv: RecyclerView
     private lateinit var progress: ProgressBar
@@ -55,7 +57,8 @@ class NewGuideActivity : NtBase() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_new_guide)
-        NavHelper.setup(this, "guide")
+        findViewById<TextView?>(R.id.screenTitleTv)?.text = headerTitle
+        NavHelper.setup(this, navTag)
         catRv = findViewById(R.id.catRv)
         channelRv = findViewById(R.id.channelRv)
         progress = findViewById(R.id.progress)

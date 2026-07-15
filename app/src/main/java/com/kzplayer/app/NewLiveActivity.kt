@@ -1,37 +1,10 @@
 package com.kzplayer.app
 
-import android.content.Intent
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-
-// Ecran TV (theme NewTivi) : liste des chaines en direct. Un clic = on regarde la chaine.
-// Le Guide (EPG) est un ecran separe (NewGuideActivity).
-class NewLiveActivity : NtCatalogActivity() {
-    override val kind = "live"
+// Ecran TV (theme NewTivi) : meme presentation que le Guide facon TiviMate
+// (categories a gauche + liste des chaines avec numero/logo/nom + grille EPG + apercu en haut).
+// Difference : ici un clic sur une chaine lance directement la lecture.
+// Toute la logique est heritee de NewGuideActivity ; on ne change que le titre et l'onglet actif.
+class NewLiveActivity : NewGuideActivity() {
     override val navTag = "tv"
-    override val screenTitle = "TV"
-
-    override fun openItem(item: Item) {
-        val pl = Session.current ?: return
-        Session.liveChannels = visibleItems().filter { it.kind == "live" }
-        if (pl.type == "stalker") {
-            val cmd = item.cmd
-            if (cmd.isNullOrBlank()) return
-            lifecycleScope.launch {
-                val link = try { Api.stalkerLink(pl, cmd, "live") } catch (e: Exception) { null }
-                if (!link.isNullOrBlank()) openPreview(link, item)
-            }
-            return
-        }
-        val url = item.directUrl ?: return
-        openPreview(url, item)
-    }
-
-    private fun openPreview(url: String, item: Item) {
-        startActivity(
-            Intent(this, LivePreviewActivity::class.java)
-                .putExtra("url", url).putExtra("title", item.name)
-                .putExtra("logo", item.logo).putExtra("streamId", item.streamId ?: "")
-        )
-    }
+    override val headerTitle = "TV"
 }

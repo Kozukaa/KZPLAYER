@@ -27,7 +27,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun apply(v: String) {
         ThemePref.set(this, v)
-        val cls = if (v == ThemePref.NEWTIVI) NewGuideActivity::class.java else HomeActivity::class.java
+        val cls = if (v == ThemePref.NEWTIVI) NewLiveActivity::class.java else HomeActivity::class.java
         startActivity(Intent(this, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         finish()
     }

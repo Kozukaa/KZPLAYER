@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                         Session.current = Session.playlists.firstOrNull()
                     }
-                    val homeCls = if (ThemePref.isNew(this@MainActivity)) NewGuideActivity::class.java else HomeActivity::class.java
+                    val homeCls = if (ThemePref.isNew(this@MainActivity)) NewLiveActivity::class.java else HomeActivity::class.java
                     startActivity(Intent(this@MainActivity, homeCls))
                 } else {
                     codeTv.text = res.deviceCode.ifBlank { deviceCode() }

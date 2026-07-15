@@ -1,72 +1,137 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/ntSidebar"
-    android:layout_width="84dp"
+    android:layout_width="70dp"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/bg2"
-    android:gravity="center_horizontal"
     android:paddingStart="10dp"
     android:paddingEnd="10dp">
 
     <ImageView
         android:id="@+id/logoIv"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
-        android:layout_marginTop="18dp"
-        android:layout_marginBottom="22dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="20dp"
         android:src="@drawable/kz_logo_icon"
         android:scaleType="fitCenter"
         android:contentDescription="@null" />
 
     <LinearLayout
-        android:id="@+id/navGuide"
+        android:id="@+id/navTv"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginBottom="8dp"
-        android:gravity="center"
+        android:layout_height="48dp"
+        android:layout_marginBottom="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="13dp"
         android:clickable="true"
         android:focusable="true"
         android:background="@drawable/bg_nav_item">
         <ImageView
-            android:id="@+id/navGuideImg"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
-            android:src="@drawable/ic_epg"
+            android:id="@+id/navTvImg"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_live_tv"
             android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/navTvLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TV"
+            android:textColor="@color/muted"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/navMovies"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginBottom="8dp"
-        android:gravity="center"
+        android:layout_height="48dp"
+        android:layout_marginBottom="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="13dp"
         android:clickable="true"
         android:focusable="true"
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navMoviesImg"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:src="@drawable/ic_movie"
             android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/navMoviesLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Films"
+            android:textColor="@color/muted"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/navSeries"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:gravity="center"
+        android:layout_height="48dp"
+        android:layout_marginBottom="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="13dp"
         android:clickable="true"
         android:focusable="true"
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navSeriesImg"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:src="@drawable/ic_tv"
             android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/navSeriesLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="S\u00e9ries"
+            android:textColor="@color/muted"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navGuide"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="13dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_nav_item">
+        <ImageView
+            android:id="@+id/navGuideImg"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_epg"
+            android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/navGuideLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Guide"
+            android:textColor="@color/muted"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <View
@@ -77,34 +142,58 @@
     <LinearLayout
         android:id="@+id/navSearch"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginBottom="8dp"
-        android:gravity="center"
+        android:layout_height="48dp"
+        android:layout_marginBottom="6dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="14dp"
         android:clickable="true"
         android:focusable="true"
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navSearchImg"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:src="@drawable/ic_search"
             android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/navSearchLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Recherche"
+            android:textColor="@color/muted"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="18dp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/navSettings"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginBottom="16dp"
-        android:gravity="center"
+        android:layout_height="48dp"
+        android:layout_marginBottom="14dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="13dp"
         android:clickable="true"
         android:focusable="true"
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navSettingsImg"
-            android:layout_width="26dp"
-            android:layout_height="26dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:src="@drawable/ic_settings"
             android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/navSettingsLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="R\u00e9glages"
+            android:textColor="@color/muted"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

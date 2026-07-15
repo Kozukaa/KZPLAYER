@@ -6,19 +6,19 @@
     android:background="@color/bg">
     <include layout="@layout/newtivi_sidebar" />
     <LinearLayout
-        android:layout_width="210dp"
+        android:layout_width="170dp"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:background="@color/bg2"
-        android:padding="14dp">
+        android:padding="12dp">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="CAT\u00c9GORIES"
             android:textColor="@color/muted"
-            android:textSize="11sp"
+            android:textSize="10sp"
             android:letterSpacing="0.1"
-            android:layout_marginBottom="10dp" />
+            android:layout_marginBottom="8dp" />
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/catRv"
             android:layout_width="match_parent"
@@ -30,7 +30,7 @@
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="18dp">
+        android:padding="14dp">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -41,7 +41,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text"
-                android:textSize="24sp"
+                android:textSize="19sp"
                 android:textStyle="bold" />
             <View
                 android:layout_width="0dp"
@@ -49,33 +49,34 @@
                 android:layout_weight="1" />
             <EditText
                 android:id="@+id/searchEt"
-                android:layout_width="260dp"
+                android:layout_width="210dp"
                 android:layout_height="wrap_content"
                 android:hint="Rechercher..."
                 android:inputType="text"
+                android:textSize="13sp"
                 android:textColor="@color/text"
                 android:textColorHint="@color/muted"
                 android:background="@drawable/bg_card"
-                android:padding="12dp" />
+                android:padding="9dp" />
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="200dp"
+            android:layout_height="148dp"
             android:orientation="horizontal"
-            android:layout_marginTop="14dp">
+            android:layout_marginTop="10dp">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center_vertical"
-                android:paddingEnd="18dp">
+                android:paddingEnd="14dp">
                 <TextView
                     android:id="@+id/heroTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="@color/text"
-                    android:textSize="26sp"
+                    android:textSize="20sp"
                     android:textStyle="bold"
                     android:maxLines="2"
                     android:ellipsize="end" />
@@ -85,21 +86,21 @@
                     android:layout_height="wrap_content"
                     android:textColor="@color/accent"
                     android:textStyle="bold"
-                    android:textSize="13sp"
-                    android:layout_marginTop="6dp" />
+                    android:textSize="12sp"
+                    android:layout_marginTop="5dp" />
                 <TextView
                     android:id="@+id/heroDesc"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="#CCFFFFFF"
-                    android:textSize="14sp"
-                    android:maxLines="4"
+                    android:textSize="12sp"
+                    android:maxLines="3"
                     android:ellipsize="end"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="6dp" />
             </LinearLayout>
             <ImageView
                 android:id="@+id/heroImg"
-                android:layout_width="340dp"
+                android:layout_width="248dp"
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop"
                 android:background="@drawable/bg_tile"
@@ -109,7 +110,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginTop="14dp">
+            android:layout_marginTop="10dp">
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/itemRv"
                 android:layout_width="match_parent"

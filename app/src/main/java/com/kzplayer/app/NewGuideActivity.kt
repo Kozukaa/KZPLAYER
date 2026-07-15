@@ -30,6 +30,8 @@ class NewGuideActivity : NtBase() {
     private lateinit var progress: ProgressBar
     private lateinit var msgTv: TextView
     private lateinit var clockTv: TextView
+    private lateinit var dateTv: TextView
+    private lateinit var sourceTv: TextView
     private lateinit var heroImg: ImageView
     private lateinit var heroTitle: TextView
     private lateinit var heroTime: TextView
@@ -43,7 +45,9 @@ class NewGuideActivity : NtBase() {
     private val clockHandler = Handler(Looper.getMainLooper())
     private val clockRunnable = object : Runnable {
         override fun run() {
-            clockTv.text = SimpleDateFormat("EEE d MMM  HH:mm", Locale.getDefault()).format(Date())
+            val now = Date()
+            dateTv.text = SimpleDateFormat("EEE d MMM", Locale.getDefault()).format(now)
+            clockTv.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
             clockHandler.postDelayed(this, 30000)
         }
     }
@@ -57,6 +61,9 @@ class NewGuideActivity : NtBase() {
         progress = findViewById(R.id.progress)
         msgTv = findViewById(R.id.msgTv)
         clockTv = findViewById(R.id.clockTv)
+        dateTv = findViewById(R.id.dateTv)
+        sourceTv = findViewById(R.id.sourceTv)
+        findViewById<TextView?>(R.id.optionsBtn)?.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         heroImg = findViewById(R.id.heroImg)
         heroTitle = findViewById(R.id.heroTitle)
         heroTime = findViewById(R.id.heroTime)
@@ -65,7 +72,17 @@ class NewGuideActivity : NtBase() {
         channelRv.layoutManager = LinearLayoutManager(this)
         channelRv.setItemViewCacheSize(20)
         clockRunnable.run()
+        bindTimeHeader()
         ensureSession { loadCategories() }
+    }
+
+    private fun bindTimeHeader() {
+        val tf = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val nowMs = System.currentTimeMillis()
+        val ids = intArrayOf(R.id.timeH1, R.id.timeH2, R.id.timeH3, R.id.timeH4)
+        for (i in ids.indices) {
+            findViewById<TextView?>(ids[i])?.text = tf.format(Date(nowMs + i * 30L * 60L * 1000L))
+        }
     }
 
     override fun onDestroy() { super.onDestroy(); clockHandler.removeCallbacks(clockRunnable) }
@@ -96,6 +113,8 @@ class NewGuideActivity : NtBase() {
 
     private fun selectCategory(cat: Category) {
         selectedCat = cat.id
+        val src = Session.current?.nom?.takeIf { it.isNotBlank() }
+        sourceTv.text = if (src != null) "$src  /  ${cat.name}" else cat.name
         catAdapter?.notifyDataSetChanged()
         val pl = Session.current ?: return
         if (cat.id == "__favorites__") {
@@ -139,11 +158,32 @@ class NewGuideActivity : NtBase() {
     } catch (e: Exception) { emptyList() }
 
     private fun updateHero(item: Item, epg: List<EpgEntry>) {
-        val now = epg.firstOrNull { it.nowPlaying } ?: epg.firstOrNull()
+        val nowIdx = epg.indexOfFirst { it.nowPlaying }.let { if (it >= 0) it else 0 }
+        val now = epg.getOrNull(nowIdx)
         heroTitle.text = (now?.title ?: "").ifBlank { item.name }
         heroTime.text = now?.time ?: ""
         heroDesc.text = now?.description ?: ""
         heroImg.load(item.logo) { crossfade(true); placeholder(R.drawable.bg_tile); error(R.drawable.ic_live_tv) }
+        // Barre de progression du programme en cours (si horaires connus)
+        val start = now?.startMs ?: 0L
+        val end = epg.getOrNull(nowIdx + 1)?.startMs ?: 0L
+        var pct = -1f
+        if (start > 0L && end > start) {
+            pct = ((System.currentTimeMillis() - start).toFloat() / (end - start).toFloat()).coerceIn(0f, 1f)
+        }
+        val fill = findViewById<View?>(R.id.heroProgFill)
+        val rest = findViewById<View?>(R.id.heroProgRest)
+        val pctTv = findViewById<TextView?>(R.id.heroPctTv)
+        if (pct >= 0f) {
+            (fill?.layoutParams as? LinearLayout.LayoutParams)?.let { it.weight = pct; fill.layoutParams = it }
+            (rest?.layoutParams as? LinearLayout.LayoutParams)?.let { it.weight = 1f - pct; rest.layoutParams = it }
+            pctTv?.text = "${(pct * 100).toInt()}% \u00e9coul\u00e9"
+            pctTv?.visibility = View.VISIBLE
+        } else {
+            (fill?.layoutParams as? LinearLayout.LayoutParams)?.let { it.weight = 0.12f; fill.layoutParams = it }
+            (rest?.layoutParams as? LinearLayout.LayoutParams)?.let { it.weight = 0.88f; rest.layoutParams = it }
+            pctTv?.visibility = View.GONE
+        }
     }
 
     private fun playChannel(item: Item) {
@@ -197,6 +237,9 @@ class NewGuideActivity : NtBase() {
             val logo: ImageView = v.findViewById(R.id.logoIv)
             val name: TextView = v.findViewById(R.id.nameTv)
             val progRow: LinearLayout = v.findViewById(R.id.progRow)
+            val number: TextView = v.findViewById(R.id.numberTv)
+            val nowBadge: TextView = v.findViewById(R.id.nowBadge)
+            val hd: TextView = v.findViewById(R.id.hdBadge)
             var boundStream: String = ""
         }
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
@@ -205,6 +248,16 @@ class NewGuideActivity : NtBase() {
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = data[position]
             holder.name.text = item.name
+            holder.number.text = (position + 1).toString()
+            val q = when {
+                Regex("(?i)(4k|uhd|2160)").containsMatchIn(item.name) -> "4K"
+                Regex("(?i)(fhd|1080)").containsMatchIn(item.name) -> "FHD"
+                Regex("(?i)(\\bhd\\b|720)").containsMatchIn(item.name) -> "HD"
+                else -> ""
+            }
+            holder.hd.text = q
+            holder.hd.visibility = if (q.isBlank()) View.GONE else View.VISIBLE
+            holder.nowBadge.visibility = View.GONE
             holder.logo.load(item.logo) { crossfade(false); placeholder(R.drawable.bg_tile); error(R.drawable.ic_live_tv) }
             holder.progRow.removeAllViews()
             holder.boundStream = item.streamId ?: item.name
@@ -218,6 +271,7 @@ class NewGuideActivity : NtBase() {
             lifecycleScope.launch {
                 val epg = epgFor(pl, item)
                 if (holder.boundStream != key) return@launch
+                holder.nowBadge.visibility = if (epg.any { it.nowPlaying }) View.VISIBLE else View.GONE
                 renderProg(holder.progRow, epg)
                 if (holder.v.hasFocus() || position == 0) updateHero(item, epg)
             }
@@ -245,7 +299,7 @@ class NewGuideActivity : NtBase() {
                     setPadding(px(10), px(6), px(10), px(6))
                     setBackgroundResource(if (e.nowPlaying) R.drawable.bg_epg_now else R.drawable.bg_epg_cell)
                 }
-                val lp = LinearLayout.LayoutParams(px(190), LinearLayout.LayoutParams.MATCH_PARENT)
+                val lp = LinearLayout.LayoutParams(px(150), LinearLayout.LayoutParams.MATCH_PARENT)
                 lp.marginEnd = px(6)
                 cell.layoutParams = lp
                 row.addView(cell)

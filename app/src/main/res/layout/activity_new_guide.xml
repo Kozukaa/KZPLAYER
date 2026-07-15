@@ -8,50 +8,52 @@
     <include layout="@layout/newtivi_sidebar" />
 
     <LinearLayout
-        android:layout_width="212dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:background="@color/bg2"
-        android:padding="16dp">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="CAT\u00c9GORIES"
-            android:textColor="@color/muted"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.12"
-            android:layout_marginBottom="12dp" />
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/catRv"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-    </LinearLayout>
-
-    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="22dp">
+        android:padding="20dp">
 
+        <!-- En-tete : titre Guide + fil d'ariane + date / heure / Options -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Guide"
+                    android:textColor="@color/text"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/sourceTv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/muted"
+                    android:textSize="12sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
             <TextView
+                android:id="@+id/dateTv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Guide"
+                android:background="@drawable/bg_fav_chip"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="7dp"
+                android:paddingBottom="7dp"
+                android:layout_marginEnd="8dp"
                 android:textColor="@color/text"
-                android:textSize="26sp"
-                android:textStyle="bold" />
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
+                android:textSize="12sp" />
             <TextView
                 android:id="@+id/clockTv"
                 android:layout_width="wrap_content"
@@ -61,70 +63,154 @@
                 android:paddingEnd="14dp"
                 android:paddingTop="7dp"
                 android:paddingBottom="7dp"
+                android:layout_marginEnd="8dp"
                 android:textColor="@color/text"
-                android:textSize="13sp" />
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/optionsBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Options"
+                android:background="@drawable/bg_ghost_btn"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="7dp"
+                android:paddingBottom="7dp"
+                android:textColor="@color/text"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true" />
         </LinearLayout>
 
-        <FrameLayout
+        <!-- Apercu programme en cours : vignette + infos + progression -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="196dp"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_tile">
+            android:layout_height="132dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="14dp">
             <ImageView
                 android:id="@+id/heroImg"
-                android:layout_width="match_parent"
+                android:layout_width="228dp"
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop"
+                android:background="@drawable/bg_tile"
                 android:contentDescription="@null" />
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/bg_scrim_hero" />
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
                 android:orientation="vertical"
-                android:padding="22dp">
-                <TextView
-                    android:id="@+id/heroTime"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_now_badge"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="3dp"
-                    android:paddingBottom="3dp"
-                    android:textColor="@color/text"
-                    android:textStyle="bold"
-                    android:textSize="12sp" />
+                android:gravity="center_vertical"
+                android:paddingStart="18dp">
                 <TextView
                     android:id="@+id/heroTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="@color/text"
-                    android:textSize="22sp"
+                    android:textSize="20sp"
                     android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:layout_marginTop="8dp" />
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+                <TextView
+                    android:id="@+id/heroTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/accent"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:layout_marginTop="6dp" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_progress_track">
+                    <View
+                        android:id="@+id/heroProgFill"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="0.12"
+                        android:background="@drawable/bg_progress_fill" />
+                    <View
+                        android:id="@+id/heroProgRest"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="0.88" />
+                </LinearLayout>
+                <TextView
+                    android:id="@+id/heroPctTv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/muted"
+                    android:textSize="11sp"
+                    android:layout_marginTop="5dp"
+                    android:visibility="gone" />
                 <TextView
                     android:id="@+id/heroDesc"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="#CCFFFFFF"
-                    android:textSize="13sp"
+                    android:textSize="12sp"
                     android:maxLines="2"
                     android:ellipsize="end"
-                    android:layout_marginTop="4dp" />
+                    android:layout_marginTop="6dp" />
             </LinearLayout>
-        </FrameLayout>
+        </LinearLayout>
+
+        <!-- En-tete des colonnes horaires -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:paddingBottom="8dp">
+            <TextView
+                android:id="@+id/sectionTv"
+                android:layout_width="196dp"
+                android:layout_height="wrap_content"
+                android:text="Cha\u00eenes"
+                android:paddingStart="12dp"
+                android:textColor="@color/text"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+            <TextView
+                android:id="@+id/timeH1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/text"
+                android:textStyle="bold"
+                android:textSize="11sp" />
+            <TextView
+                android:id="@+id/timeH2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/muted"
+                android:textSize="11sp" />
+            <TextView
+                android:id="@+id/timeH3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/muted"
+                android:textSize="11sp" />
+            <TextView
+                android:id="@+id/timeH4"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/muted"
+                android:textSize="11sp" />
+        </LinearLayout>
 
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="16dp">
+            android:layout_weight="1">
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/channelRv"
                 android:layout_width="match_parent"

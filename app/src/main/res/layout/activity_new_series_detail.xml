@@ -6,7 +6,7 @@
     android:background="@color/bg">
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="320dp">
+        android:layout_height="232dp">
         <ImageView
             android:id="@+id/heroImg"
             android:layout_width="match_parent"
@@ -25,31 +25,31 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:padding="30dp">
+            android:padding="22dp">
             <TextView
                 android:id="@+id/backBtn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="\u2190 Retour"
                 android:textColor="@color/text"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:background="@drawable/bg_fav_chip"
                 android:clickable="true"
                 android:focusable="true"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:paddingTop="7dp"
-                android:paddingBottom="7dp" />
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp" />
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1" />
             <TextView
                 android:id="@+id/seriesTitle"
-                android:layout_width="620dp"
+                android:layout_width="560dp"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text"
-                android:textSize="32sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 android:maxLines="2"
                 android:ellipsize="end" />
@@ -59,44 +59,46 @@
                 android:layout_height="wrap_content"
                 android:textColor="@color/accent"
                 android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginTop="6dp" />
+                android:textSize="12sp"
+                android:layout_marginTop="5dp" />
             <TextView
                 android:id="@+id/heroDesc"
-                android:layout_width="620dp"
+                android:layout_width="560dp"
                 android:layout_height="wrap_content"
                 android:textColor="#CCFFFFFF"
-                android:textSize="14sp"
-                android:maxLines="3"
+                android:textSize="13sp"
+                android:maxLines="2"
                 android:ellipsize="end"
-                android:layout_marginTop="10dp" />
+                android:layout_marginTop="8dp" />
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="16dp">
+                android:layout_marginTop="12dp">
                 <Button
                     android:id="@+id/playBtn"
                     android:layout_width="wrap_content"
-                    android:layout_height="48dp"
+                    android:layout_height="42dp"
                     android:text="\u25B6 Lecture"
                     android:textAllCaps="false"
+                    android:textSize="13sp"
                     android:textColor="@color/text"
                     android:textStyle="bold"
                     android:background="@drawable/bg_button_focus"
-                    android:paddingStart="28dp"
-                    android:paddingEnd="28dp" />
+                    android:paddingStart="22dp"
+                    android:paddingEnd="22dp" />
                 <Button
                     android:id="@+id/favBtn"
                     android:layout_width="wrap_content"
-                    android:layout_height="48dp"
+                    android:layout_height="42dp"
                     android:text="\uFF0B Ma liste"
                     android:textAllCaps="false"
+                    android:textSize="13sp"
                     android:textColor="@color/text"
                     android:background="@drawable/bg_ghost_btn"
-                    android:layout_marginStart="12dp"
-                    android:paddingStart="22dp"
-                    android:paddingEnd="22dp" />
+                    android:layout_marginStart="10dp"
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
@@ -104,7 +106,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:scrollbars="none"
-        android:padding="18dp">
+        android:padding="14dp">
         <LinearLayout
             android:id="@+id/seasonTabs"
             android:layout_width="wrap_content"
@@ -115,9 +117,9 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:paddingStart="18dp"
-        android:paddingEnd="18dp"
-        android:paddingBottom="18dp">
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="14dp">
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/episodeRv"
             android:layout_width="match_parent"

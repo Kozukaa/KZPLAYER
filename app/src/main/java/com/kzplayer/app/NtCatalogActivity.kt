@@ -28,6 +28,9 @@ abstract class NtCatalogActivity : NtBase() {
     abstract val screenTitle: String
     abstract fun openItem(item: Item)
 
+    // Liste actuellement affichee (utile aux sous-ecrans, ex. zapping TV).
+    protected fun visibleItems(): List<Item> = filtered
+
     private lateinit var catRv: RecyclerView
     private lateinit var itemRv: RecyclerView
     private lateinit var progress: ProgressBar
@@ -79,8 +82,8 @@ abstract class NtCatalogActivity : NtBase() {
     private fun computeSpan(): Int {
         val m = resources.displayMetrics
         val totalDp = m.widthPixels / m.density
-        val content = (totalDp - 76f - 210f).coerceAtLeast(200f)
-        return (content / 120f).toInt().coerceIn(2, 8)
+        val content = (totalDp - 64f - 170f).coerceAtLeast(200f)
+        return (content / 108f).toInt().coerceIn(2, 9)
     }
 
     private fun loadCategories() {

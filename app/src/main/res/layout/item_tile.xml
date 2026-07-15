@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:layout_margin="7dp"
+    android:layout_margin="6dp"
     android:padding="6dp"
     android:clickable="true"
     android:focusable="true"
@@ -11,7 +11,7 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="178dp">
+        android:layout_height="150dp">
 
         <ImageView
             android:id="@+id/posterIv"
@@ -29,18 +29,18 @@
             android:layout_margin="6dp"
             android:background="@drawable/bg_badge_dark"
             android:textColor="@color/text"
-            android:textSize="10sp"
+            android:textSize="9sp"
             android:textStyle="bold"
-            android:paddingStart="7dp"
-            android:paddingEnd="7dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp"
             android:visibility="gone" />
 
         <FrameLayout
             android:id="@+id/progressWrap"
             android:layout_width="match_parent"
-            android:layout_height="4dp"
+            android:layout_height="3dp"
             android:layout_gravity="bottom"
             android:background="#66000000"
             android:visibility="gone">
@@ -61,7 +61,7 @@
         android:textStyle="bold"
         android:maxLines="2"
         android:ellipsize="end"
-        android:paddingTop="8dp"
+        android:paddingTop="7dp"
         android:paddingBottom="2dp" />
 
     <TextView
@@ -70,15 +70,15 @@
         android:layout_height="wrap_content"
         android:background="@drawable/bg_fav_chip"
         android:textColor="@color/accent"
-        android:textSize="10sp"
+        android:textSize="9sp"
         android:textStyle="bold"
         android:maxLines="1"
         android:ellipsize="end"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:paddingTop="2dp"
-        android:paddingBottom="2dp"
+        android:paddingStart="7dp"
+        android:paddingEnd="7dp"
+        android:paddingTop="1dp"
+        android:paddingBottom="1dp"
         android:layout_marginTop="2dp"
-        android:layout_marginBottom="2dp"
+        android:layout_marginBottom="1dp"
         android:visibility="gone" />
 </LinearLayout>

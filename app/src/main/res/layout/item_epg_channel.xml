@@ -6,10 +6,7 @@
     android:background="@drawable/bg_epg_row"
     android:layout_marginBottom="7dp"
     android:focusable="true"
-    android:clickable="true"
-    android:nextFocusUp="@id/channelRv"
-    android:nextFocusDown="@id/channelRv"
-    android:nextFocusLeft="@id/catRv">
+    android:clickable="true">
 
     <LinearLayout
         android:layout_width="196dp"

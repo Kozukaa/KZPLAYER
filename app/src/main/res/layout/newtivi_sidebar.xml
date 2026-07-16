@@ -21,6 +21,7 @@
 
     <LinearLayout
         android:id="@+id/navTv"
+        android:nextFocusDown="@id/navMovies"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginBottom="6dp"
@@ -50,6 +51,8 @@
 
     <LinearLayout
         android:id="@+id/navMovies"
+        android:nextFocusUp="@id/navTv"
+        android:nextFocusDown="@id/navSeries"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginBottom="6dp"
@@ -79,6 +82,8 @@
 
     <LinearLayout
         android:id="@+id/navSeries"
+        android:nextFocusUp="@id/navMovies"
+        android:nextFocusDown="@id/navGuide"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginBottom="6dp"
@@ -108,6 +113,8 @@
 
     <LinearLayout
         android:id="@+id/navGuide"
+        android:nextFocusUp="@id/navSeries"
+        android:nextFocusDown="@id/navSearch"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:orientation="horizontal"
@@ -141,6 +148,8 @@
 
     <LinearLayout
         android:id="@+id/navSearch"
+        android:nextFocusUp="@id/navGuide"
+        android:nextFocusDown="@id/navSettings"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginBottom="6dp"
@@ -170,6 +179,7 @@
 
     <LinearLayout
         android:id="@+id/navSettings"
+        android:nextFocusUp="@id/navSearch"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginBottom="14dp"

@@ -81,4 +81,31 @@
             android:textSize="13sp"
             android:layout_marginTop="4dp" />
     </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/reloadMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_tile"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="20dp"
+        android:layout_marginTop="14dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="\ud83d\udd04  Recharger les listes"
+            android:textColor="@color/text"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/reloadStateTv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/muted"
+            android:textSize="13sp"
+            android:text="Rafra\u00eechir la licence et les serveurs"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
 </LinearLayout>

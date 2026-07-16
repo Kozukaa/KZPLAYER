@@ -29,6 +29,24 @@
         android:textColor="@color/muted"
         android:textSize="14sp"
         android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="N\u00b0 DE LICENCE"
+        android:textColor="@color/muted"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.08"
+        android:layout_marginBottom="2dp" />
+    <TextView
+        android:id="@+id/licenseTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/accent"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.05"
         android:layout_marginBottom="20dp" />
     <ScrollView
         android:layout_width="match_parent"

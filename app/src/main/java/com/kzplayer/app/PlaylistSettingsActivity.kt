@@ -19,6 +19,7 @@ class PlaylistSettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_playlist_settings)
         findViewById<View>(R.id.backBtn).setOnClickListener { finish() }
+        findViewById<TextView>(R.id.licenseTv).text = DeviceIdentity.licenseCode(this)
 
         renderPlaylists()
         if (Session.playlists.isEmpty()) {

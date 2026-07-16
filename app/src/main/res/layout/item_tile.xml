@@ -7,6 +7,8 @@
     android:padding="6dp"
     android:clickable="true"
     android:focusable="true"
+    android:nextFocusUp="@id/itemRv"
+    android:nextFocusDown="@id/itemRv"
     android:background="@drawable/bg_tile">
 
     <FrameLayout

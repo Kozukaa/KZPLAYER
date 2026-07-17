@@ -28,4 +28,24 @@ abstract class NtBase : AppCompatActivity() {
             onReady()
         }
     }
+
+    // Retour NewTivi : si le focus n'est pas deja sur la barre laterale, on l'y ramene
+    // (categories TV / Films / Series...) au lieu de quitter l'ecran. Un 2e retour quitte.
+    override fun onBackPressed() {
+        val sidebar = findViewById<android.view.View?>(R.id.ntSidebar)
+        val focused = currentFocus
+        if (sidebar != null && !isInsideSidebar(focused, sidebar)) {
+            if (sidebar.requestFocus()) return
+        }
+        super.onBackPressed()
+    }
+
+    private fun isInsideSidebar(view: android.view.View?, sidebar: android.view.View): Boolean {
+        var p: android.view.ViewParent? = view?.parent
+        while (p != null) {
+            if (p === sidebar) return true
+            p = p.parent
+        }
+        return false
+    }
 }

@@ -46,7 +46,7 @@ object NavHelper {
     private fun setupRail(act: AppCompatActivity, active: String) {
         val rail = act.findViewById<View?>(R.id.ntSidebar) ?: return
         val d = act.resources.displayMetrics.density
-        val collapsedW = (70 * d).toInt()
+        val collapsedW = (88 * d).toInt()
         val expandedW = (206 * d).toInt()
         val handler = Handler(Looper.getMainLooper())
 

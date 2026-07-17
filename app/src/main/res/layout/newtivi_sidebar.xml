@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/ntSidebar"
-    android:layout_width="70dp"
+    android:layout_width="88dp"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/bg2"
@@ -12,8 +12,8 @@
 
     <ImageView
         android:id="@+id/logoIv"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="18dp"
         android:layout_marginBottom="18dp"

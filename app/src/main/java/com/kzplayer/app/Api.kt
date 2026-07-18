@@ -1424,13 +1424,19 @@ object Api {
 
     // ---------------- RECHERCHE GLOBALE (multi-serveurs) ----------------
     // Cache des catalogues deja telecharges (par serveur + type) pour des recherches rapides.
-    private val catalogCache = ConcurrentHashMap<String, List<Item>>()
-    // Limite GLOBALE des telechargements de catalogue complet (Xtream/M3U), gros en memoire.
-    // Partagee par la recherche ET le prechargement : au plus 3 catalogues charges EN MEME
-    // TEMPS quelle que soit l'origine -> plus rapide qu'avant sans risque de saturation
-    // memoire (le crash historique venait du telechargement de TOUS les catalogues en
-    // parallele). Une fois en cache, la recherche est locale et quasi instantanee.
-    private val catalogSem = Semaphore(3)
+    // Cache LRU borne : au plus MAX_CACHED_CATALOGS catalogues gardes en memoire a la fois.
+    // Avec beaucoup de serveurs, garder TOUS les catalogues saturait la memoire et l'appli
+    // etait tuee (retour brutal a l'accueil). On ne garde donc que les plus recents.
+    private val MAX_CACHED_CATALOGS = 5
+    private val catalogCache = java.util.Collections.synchronizedMap(
+        object : LinkedHashMap<String, List<Item>>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<Item>>): Boolean =
+                size > MAX_CACHED_CATALOGS
+        }
+    )
+    // Au plus 2 gros catalogues (Xtream/M3U) telecharges EN MEME TEMPS, quelle que soit
+    // l'origine (recherche ou prechargement) -> pas de saturation memoire.
+    private val catalogSem = Semaphore(2)
 
     private suspend fun catalogFor(pl: Playlist, kind: String): List<Item> {
         val key = "${pl.id}:$kind"
@@ -1460,18 +1466,21 @@ object Api {
      */
     suspend fun prefetchCatalogs(playlists: List<Playlist>, kind: String) {
         if (kind != "movie" && kind != "series") return
-        coroutineScope {
-            val curId = Session.current?.id
-            // Serveur courant en premier (c'est celui recherche en priorite).
-            val ordered = playlists.sortedByDescending { it.id == curId }
-            for (pl in ordered) {
-                val key = "${pl.id}:$kind"
-                if (catalogCache.containsKey(key)) continue
-                if (pl.type == "stalker") continue
-                async(Dispatchers.IO) {
-                    try { withTimeoutOrNull(15000L) { catalogFor(pl, kind) } } catch (e: Exception) {}
-                }
-            }
+        val curId = Session.current?.id
+        // Serveur courant en premier (c'est celui recherche en priorite).
+        val ordered = playlists.sortedByDescending { it.id == curId }
+        var warmed = 0
+        // SEQUENTIEL (un catalogue a la fois) + garde-memoire : le prechargement ne doit
+        // JAMAIS faire planter l'appli. On s'arrete des que la memoire se remplit.
+        for (pl in ordered) {
+            if (warmed >= MAX_CACHED_CATALOGS - 1) break // pas plus que le cache ne garde
+            if (pl.type == "stalker") continue // Stalker cherche cote portail : rien a precharger
+            val key = "${pl.id}:$kind"
+            if (catalogCache.containsKey(key)) { warmed++; continue }
+            val rt = Runtime.getRuntime()
+            if (rt.totalMemory() - rt.freeMemory() > rt.maxMemory() * 6 / 10) break
+            try { withTimeoutOrNull(15000L) { catalogFor(pl, kind) } } catch (e: Exception) {}
+            warmed++
         }
     }
 
@@ -1521,7 +1530,7 @@ object Api {
             val ordered = playlists.sortedByDescending { it.id == curId }
             // Parallelisation : jusqu'a 5 serveurs interroges EN MEME TEMPS (recherche native
             // Stalker + filtrage sur catalogues deja en cache = leger et rapide). La securite
-            // memoire est desormais assuree en amont par catalogSem (max 3 gros catalogues
+            // memoire est desormais assuree en amont par catalogSem (max 2 gros catalogues
             // charges simultanement), donc plus de saturation meme avec beaucoup de serveurs.
             // Chaque serveur reste limite a 8 s pour ne jamais bloquer l'affichage.
             val sem = Semaphore(5)

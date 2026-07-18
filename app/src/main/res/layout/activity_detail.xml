@@ -58,14 +58,12 @@
                 android:maxLines="2"
                 android:ellipsize="end" />
 
-            <Button
+            <TextView
                 android:id="@+id/favBtn"
                 android:layout_width="wrap_content"
                 android:layout_height="32dp"
-                android:minWidth="0dp"
-                android:minHeight="0dp"
+                android:gravity="center"
                 android:text="☆ Favori"
-                android:textAllCaps="false"
                 android:textColor="@color/text"
                 android:textStyle="bold"
                 android:textSize="11sp"
@@ -73,7 +71,6 @@
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
                 android:background="@drawable/bg_fav_chip"
-                android:stateListAnimator="@null"
                 android:focusable="true"
                 android:clickable="true"
                 android:layout_marginStart="12dp" />

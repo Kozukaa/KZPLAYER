@@ -35,7 +35,7 @@ class NewSeriesDetailActivity : AppCompatActivity() {
         val pl = Session.current
         findViewById<TextView>(R.id.backBtn).setOnClickListener { finish() }
         val playBtn = findViewById<Button>(R.id.playBtn)
-        val favBtn = findViewById<Button>(R.id.favBtn)
+        val favBtn = findViewById<TextView>(R.id.favBtn)
         episodeRv = findViewById(R.id.episodeRv)
         seasonTabs = findViewById(R.id.seasonTabs)
         progress = findViewById(R.id.progress)

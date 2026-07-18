@@ -32,7 +32,7 @@ class SeriesActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.backBtn).setOnClickListener { finish() }
         if (series == null || pl == null) { finish(); return }
 
-        val favBtn = findViewById<Button>(R.id.favBtn)
+        val favBtn = findViewById<TextView>(R.id.favBtn)
         fun refreshFav() {
             favBtn.text = if (Favorites.isFavorite(this, series)) "★" else "☆"
         }

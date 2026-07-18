@@ -91,15 +91,17 @@
                     android:background="@drawable/bg_button_focus"
                     android:paddingStart="22dp"
                     android:paddingEnd="22dp" />
-                <Button
+                <TextView
                     android:id="@+id/favBtn"
                     android:layout_width="wrap_content"
                     android:layout_height="42dp"
+                    android:gravity="center"
                     android:text="\uFF0B Ma liste"
-                    android:textAllCaps="false"
                     android:textSize="13sp"
                     android:textColor="@color/text"
                     android:background="@drawable/bg_ghost_btn"
+                    android:focusable="true"
+                    android:clickable="true"
                     android:layout_marginStart="10dp"
                     android:paddingStart="18dp"
                     android:paddingEnd="18dp" />

@@ -22,7 +22,7 @@ class DetailActivity : AppCompatActivity() {
         val title = findViewById<TextView>(R.id.detailTitle)
         val desc = findViewById<TextView>(R.id.detailDesc)
         val playBtn = findViewById<Button>(R.id.playBtn)
-        val favBtn = findViewById<Button>(R.id.favBtn)
+        val favBtn = findViewById<TextView>(R.id.favBtn)
         val prog = findViewById<ProgressBar>(R.id.detailProgress)
         val back = findViewById<TextView>(R.id.backBtn)
 

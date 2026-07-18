@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/bg">
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="232dp">
+        android:layout_height="280dp">
         <ImageView
             android:id="@+id/heroImg"
             android:layout_width="match_parent"
@@ -61,15 +62,18 @@
                 android:textStyle="bold"
                 android:textSize="12sp"
                 android:layout_marginTop="5dp" />
+            <!-- Resume de la serie entiere : hauteur fixe + texte auto-ajuste,
+                 il retrecit pour tenir en entier, donc visible d'un coup. -->
             <TextView
                 android:id="@+id/heroDesc"
-                android:layout_width="560dp"
-                android:layout_height="wrap_content"
+                android:layout_width="620dp"
+                android:layout_height="78dp"
                 android:textColor="#CCFFFFFF"
-                android:textSize="13sp"
-                android:maxLines="4"
-                android:ellipsize="end"
-                android:layout_marginTop="8dp" />
+                android:layout_marginTop="8dp"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="9sp"
+                app:autoSizeMaxTextSize="13sp"
+                app:autoSizeStepGranularity="1sp" />
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

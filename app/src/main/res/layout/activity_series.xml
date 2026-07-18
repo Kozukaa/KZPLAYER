@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
@@ -33,7 +34,7 @@
             android:id="@+id/posterIv"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxHeight="240dp"
+            android:maxHeight="170dp"
             android:adjustViewBounds="true"
             android:scaleType="fitCenter"
             android:background="@drawable/bg_tile"
@@ -86,24 +87,23 @@
             android:textSize="13sp"
             android:layout_marginTop="4dp" />
 
-        <!-- Resume de la serie entiere (pas par episode) -->
-        <ScrollView
+        <!-- Resume de la serie entiere (pas par episode).
+             Texte auto-ajuste : il retrecit juste ce qu'il faut pour tenir en entier
+             dans l'espace restant, donc visible d'un coup SANS defilement. -->
+        <TextView
+            android:id="@+id/seriesSummary"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:layout_marginTop="10dp"
-            android:scrollbars="none"
-            android:fadeScrollbars="false">
-
-            <TextView
-                android:id="@+id/seriesSummary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#CCFFFFFF"
-                android:textSize="12sp"
-                android:lineSpacingExtra="2dp"
-                android:visibility="gone" />
-        </ScrollView>
+            android:textColor="#CCFFFFFF"
+            android:lineSpacingExtra="1dp"
+            android:gravity="top"
+            android:visibility="gone"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="9sp"
+            app:autoSizeMaxTextSize="13sp"
+            app:autoSizeStepGranularity="1sp" />
 
     </LinearLayout>
 

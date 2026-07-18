@@ -55,6 +55,7 @@ class BrowseActivity : AppCompatActivity() {
     private var lastRealCategories: List<Category> = emptyList()
     private var lastBaseCategories: List<Category> = emptyList()
     private var didWhitelistRefresh = false
+    private var didWarmSearch = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -201,6 +202,9 @@ class BrowseActivity : AppCompatActivity() {
                     }
                 }
                 autoSyncWhitelist(pl.id)
+                // Prechauffe la recherche multi-serveurs en arriere-plan (Films/Series) pour
+                // des resultats quasi instantanes des que l'utilisateur commence a taper.
+                maybeWarmSearch()
             } catch (e: Exception) {
                 msgTv.text = "Erreur de chargement : ${e.message}"
                 setLoading(false)
@@ -553,6 +557,19 @@ class BrowseActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) { msgTv.text = "Erreur : ${e.message}"; setLoading(false) }
             }
+        }
+    }
+
+    // Precharge en tache de fond les catalogues de tous les serveurs (une seule fois par
+    // ouverture d'ecran) pour accelerer la recherche multi-serveurs Films/Series.
+    private fun maybeWarmSearch() {
+        if (didWarmSearch) return
+        if (kind != "movie" && kind != "series") return
+        val pls = Session.playlists
+        if (pls.size <= 1) return // un seul serveur : deja rapide, inutile de prechauffer
+        didWarmSearch = true
+        lifecycleScope.launch(Dispatchers.IO) {
+            try { Api.prefetchCatalogs(pls, kind) } catch (e: Exception) {}
         }
     }
 

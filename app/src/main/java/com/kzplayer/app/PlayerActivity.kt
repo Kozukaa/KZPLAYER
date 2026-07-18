@@ -242,9 +242,15 @@ class PlayerActivity : AppCompatActivity() {
         if (isVod) {
             // Optimisation audio VOD : si plusieurs pistes existent, ExoPlayer prefere une piste compatible
             // avec peu de canaux (stereo) plutot qu'une piste 5.1/DTS que le boitier ne sort pas.
-            p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            var vodParams = p.trackSelectionParameters.buildUpon()
                 .setMaxAudioChannelCount(2)
-                .build()
+            // Series multi-langues : on selectionne automatiquement le francais quand il existe.
+            // C'est une PREFERENCE (pas une contrainte) : si le francais est absent, ExoPlayer garde
+            // la piste par defaut, donc jamais de perte de son. Codes fr / fra / fre couverts.
+            if (watchKind == "series") {
+                vodParams = vodParams.setPreferredAudioLanguages("fr", "fra", "fre")
+            }
+            p.trackSelectionParameters = vodParams.build()
         }
         player = p
         playerView.player = p
@@ -408,7 +414,7 @@ class PlayerActivity : AppCompatActivity() {
     // Menu de la roue dentee : Audio puis Sous-titres (comme demande).
     private fun showSettingsMenu() {
         val items = arrayOf("Audio", "Sous-titres")
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        androidx.appcompat.app.AlertDialog.Builder(this, R.style.Theme_KZ_Dialog)
             .setTitle("Param\u00e8tres")
             .setItems(items) { d, which ->
                 d.dismiss()
@@ -435,7 +441,7 @@ class PlayerActivity : AppCompatActivity() {
                 actions.add { selectTrack(androidx.media3.common.C.TRACK_TYPE_AUDIO, g, ti) }
             }
         }
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        androidx.appcompat.app.AlertDialog.Builder(this, R.style.Theme_KZ_Dialog)
             .setTitle("Audio")
             .setItems(labels.toTypedArray()) { d, which -> actions[which](); d.dismiss() }
             .show()
@@ -458,7 +464,7 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
         labels.add("Chercher en ligne\u2026"); actions.add { searchSubtitlesOnline() }
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        androidx.appcompat.app.AlertDialog.Builder(this, R.style.Theme_KZ_Dialog)
             .setTitle("Sous-titres")
             .setItems(labels.toTypedArray()) { d, which -> actions[which](); d.dismiss() }
             .show()
@@ -491,7 +497,7 @@ class PlayerActivity : AppCompatActivity() {
                 return@launch
             }
             val labels = results.map { "${langName(it.lang)}  \u2014  ${it.release.take(45)}" }.toTypedArray()
-            androidx.appcompat.app.AlertDialog.Builder(this@PlayerActivity)
+            androidx.appcompat.app.AlertDialog.Builder(this@PlayerActivity, R.style.Theme_KZ_Dialog)
                 .setTitle("Choisir la langue")
                 .setItems(labels) { d, which -> applyOnlineSubtitle(results[which]); d.dismiss() }
                 .show()

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Curseur (focus telecommande) des lignes dans les fenetres Audio / Sous-titres.
+     Ligne ciblee = barre rouge pleine, pour bien voir ou on est. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent2" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+</selector>

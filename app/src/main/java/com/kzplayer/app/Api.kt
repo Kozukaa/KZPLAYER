@@ -560,6 +560,19 @@ object Api {
 
 
 
+    // Resume (synopsis) de la SERIE entiere pour Xtream : lu dans le bloc "info" de
+    // get_series_info. 100% additif : renvoie "" en cas d'absence ou d'erreur.
+    suspend fun xtreamSeriesPlot(pl: Playlist, seriesId: String): String = withContext(Dispatchers.IO) {
+        if (seriesId.isBlank()) return@withContext ""
+        val obj = try { httpObject(xtreamApi(pl, "get_series_info", "&series_id=${enc(seriesId)}")) } catch (e: Exception) { return@withContext "" }
+        val info = obj.optJSONObject("info") ?: return@withContext ""
+        val raw = info.optString("plot")
+            .ifBlank { info.optString("description") }
+            .ifBlank { info.optString("overview") }
+            .ifBlank { info.optString("synopsis") }
+        decodeXtreamText(raw).trim()
+    }
+
     private fun decodeXtreamText(raw: String): String {
         if (raw.isBlank()) return ""
         return try {

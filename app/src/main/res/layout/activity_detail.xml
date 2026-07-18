@@ -30,10 +30,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="← Retour"
-            android:textColor="@color/muted"
+            android:textColor="@color/text"
             android:textSize="14sp"
-            android:paddingTop="4dp"
-            android:paddingBottom="8dp"
+            android:background="@drawable/bg_focus_chip"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
             android:clickable="true"
             android:focusable="true" />
 

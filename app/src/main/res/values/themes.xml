@@ -12,4 +12,16 @@
         <item name="android:windowFullscreen">true</item>
         <item name="android:windowBackground">@color/black</item>
     </style>
+
+    <!-- Fenetres Audio / Sous-titres / Parametres du lecteur : curseur (focus) rouge
+         bien visible a la telecommande, fond sombre KZ. -->
+    <style name="Theme.KZ.Dialog" parent="Theme.Material3.DayNight.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_dialog</item>
+        <item name="listChoiceBackgroundIndicator">@drawable/bg_dialog_item</item>
+        <item name="android:listChoiceBackgroundIndicator">@drawable/bg_dialog_item</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorSurface">@color/card</item>
+        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColorSecondary">@color/muted</item>
+    </style>
 </resources>

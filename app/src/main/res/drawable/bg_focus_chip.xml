@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Curseur (focus telecommande) net pour les boutons texte type "Retour".
+     Normal : transparent. Cible : voile rouge + bordure rouge vive. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#33E50914" />
+            <corners android:radius="14dp" />
+            <stroke android:width="2dp" android:color="@color/danger" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent" />
+            <corners android:radius="14dp" />
+            <stroke android:width="2dp" android:color="@color/text" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="14dp" />
+            <stroke android:width="1dp" android:color="#33FFFFFF" />
+        </shape>
+    </item>
+</selector>

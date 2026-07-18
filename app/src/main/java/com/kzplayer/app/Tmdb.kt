@@ -122,6 +122,22 @@ object Tmdb {
         }
     }
 
+    // Resume (synopsis) FR de la SERIE entiere (pas par episode), par nom.
+    // 100% additif : renvoie "" si la cle TMDB est vide ou si la serie est introuvable.
+    private val overviewCache = ConcurrentHashMap<String, String>()
+    suspend fun seriesOverview(name: String): String = withContext(Dispatchers.IO) {
+        if (!enabled() || name.isBlank()) return@withContext ""
+        val key = normalize(name).lowercase()
+        if (key.isBlank()) return@withContext ""
+        overviewCache[key]?.let { return@withContext it }
+        val tvId = try { findTvId(name) } catch (e: Exception) { -1 }
+        if (tvId < 0) { overviewCache[key] = ""; return@withContext "" }
+        val o = get("$API/tv/$tvId?api_key=${Config.TMDB_API_KEY}&language=fr-FR")
+        val plot = o.optString("overview").let { if (it == "null") "" else it }.trim()
+        overviewCache[key] = plot
+        plot
+    }
+
     private fun seasonMeta(tvId: Int, season: Int): Map<Int, EpMeta> {
         val key = "$tvId:$season"
         return seasonCache.getOrPut(key) {

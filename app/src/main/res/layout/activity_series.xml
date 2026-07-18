@@ -18,10 +18,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="← Retour"
-            android:textColor="@color/muted"
+            android:textColor="@color/text"
             android:textSize="14sp"
-            android:paddingTop="4dp"
-            android:paddingBottom="12dp"
+            android:background="@drawable/bg_focus_chip"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:layout_marginBottom="8dp"
             android:clickable="true"
             android:focusable="true" />
 
@@ -81,6 +85,25 @@
             android:textColor="@color/muted"
             android:textSize="13sp"
             android:layout_marginTop="4dp" />
+
+        <!-- Resume de la serie entiere (pas par episode) -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="10dp"
+            android:scrollbars="none"
+            android:fadeScrollbars="false">
+
+            <TextView
+                android:id="@+id/seriesSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#CCFFFFFF"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp"
+                android:visibility="gone" />
+        </ScrollView>
 
     </LinearLayout>
 

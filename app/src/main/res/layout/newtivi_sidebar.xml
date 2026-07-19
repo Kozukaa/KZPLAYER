@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/ntSidebar"
-    android:layout_width="88dp"
+    android:layout_width="@dimen/nt_sidebar_w"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/bg2"
-    android:paddingStart="10dp"
-    android:paddingEnd="10dp"
+    android:paddingStart="@dimen/nt_sidebar_pad"
+    android:paddingEnd="@dimen/nt_sidebar_pad"
     android:clipToPadding="false"
     android:clipChildren="false">
 
     <ImageView
         android:id="@+id/logoIv"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
+        android:layout_width="@dimen/nt_logo_size"
+        android:layout_height="@dimen/nt_logo_size"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="18dp"
-        android:layout_marginBottom="18dp"
+        android:layout_marginTop="@dimen/nt_logo_margin_v"
+        android:layout_marginBottom="@dimen/nt_logo_margin_v"
         android:src="@drawable/kz_logo_icon"
         android:scaleType="fitCenter"
         android:background="@android:color/transparent"
@@ -27,8 +27,8 @@
         android:id="@+id/navTv"
         android:nextFocusDown="@id/navMovies"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginBottom="6dp"
+        android:layout_height="@dimen/nt_nav_item_h"
+        android:layout_marginBottom="@dimen/nt_nav_item_margin"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="13dp"
@@ -37,8 +37,8 @@
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navTvImg"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="@dimen/nt_nav_icon"
+            android:layout_height="@dimen/nt_nav_icon"
             android:src="@drawable/ic_live_tv"
             android:contentDescription="@null" />
         <TextView
@@ -58,8 +58,8 @@
         android:nextFocusUp="@id/navTv"
         android:nextFocusDown="@id/navSeries"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginBottom="6dp"
+        android:layout_height="@dimen/nt_nav_item_h"
+        android:layout_marginBottom="@dimen/nt_nav_item_margin"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="13dp"
@@ -68,8 +68,8 @@
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navMoviesImg"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="@dimen/nt_nav_icon"
+            android:layout_height="@dimen/nt_nav_icon"
             android:src="@drawable/ic_movie"
             android:contentDescription="@null" />
         <TextView
@@ -89,8 +89,8 @@
         android:nextFocusUp="@id/navMovies"
         android:nextFocusDown="@id/navGuide"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginBottom="6dp"
+        android:layout_height="@dimen/nt_nav_item_h"
+        android:layout_marginBottom="@dimen/nt_nav_item_margin"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="13dp"
@@ -99,8 +99,8 @@
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navSeriesImg"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="@dimen/nt_nav_icon"
+            android:layout_height="@dimen/nt_nav_icon"
             android:src="@drawable/ic_tv"
             android:contentDescription="@null" />
         <TextView
@@ -120,7 +120,7 @@
         android:nextFocusUp="@id/navSeries"
         android:nextFocusDown="@id/navSearch"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="@dimen/nt_nav_item_h"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="13dp"
@@ -129,8 +129,8 @@
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navGuideImg"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="@dimen/nt_nav_icon"
+            android:layout_height="@dimen/nt_nav_icon"
             android:src="@drawable/ic_epg"
             android:contentDescription="@null" />
         <TextView
@@ -155,8 +155,8 @@
         android:nextFocusUp="@id/navGuide"
         android:nextFocusDown="@id/navSettings"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginBottom="6dp"
+        android:layout_height="@dimen/nt_nav_item_h"
+        android:layout_marginBottom="@dimen/nt_nav_item_margin"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="14dp"
@@ -165,8 +165,8 @@
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navSearchImg"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
+            android:layout_width="@dimen/nt_nav_icon"
+            android:layout_height="@dimen/nt_nav_icon"
             android:src="@drawable/ic_search"
             android:contentDescription="@null" />
         <TextView
@@ -185,7 +185,7 @@
         android:id="@+id/navSettings"
         android:nextFocusUp="@id/navSearch"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="@dimen/nt_nav_item_h"
         android:layout_marginBottom="14dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
@@ -195,8 +195,8 @@
         android:background="@drawable/bg_nav_item">
         <ImageView
             android:id="@+id/navSettingsImg"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="@dimen/nt_nav_icon"
+            android:layout_height="@dimen/nt_nav_icon"
             android:src="@drawable/ic_settings"
             android:contentDescription="@null" />
         <TextView

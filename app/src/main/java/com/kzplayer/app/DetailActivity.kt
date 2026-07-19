@@ -56,9 +56,11 @@ class DetailActivity : AppCompatActivity() {
             } catch (e: Exception) { null }
             if (info != null) {
                 if (info.duration.isNotBlank()) meta.text = "Durée : ${info.duration}"
-                desc.text = if (info.plot.isBlank()) (if (item.description.isBlank()) "Pas de resume disponible pour ce titre." else item.description) else info.plot
+                val p = Api.cleanPlot(info.plot).ifBlank { Api.cleanPlot(item.description) }
+                desc.text = if (p.isBlank()) "Pas de resume disponible pour ce titre." else p
             } else {
-                desc.text = if (item.description.isBlank()) "Pas de resume disponible pour ce titre." else item.description
+                val p = Api.cleanPlot(item.description)
+                desc.text = if (p.isBlank()) "Pas de resume disponible pour ce titre." else p
             }
         }
 

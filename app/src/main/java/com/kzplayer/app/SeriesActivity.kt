@@ -52,7 +52,7 @@ class SeriesActivity : AppCompatActivity() {
         // Resume de la SERIE entiere (pas par episode). Xtream : bloc info. Stalker/M3U : TMDB (FR).
         // 100% additif : reste masque si aucun resume n'est trouve.
         val summaryTv = findViewById<TextView>(R.id.seriesSummary)
-        val existingSummary = if (series.description.isNotBlank()) series.description else series.summary
+        val existingSummary = Api.cleanPlot(if (series.description.isNotBlank()) series.description else series.summary)
         if (existingSummary.isNotBlank()) {
             summaryTv.visibility = View.VISIBLE
             summaryTv.text = existingSummary

@@ -6,7 +6,7 @@
     android:background="@color/bg">
     <include layout="@layout/newtivi_sidebar" />
     <LinearLayout
-        android:layout_width="170dp"
+        android:layout_width="@dimen/nt_cat_col_w"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:background="@color/bg2"
@@ -30,7 +30,7 @@
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="@dimen/nt_content_pad">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -41,7 +41,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text"
-                android:textSize="19sp"
+                android:textSize="@dimen/nt_screen_title"
                 android:textStyle="bold" />
             <View
                 android:layout_width="0dp"
@@ -49,7 +49,7 @@
                 android:layout_weight="1" />
             <EditText
                 android:id="@+id/searchEt"
-                android:layout_width="210dp"
+                android:layout_width="@dimen/nt_search_w"
                 android:layout_height="wrap_content"
                 android:hint="Rechercher..."
                 android:inputType="text"
@@ -61,7 +61,7 @@
         </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="148dp"
+            android:layout_height="@dimen/nt_cat_hero_h"
             android:orientation="horizontal"
             android:layout_marginTop="10dp">
             <LinearLayout
@@ -76,7 +76,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="@color/text"
-                    android:textSize="20sp"
+                    android:textSize="@dimen/nt_hero_title"
                     android:textStyle="bold"
                     android:maxLines="2"
                     android:ellipsize="end" />
@@ -100,7 +100,7 @@
             </LinearLayout>
             <ImageView
                 android:id="@+id/heroImg"
-                android:layout_width="99dp"
+                android:layout_width="@dimen/nt_cat_hero_img_w"
                 android:layout_height="match_parent"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"

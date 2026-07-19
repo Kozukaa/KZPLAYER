@@ -9,7 +9,7 @@
 
     <!-- Colonne des categories (facon TiviMate) -->
     <LinearLayout
-        android:layout_width="182dp"
+        android:layout_width="@dimen/nt_cat_col_w"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:background="@color/bg2"
@@ -38,7 +38,7 @@
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="@dimen/nt_content_pad">
 
         <!-- En-tete : titre Guide + fil d'ariane + date / heure / Options -->
         <LinearLayout
@@ -57,7 +57,7 @@
                     android:layout_height="wrap_content"
                     android:text="Guide"
                     android:textColor="@color/text"
-                    android:textSize="26sp"
+                    android:textSize="@dimen/nt_screen_title"
                     android:textStyle="bold" />
                 <TextView
                     android:id="@+id/sourceTv"
@@ -113,11 +113,11 @@
         <!-- Apercu programme en cours : vignette + infos + progression -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="132dp"
+            android:layout_height="@dimen/nt_hero_h"
             android:orientation="horizontal"
             android:layout_marginTop="14dp">
             <FrameLayout
-                android:layout_width="228dp"
+                android:layout_width="@dimen/nt_hero_preview_w"
                 android:layout_height="match_parent"
                 android:background="@drawable/bg_tile">
                 <ImageView
@@ -144,7 +144,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textColor="@color/text"
-                    android:textSize="20sp"
+                    android:textSize="@dimen/nt_hero_title"
                     android:textStyle="bold"
                     android:maxLines="2"
                     android:ellipsize="end" />
@@ -203,7 +203,7 @@
             android:paddingBottom="8dp">
             <TextView
                 android:id="@+id/sectionTv"
-                android:layout_width="196dp"
+                android:layout_width="@dimen/nt_channel_col_w"
                 android:layout_height="wrap_content"
                 android:text="Cha\u00eenes"
                 android:paddingStart="12dp"

@@ -11,7 +11,7 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="150dp">
+        android:layout_height="@dimen/nt_tile_poster_h">
 
         <ImageView
             android:id="@+id/posterIv"

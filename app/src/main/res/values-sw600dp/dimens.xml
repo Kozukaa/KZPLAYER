@@ -1,8 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Tablettes / TV / boitiers Android (grand ecran) -->
+    <!-- Tablettes / TV / boitiers Android (grand ecran) : valeurs d'origine -->
     <dimen name="home_cards_h">250dp</dimen>
     <dimen name="tile_poster_h">240dp</dimen>
     <dimen name="tile_logo_h">120dp</dimen>
     <dimen name="detail_poster_w">270dp</dimen>
+
+    <!-- NewTivi : barre laterale (valeurs TV d'origine) -->
+    <dimen name="nt_sidebar_w">88dp</dimen>
+    <dimen name="nt_sidebar_pad">10dp</dimen>
+    <dimen name="nt_logo_size">80dp</dimen>
+    <dimen name="nt_logo_margin_v">18dp</dimen>
+    <dimen name="nt_nav_item_h">48dp</dimen>
+    <dimen name="nt_nav_item_margin">6dp</dimen>
+    <dimen name="nt_nav_icon">24dp</dimen>
+
+    <!-- NewTivi : ecran Guide / TV en direct (valeurs TV d'origine) -->
+    <dimen name="nt_cat_col_w">182dp</dimen>
+    <dimen name="nt_content_pad">20dp</dimen>
+    <dimen name="nt_screen_title">26sp</dimen>
+    <dimen name="nt_hero_h">132dp</dimen>
+    <dimen name="nt_hero_preview_w">228dp</dimen>
+    <dimen name="nt_hero_title">20sp</dimen>
+    <dimen name="nt_channel_col_w">196dp</dimen>
+    <dimen name="nt_epg_row_h">60dp</dimen>
+    <dimen name="nt_epg_logo_w">46dp</dimen>
+    <dimen name="nt_epg_logo_h">40dp</dimen>
+
+    <!-- NewTivi : ecran catalogue (valeurs TV d'origine) -->
+    <dimen name="nt_search_w">210dp</dimen>
+    <dimen name="nt_cat_hero_h">148dp</dimen>
+    <dimen name="nt_cat_hero_img_w">99dp</dimen>
+    <dimen name="nt_tile_poster_h">150dp</dimen>
+
+    <!-- Theme Classique (valeurs TV d'origine) -->
+    <dimen name="cl_cat_col_w">230dp</dimen>
+    <dimen name="cl_content_pad">16dp</dimen>
+    <dimen name="cl_detail_pad">28dp</dimen>
+    <dimen name="cl_detail_poster_w">170dp</dimen>
+    <dimen name="cl_detail_poster_h">255dp</dimen>
+    <dimen name="cl_detail_title">26sp</dimen>
+    <dimen name="cl_series_col_w">200dp</dimen>
+    <dimen name="cl_series_poster_maxh">170dp</dimen>
 </resources>

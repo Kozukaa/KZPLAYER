@@ -7,7 +7,7 @@
 
     <!-- MENU CATEGORIES (gauche) -->
     <LinearLayout
-        android:layout_width="230dp"
+        android:layout_width="@dimen/cl_cat_col_w"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:background="@color/bg2"
@@ -45,7 +45,7 @@
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/cl_content_pad">
 
         <LinearLayout
             android:layout_width="match_parent"

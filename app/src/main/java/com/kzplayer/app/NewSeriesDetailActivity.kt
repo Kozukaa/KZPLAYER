@@ -44,7 +44,9 @@ class NewSeriesDetailActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.seriesTitle).text = series.name
         findViewById<TextView>(R.id.heroMeta).text = series.duration
         val heroDesc = findViewById<TextView>(R.id.heroDesc)
-        heroDesc.text = if (series.description.isNotBlank()) series.description else series.summary
+        val initialDesc = Api.cleanPlot(if (series.description.isNotBlank()) series.description else series.summary)
+        heroDesc.text = initialDesc
+        heroDesc.visibility = if (initialDesc.isBlank()) View.GONE else View.VISIBLE
         findViewById<ImageView>(R.id.heroImg).load(series.logo) { crossfade(true); placeholder(R.drawable.bg_tile); error(R.drawable.ic_movie) }
 
         // Resume de la SERIE entiere (pas par episode). Xtream : bloc info. Stalker/M3U : TMDB (FR).
@@ -55,7 +57,8 @@ class NewSeriesDetailActivity : AppCompatActivity() {
                     Api.xtreamSeriesPlot(pl, series.seriesId ?: "").ifBlank { Tmdb.seriesOverview(series.name) }
                 else Tmdb.seriesOverview(series.name)
             } catch (e: Exception) { "" }
-            if (plot.isNotBlank()) heroDesc.text = plot
+            val clean = Api.cleanPlot(plot)
+            if (clean.isNotBlank()) { heroDesc.text = clean; heroDesc.visibility = View.VISIBLE }
         }
         fun refreshFav() { favBtn.text = if (Favorites.isFavorite(this, series)) "\u2713 Ma liste" else "\uFF0B Ma liste" }
         refreshFav()

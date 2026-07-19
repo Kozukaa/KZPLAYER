@@ -573,14 +573,33 @@ object Api {
         decodeXtreamText(raw).trim()
     }
 
-    private fun decodeXtreamText(raw: String): String {
-        if (raw.isBlank()) return ""
-        return try {
-            val decoded = android.util.Base64.decode(raw, android.util.Base64.DEFAULT)
-            String(decoded, Charsets.UTF_8).trim().ifBlank { raw }
-        } catch (e: Exception) {
-            raw
+    /** Nettoie un resume : gere un eventuel Base64 et rejette le charabia. */
+    fun cleanPlot(raw: String): String = decodeXtreamText(raw)
+
+    private fun looksReadable(s: String): Boolean {
+        val t = s.trim()
+        if (t.length < 2) return false
+        var ok = 0
+        for (ch in t) {
+            if (ch.isLetterOrDigit() || ch.isWhitespace() || ch in ".,;:!?'\"()[]{}-\u2013\u2014\u2026%\u00b0&/+@#\u2019\u00ab\u00bb*") ok++
         }
+        return ok.toDouble() / t.length >= 0.85
+    }
+
+    private fun decodeXtreamText(raw: String): String {
+        val t = raw.trim()
+        if (t.isBlank()) return ""
+        // Deja lisible : ne surtout pas tenter de decoder (evite le charabia).
+        if (looksReadable(t)) return t
+        // Tenter Base64 seulement si le texte en a vraiment la forme.
+        if (t.length >= 8 && t.length % 4 == 0 && t.matches(Regex("^[A-Za-z0-9+/=]+\$"))) {
+            try {
+                val decoded = String(android.util.Base64.decode(t, android.util.Base64.DEFAULT), Charsets.UTF_8).trim()
+                if (looksReadable(decoded)) return decoded
+            } catch (e: Exception) {}
+        }
+        // Ni lisible, ni Base64 valide : on n'affiche pas de charabia.
+        return ""
     }
 
     suspend fun xtreamShortEpg(pl: Playlist, streamId: String, limit: Int = 6): List<EpgEntry> = withContext(Dispatchers.IO) {

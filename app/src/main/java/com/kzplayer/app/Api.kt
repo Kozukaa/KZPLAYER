@@ -887,7 +887,7 @@ object Api {
             // les champs speciaux ajoutes pour les portails avec SN obligatoire.
             val sn = stbSerial(pl)
             val did = stbDeviceId(pl)
-            val sig = sha256Hex((pl.mac + sn).uppercase()).uppercase()
+            val sig = sha256Hex((sn + pl.mac).uppercase()).uppercase()
             val ver = enc(currentStbProfile.ver)
             val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}")
             val q = "type=stb&action=get_profile&hd=1&ver=$ver" +
@@ -908,7 +908,7 @@ object Api {
         val sn = pl.stalkerSn.ifBlank { stbSerial(pl) }
         val did = pl.stalkerDeviceId.ifBlank { stbDeviceId(pl) }
         val did2 = pl.stalkerDeviceId2.ifBlank { did }
-        val sig = pl.stalkerSignature.ifBlank { sha256Hex((pl.mac + sn).uppercase()).uppercase() }
+        val sig = pl.stalkerSignature.ifBlank { sha256Hex((sn + pl.mac).uppercase()).uppercase() }
         val imageVersion = pl.stalkerImageVersion.ifBlank { currentStbProfile.imageVersion }
         val verRaw = pl.stalkerVer.ifBlank {
             currentStbProfile.ver

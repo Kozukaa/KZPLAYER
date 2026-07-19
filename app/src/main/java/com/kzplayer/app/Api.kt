@@ -736,6 +736,9 @@ object Api {
 
     private var stalkerToken: String? = null
     private var stalkerBase: String? = null
+    // Profil "complet" facon SFVipPlayer : active uniquement en dernier recours pour
+    // les portails proteges (ex: 900900.eu). Les serveurs normaux restent en profil V112.
+    private var stalkerFullProfile = false
     // Dernier diagnostic de resolution de flux (affiche dans le lecteur en cas d'echec).
     var lastStreamLog: String = ""
     var lastStalkerLog: String = ""
@@ -829,9 +832,9 @@ object Api {
                 stalkerToken = tok
                 stalkerBase = portal
                 stalkerGetProfile(pl, portal)
-                // get_main_info systematique : beaucoup de portails Ministra ne renvoient
-                // les listes qu'apres cet appel (sinon listes vides -> chargement en boucle).
-                stalkerAccountInfo(pl, portal)
+                // get_main_info seulement pour les profils personnalises ou le mode profil
+                // complet (fallback serveurs proteges). Serveurs normaux = comportement V112.
+                if (hasCustomStalkerProfile(pl) || stalkerFullProfile) stalkerAccountInfo(pl, portal)
                 lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${currentStbProfile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}"
                 return true
             }
@@ -894,9 +897,21 @@ object Api {
             val sn = stbSerial(pl)
             val did = stbDeviceId(pl)
             val sig = sha256Hex((sn + pl.mac).uppercase()).uppercase()
-            // Profil MAG COMPLET (identique a SFVipPlayer) : les portails proteges exigent
-            // aussi hw_version_2 / timestamp / api_signature / prehash + un metrics avec uid
-            // vide. Sans ces champs -> get_profile refuse -> l'app tourne en boucle.
+            if (!stalkerFullProfile) {
+                // Profil LEGER = comportement V112 exact (serveurs normaux). C'est ce qui
+                // garantit que listes et EPG marchent comme avant.
+                val ver = enc(currentStbProfile.ver)
+                val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}")
+                val q = "type=stb&action=get_profile&hd=1&ver=$ver" +
+                    "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
+                    "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
+                    "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics" +
+                    "&JsHttpRequest=1-xml"
+                stbCall(pl, portal, q)
+                return
+            }
+            // Profil COMPLET (identique a SFVipPlayer) : uniquement en dernier recours quand
+            // le profil leger n'a renvoye aucune liste (portail protege type 900900.eu).
             val hw2 = sha1Hex(pl.mac.lowercase())
             val ts = (System.currentTimeMillis() / 1000).toString()
             val ver = enc(currentStbProfile.ver)
@@ -946,6 +961,8 @@ object Api {
     private fun ensureStalker(pl: Playlist): String? {
         val base = stalkerBase
         if (stalkerToken.isNullOrBlank() || base == null || !base.startsWith(pl.serverUrl)) {
+            // Nouveau serveur -> on repart toujours en profil leger (comportement V112).
+            if (base != null && !base.startsWith(pl.serverUrl)) stalkerFullProfile = false
             stalkerToken = null; stalkerBase = null
             if (!stalkerHandshake(pl)) return null
         }
@@ -953,27 +970,54 @@ object Api {
     }
 
     suspend fun stalkerCategories(pl: Playlist, kind: String): List<Category> = withContext(Dispatchers.IO) {
-        val portal = ensureStalker(pl) ?: return@withContext listOf(Category("__all__", "Tout"))
+        var portal = ensureStalker(pl) ?: return@withContext listOf(Category("__all__", "Tout"))
         val type = when (kind) { "movie" -> "vod"; "series" -> "series"; else -> "itv" }
         val action = if (type == "itv") "get_genres" else "get_categories"
-        var txt = stbCall(pl, portal, "type=$type&action=$action&JsHttpRequest=1-xml")
-        if (!txt.contains("\"js\"")) {
-            // Certains portails repondent mieux sans JsHttpRequest sur les listes.
-            txt = stbCall(pl, portal, "type=$type&action=$action")
-        }
-        val out = ArrayList<Category>()
-        out.add(Category("__all__", "Tout"))
-        try {
-            val js = JSONObject(txt).optJSONArray("js") ?: JSONArray()
-            for (i in 0 until js.length()) {
-                val o = js.optJSONObject(i) ?: continue
-                val id = o.optString("id")
-                if (id.isBlank() || id == "*" || id == "0") continue
-                out.add(Category(id, o.optString("title", o.optString("name"))))
+
+        fun fetchCats(p: String): Pair<ArrayList<Category>, String> {
+            var txt = stbCall(pl, p, "type=$type&action=$action&JsHttpRequest=1-xml")
+            if (!txt.contains("\"js\"")) {
+                // Certains portails repondent mieux sans JsHttpRequest sur les listes.
+                txt = stbCall(pl, p, "type=$type&action=$action")
             }
-        } catch (e: Exception) {
-            lastStalkerLog = "Erreur parsing categories\nPortail: $portal\nAction: $type/$action\nReponse: ${txt.take(500)}"
+            val res = ArrayList<Category>()
+            res.add(Category("__all__", "Tout"))
+            try {
+                val js = JSONObject(txt).optJSONArray("js") ?: JSONArray()
+                for (i in 0 until js.length()) {
+                    val o = js.optJSONObject(i) ?: continue
+                    val id = o.optString("id")
+                    if (id.isBlank() || id == "*" || id == "0") continue
+                    res.add(Category(id, o.optString("title", o.optString("name"))))
+                }
+            } catch (e: Exception) {
+                lastStalkerLog = "Erreur parsing categories\nPortail: $p\nAction: $type/$action\nReponse: ${txt.take(500)}"
+            }
+            return res to txt
         }
+
+        var out: ArrayList<Category>
+        var txt: String
+        val first = fetchCats(portal)
+        out = first.first
+        txt = first.second
+
+        // Dernier recours (portails proteges type 900900.eu) : si le profil leger ne
+        // renvoie aucune categorie, on bascule en profil complet facon SFVipPlayer puis
+        // on refait handshake + une seule tentative. Les serveurs normaux ne passent
+        // jamais ici -> EPG et listes strictement comme avant.
+        if (out.size <= 1 && !hasCustomStalkerProfile(pl) && !stalkerFullProfile) {
+            stalkerFullProfile = true
+            stalkerToken = null; stalkerBase = null
+            val portal2 = ensureStalker(pl)
+            if (portal2 != null) {
+                portal = portal2
+                val retry = fetchCats(portal2)
+                out = retry.first
+                txt = retry.second
+            }
+        }
+
         if (out.size <= 1) {
             lastStalkerLog = "Aucune categorie Stalker\nPortail: $portal\nAction: $type/$action\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nReponse: ${txt.take(700)}"
         } else {

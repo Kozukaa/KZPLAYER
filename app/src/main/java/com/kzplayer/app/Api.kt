@@ -748,6 +748,10 @@ object Api {
         java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray())
             .joinToString("") { "%02x".format(it) }
 
+    private fun sha1Hex(s: String): String =
+        java.security.MessageDigest.getInstance("SHA-1").digest(s.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+
     // Identite "boitier MAG" derivee du MAC (stable). Beaucoup de portails refusent
     // l'acces au flux (et coupent -> HTTP 444) si sn / device_id / signature sont absents.
     private fun stbSerial(pl: Playlist): String = md5Hex(pl.mac).uppercase().substring(0, 13)
@@ -890,12 +894,18 @@ object Api {
             val sn = stbSerial(pl)
             val did = stbDeviceId(pl)
             val sig = sha256Hex((sn + pl.mac).uppercase()).uppercase()
+            // Profil MAG COMPLET (identique a SFVipPlayer) : les portails proteges exigent
+            // aussi hw_version_2 / timestamp / api_signature / prehash + un metrics avec uid
+            // vide. Sans ces champs -> get_profile refuse -> l'app tourne en boucle.
+            val hw2 = sha1Hex(pl.mac.lowercase())
+            val ts = (System.currentTimeMillis() / 1000).toString()
             val ver = enc(currentStbProfile.ver)
-            val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}")
+            val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"type\":\"STB\",\"model\":\"${currentStbProfile.model}\",\"uid\":\"\",\"random\":\"\"}")
             val q = "type=stb&action=get_profile&hd=1&ver=$ver" +
                 "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
                 "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
                 "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics" +
+                "&hw_version_2=$hw2&timestamp=$ts&api_signature=262&prehash=" +
                 "&JsHttpRequest=1-xml"
             stbCall(pl, portal, q)
             return

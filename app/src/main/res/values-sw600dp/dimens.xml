@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Comme V116 sur box/telephone (<600dp) : compact -->
-    <dimen name="home_cards_h">195dp</dimen>
-    <dimen name="tile_poster_h">170dp</dimen>
-    <dimen name="tile_logo_h">92dp</dimen>
-    <dimen name="detail_poster_w">190dp</dimen>
+    <!-- Grand ecran >=600dp (tablettes/TV) : comme V116 sw600dp -->
+    <dimen name="home_cards_h">250dp</dimen>
+    <dimen name="tile_poster_h">240dp</dimen>
+    <dimen name="tile_logo_h">120dp</dimen>
+    <dimen name="detail_poster_w">270dp</dimen>
 
     <!-- NewTivi : barre laterale (valeurs TV d'origine) -->
     <dimen name="nt_sidebar_w">88dp</dimen>

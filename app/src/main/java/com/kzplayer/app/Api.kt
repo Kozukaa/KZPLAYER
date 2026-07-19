@@ -825,7 +825,9 @@ object Api {
                 stalkerToken = tok
                 stalkerBase = portal
                 stalkerGetProfile(pl, portal)
-                if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, portal)
+                // get_main_info systematique : beaucoup de portails Ministra ne renvoient
+                // les listes qu'apres cet appel (sinon listes vides -> chargement en boucle).
+                stalkerAccountInfo(pl, portal)
                 lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${currentStbProfile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}"
                 return true
             }

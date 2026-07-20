@@ -2,21 +2,34 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="?attr/kzBg2" />
+            <gradient
+                android:startColor="?attr/kzBg2"
+                android:endColor="?attr/kzBg"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="8dp" />
             <stroke android:width="3dp" android:color="?attr/kzAccent" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="?attr/kzBg2" />
+            <gradient
+                android:startColor="?attr/kzBg2"
+                android:endColor="?attr/kzBg"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="8dp" />
             <stroke android:width="3dp" android:color="?attr/kzAccent" />
         </shape>
     </item>
+    <!-- Repos : degrade sombre tres subtil + fin lisere -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#0A0A0C" />
+            <gradient
+                android:startColor="?attr/kzBg2"
+                android:endColor="?attr/kzBg"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="8dp" />
             <stroke android:width="1dp" android:color="?attr/kzStroke" />
         </shape>

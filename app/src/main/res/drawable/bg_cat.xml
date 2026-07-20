@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Chips de categories : relief via degrade + transparence + lisere. -->
+<!-- Chips de categories : sobre. Repos = transparent (aucune bordure).
+     Seules la categorie active et celle ciblee ressortent. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Categorie ciblee a la telecommande : voile accent vitre + bordure accent -->
+    <!-- Categorie ciblee a la telecommande : voile accent + fine bordure accent -->
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <gradient
-                android:startColor="?attr/kzAccentSoft"
-                android:endColor="#00FFFFFF"
-                android:angle="270"
-                android:type="linear" />
-            <corners android:radius="12dp" />
+            <solid android:color="?attr/kzAccentSoft" />
+            <corners android:radius="10dp" />
             <stroke android:width="2dp" android:color="?attr/kzAccent" />
         </shape>
     </item>
-    <!-- Categorie active : degrade accent -> accent fonce + fin lisere clair -->
+    <!-- Categorie active : degrade accent discret + lisere clair tres fin -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
             <gradient
@@ -21,31 +18,21 @@
                 android:endColor="?attr/kzAccent2"
                 android:angle="270"
                 android:type="linear" />
-            <corners android:radius="12dp" />
-            <stroke android:width="1dp" android:color="#40FFFFFF" />
+            <corners android:radius="10dp" />
+            <stroke android:width="1dp" android:color="#26FFFFFF" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <gradient
-                android:startColor="?attr/kzAccent2"
-                android:endColor="?attr/kzAccent"
-                android:angle="270"
-                android:type="linear" />
-            <corners android:radius="12dp" />
-            <stroke android:width="1dp" android:color="#40FFFFFF" />
+            <solid android:color="?attr/kzAccent2" />
+            <corners android:radius="10dp" />
         </shape>
     </item>
-    <!-- Etat normal : verre subtil (transparent) + lisere discret -->
+    <!-- Repos : rien, totalement sobre -->
     <item>
         <shape android:shape="rectangle">
-            <gradient
-                android:startColor="#1AFFFFFF"
-                android:endColor="#05FFFFFF"
-                android:angle="270"
-                android:type="linear" />
-            <corners android:radius="12dp" />
-            <stroke android:width="1dp" android:color="?attr/kzStroke" />
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="10dp" />
         </shape>
     </item>
 </selector>

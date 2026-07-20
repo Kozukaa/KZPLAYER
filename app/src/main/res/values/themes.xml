@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Theme de base = palette par defaut (Rouge et Noir). Les attributs kz* sont
-         piloted par la palette choisie ; ils valent ici les couleurs historiques,
-         donc tout endroit non migre reste correct. -->
     <style name="Theme.KZ" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="kzAccent">@color/accent</item>
         <item name="kzAccent2">@color/accent2</item>
+        <item name="kzAccentSoft">#33E50914</item>
         <item name="kzBg">@color/bg</item>
         <item name="kzBg2">@color/bg2</item>
         <item name="kzCard">@color/card</item>
@@ -22,12 +20,10 @@
         <item name="android:windowBackground">@color/black</item>
     </style>
 
-    <!-- Fenetres Audio / Sous-titres / Parametres du lecteur : gardent la palette par
-         defaut pour ne pas toucher au lecteur. Les attributs kz* sont definis ici
-         pour que les drawables ?attr/... se resolvent sans planter. -->
     <style name="Theme.KZ.Dialog" parent="Theme.Material3.DayNight.Dialog.Alert">
         <item name="kzAccent">@color/accent</item>
         <item name="kzAccent2">@color/accent2</item>
+        <item name="kzAccentSoft">#33E50914</item>
         <item name="kzBg">@color/bg</item>
         <item name="kzBg2">@color/bg2</item>
         <item name="kzCard">@color/card</item>
@@ -42,11 +38,10 @@
     </style>
 
     <!-- ============ PALETTES PREDEFINIES ============ -->
-    <!-- Chaque palette ne change que l'accent (+ variante foncee) et la famille de fond. -->
-
     <style name="Theme.KZ.BleuNoir" parent="Theme.KZ">
         <item name="kzAccent">#2E7DFF</item>
         <item name="kzAccent2">#1B5FD9</item>
+        <item name="kzAccentSoft">#332E7DFF</item>
         <item name="kzBg">#0A0A0C</item>
         <item name="kzBg2">#121218</item>
         <item name="kzCard">#17171E</item>
@@ -56,6 +51,7 @@
     <style name="Theme.KZ.BleuGris" parent="Theme.KZ">
         <item name="kzAccent">#3B8CFF</item>
         <item name="kzAccent2">#2166CC</item>
+        <item name="kzAccentSoft">#333B8CFF</item>
         <item name="kzBg">#15171C</item>
         <item name="kzBg2">#1E222B</item>
         <item name="kzCard">#262B36</item>
@@ -65,6 +61,7 @@
     <style name="Theme.KZ.VertNoir" parent="Theme.KZ">
         <item name="kzAccent">#22C55E</item>
         <item name="kzAccent2">#15A34A</item>
+        <item name="kzAccentSoft">#3322C55E</item>
         <item name="kzBg">#0A0A0C</item>
         <item name="kzBg2">#121218</item>
         <item name="kzCard">#17171E</item>
@@ -74,6 +71,7 @@
     <style name="Theme.KZ.OrangeNoir" parent="Theme.KZ">
         <item name="kzAccent">#FF7A18</item>
         <item name="kzAccent2">#E85D04</item>
+        <item name="kzAccentSoft">#33FF7A18</item>
         <item name="kzBg">#0A0A0C</item>
         <item name="kzBg2">#121218</item>
         <item name="kzCard">#17171E</item>
@@ -83,6 +81,7 @@
     <style name="Theme.KZ.VioletNoir" parent="Theme.KZ">
         <item name="kzAccent">#8B5CF6</item>
         <item name="kzAccent2">#6D28D9</item>
+        <item name="kzAccentSoft">#338B5CF6</item>
         <item name="kzBg">#0A0A0C</item>
         <item name="kzBg2">#121218</item>
         <item name="kzCard">#17171E</item>
@@ -92,6 +91,7 @@
     <style name="Theme.KZ.CyanNoir" parent="Theme.KZ">
         <item name="kzAccent">#06B6D4</item>
         <item name="kzAccent2">#0E7490</item>
+        <item name="kzAccentSoft">#3306B6D4</item>
         <item name="kzBg">#0A0A0C</item>
         <item name="kzBg2">#121218</item>
         <item name="kzCard">#17171E</item>
@@ -101,6 +101,7 @@
     <style name="Theme.KZ.RoseNoir" parent="Theme.KZ">
         <item name="kzAccent">#EC4899</item>
         <item name="kzAccent2">#BE185D</item>
+        <item name="kzAccentSoft">#33EC4899</item>
         <item name="kzBg">#0A0A0C</item>
         <item name="kzBg2">#121218</item>
         <item name="kzCard">#17171E</item>

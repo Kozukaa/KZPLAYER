@@ -3,6 +3,7 @@
     <!-- Couleurs pilotees par le theme choisi (change a chaud via les palettes). -->
     <attr name="kzAccent" format="color" />
     <attr name="kzAccent2" format="color" />
+    <attr name="kzAccentSoft" format="color" />
     <attr name="kzBg" format="color" />
     <attr name="kzBg2" format="color" />
     <attr name="kzCard" format="color" />

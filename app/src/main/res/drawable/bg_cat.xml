@@ -3,7 +3,7 @@
     <!-- Categorie ciblee a la telecommande -->
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="#22E50914" />
+            <solid android:color="?attr/kzAccentSoft" />
             <corners android:radius="12dp" />
             <stroke android:width="2dp" android:color="?attr/kzAccent" />
         </shape>

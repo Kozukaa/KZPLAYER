@@ -1,35 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Degrade pilote par le theme : accent -> accent2 -> fond neutre. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="#FF6B62"
-                android:centerColor="#E01622"
-                android:endColor="#350307"
+                android:startColor="?attr/kzAccent"
+                android:centerColor="?attr/kzAccent2"
+                android:endColor="@color/grad_dark"
                 android:angle="315"
                 android:type="linear" />
             <corners android:radius="22dp" />
-            <stroke android:width="2dp" android:color="#FF8C84" />
+            <stroke android:width="3dp" android:color="#99FFFFFF" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="#FF6B62"
-                android:centerColor="#E01622"
-                android:endColor="#350307"
+                android:startColor="?attr/kzAccent"
+                android:centerColor="?attr/kzAccent2"
+                android:endColor="@color/grad_dark"
                 android:angle="315"
                 android:type="linear" />
             <corners android:radius="22dp" />
-            <stroke android:width="2dp" android:color="#FF8C84" />
+            <stroke android:width="3dp" android:color="#99FFFFFF" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
             <gradient
-                android:startColor="#FF3B30"
-                android:centerColor="#C20812"
-                android:endColor="#280205"
+                android:startColor="?attr/kzAccent"
+                android:centerColor="?attr/kzAccent2"
+                android:endColor="@color/grad_dark"
                 android:angle="315"
                 android:type="linear" />
             <corners android:radius="22dp" />

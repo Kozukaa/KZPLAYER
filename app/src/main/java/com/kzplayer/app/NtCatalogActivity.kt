@@ -208,7 +208,7 @@ abstract class NtCatalogActivity : NtBase() {
             holder.v.setOnFocusChangeListener { _, hasFocus ->
                 holder.v.animate().scaleX(if (hasFocus) 1.05f else 1f).scaleY(if (hasFocus) 1.05f else 1f).setDuration(90).start()
                 holder.v.translationZ = if (hasFocus) 16f else 0f
-                holder.name.setTextColor(ContextCompat.getColor(holder.name.context, if (hasFocus) R.color.accent else R.color.text))
+                holder.name.setTextColor(if (hasFocus) KzColors.accent(holder.name.context) else ContextCompat.getColor(holder.name.context, R.color.text))
                 if (hasFocus) updateHero(item)
             }
             holder.v.setOnClickListener { onClick(item) }

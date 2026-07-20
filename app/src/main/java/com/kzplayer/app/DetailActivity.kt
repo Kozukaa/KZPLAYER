@@ -12,7 +12,7 @@ import coil.load
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
-class DetailActivity : AppCompatActivity() {
+class DetailActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_detail)

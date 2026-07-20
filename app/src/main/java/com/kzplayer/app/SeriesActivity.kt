@@ -16,7 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
-class SeriesActivity : AppCompatActivity() {
+class SeriesActivity : BaseActivity() {
     companion object { private val rowsCache = HashMap<String, List<Item>>() }
     private lateinit var rv: RecyclerView
     private lateinit var progress: ProgressBar

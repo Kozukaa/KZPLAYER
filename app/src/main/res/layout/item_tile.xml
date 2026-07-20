@@ -18,7 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:background="@color/bg2"
+            android:background="?attr/kzBg2"
             android:contentDescription="@null" />
 
         <TextView
@@ -48,7 +48,7 @@
                 android:id="@+id/progressFill"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:background="@color/accent" />
+                android:background="?attr/kzAccent" />
         </FrameLayout>
     </FrameLayout>
 
@@ -69,7 +69,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_fav_chip"
-        android:textColor="@color/accent"
+        android:textColor="?attr/kzAccent"
         android:textSize="9sp"
         android:textStyle="bold"
         android:maxLines="1"

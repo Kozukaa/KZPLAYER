@@ -15,7 +15,7 @@
         android:layout_width="118dp"
         android:layout_height="66dp"
         android:scaleType="centerCrop"
-        android:background="@color/bg2"
+        android:background="?attr/kzBg2"
         android:src="@drawable/ic_movie"
         android:contentDescription="@null" />
 
@@ -23,7 +23,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="▶"
-        android:textColor="@color/accent"
+        android:textColor="?attr/kzAccent"
         android:textSize="16sp"
         android:layout_marginStart="12dp"
         android:layout_marginEnd="12dp" />

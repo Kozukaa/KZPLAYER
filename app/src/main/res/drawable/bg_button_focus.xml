@@ -3,7 +3,7 @@
     <!-- Focus subtil : rouge leger + fine bordure, pas de gros cadre agressif -->
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/accent" />
+            <solid android:color="?attr/kzAccent" />
             <corners android:radius="22dp" />
             <stroke android:width="2dp" android:color="@color/danger" />
         </shape>
@@ -17,9 +17,9 @@
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/accent2" />
+            <solid android:color="?attr/kzAccent2" />
             <corners android:radius="22dp" />
-            <stroke android:width="1dp" android:color="@color/accent" />
+            <stroke android:width="1dp" android:color="?attr/kzAccent" />
         </shape>
     </item>
 </selector>

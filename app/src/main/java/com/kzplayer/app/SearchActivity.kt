@@ -7,7 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 // integree directement dans Films / Series (BrowseActivity). On conserve ici un
 // stub inoffensif pour eviter toute erreur de compilation si d'anciennes references
 // subsistent dans le depot. Il ne fait rien et se ferme immediatement.
-class SearchActivity : AppCompatActivity() {
+class SearchActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         finish()

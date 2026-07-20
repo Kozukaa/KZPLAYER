@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Couleurs pilotees par le theme choisi (change a chaud via les palettes). -->
+    <attr name="kzAccent" format="color" />
+    <attr name="kzAccent2" format="color" />
+    <attr name="kzBg" format="color" />
+    <attr name="kzBg2" format="color" />
+    <attr name="kzCard" format="color" />
+    <attr name="kzStroke" format="color" />
+</resources>

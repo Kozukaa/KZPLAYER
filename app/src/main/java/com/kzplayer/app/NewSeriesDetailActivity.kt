@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 // Fiche serie NewTivi (style photo 3) : grand visuel, boutons, onglets de saisons,
 // episodes en cartes horizontales. Reutilise la logique d'expansion des episodes existante.
-class NewSeriesDetailActivity : AppCompatActivity() {
+class NewSeriesDetailActivity : BaseActivity() {
     private lateinit var episodeRv: RecyclerView
     private lateinit var seasonTabs: LinearLayout
     private lateinit var progress: ProgressBar

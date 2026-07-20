@@ -3,7 +3,7 @@
     android:id="@+id/headerTv"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:textColor="@color/accent"
+    android:textColor="?attr/kzAccent"
     android:textSize="17sp"
     android:textStyle="bold"
     android:paddingTop="16dp"

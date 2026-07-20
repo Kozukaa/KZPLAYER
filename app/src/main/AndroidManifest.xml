@@ -86,6 +86,12 @@
             android:exported="false" />
 
         <activity
+            android:name=".ColorThemeActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
             android:name=".PlaylistSettingsActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="sensorLandscape"

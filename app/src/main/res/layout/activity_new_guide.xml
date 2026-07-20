@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
-    android:background="@color/bg">
+    android:background="?attr/kzBg">
 
     <include layout="@layout/newtivi_sidebar" />
 
@@ -12,7 +12,7 @@
         android:layout_width="@dimen/nt_cat_col_w"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="@color/bg2"
+        android:background="?attr/kzBg2"
         android:paddingStart="14dp"
         android:paddingEnd="10dp"
         android:paddingTop="20dp">
@@ -152,7 +152,7 @@
                     android:id="@+id/heroTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/accent"
+                    android:textColor="?attr/kzAccent"
                     android:textStyle="bold"
                     android:textSize="12sp"
                     android:layout_marginTop="6dp" />

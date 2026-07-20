@@ -14,7 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
 // Sous-menu Parametres : choix de la liste de lecture (serveur actif). Marche sur les 2 themes.
-class PlaylistSettingsActivity : AppCompatActivity() {
+class PlaylistSettingsActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_playlist_settings)

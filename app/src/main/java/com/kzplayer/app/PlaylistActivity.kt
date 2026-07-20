@@ -7,7 +7,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 
-class PlaylistActivity : AppCompatActivity() {
+class PlaylistActivity : BaseActivity() {
     private fun deviceCode(): String = DeviceIdentity.licenseCode(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -4,7 +4,7 @@
     android:layout_width="@dimen/nt_sidebar_w"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/bg2"
+    android:background="?attr/kzBg2"
     android:paddingStart="@dimen/nt_sidebar_pad"
     android:paddingEnd="@dimen/nt_sidebar_pad"
     android:clipToPadding="false"

@@ -7,7 +7,7 @@ import kotlinx.coroutines.launch
 
 // Base commune aux ecrans NewTivi : garantit que la Session (licence + serveurs) est prete.
 // Si l'appli a ete relancee (process tue), on recharge licence + serveurs avant d'afficher.
-abstract class NtBase : AppCompatActivity() {
+abstract class NtBase : BaseActivity() {
     protected fun ensureSession(onReady: () -> Unit) {
         if (Session.current != null) { onReady(); return }
         val existing = Session.playlists.firstOrNull()

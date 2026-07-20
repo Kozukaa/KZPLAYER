@@ -16,7 +16,7 @@
         android:layout_width="48dp"
         android:layout_height="38dp"
         android:scaleType="fitCenter"
-        android:background="@color/bg2"
+        android:background="?attr/kzBg2"
         android:contentDescription="@null" />
 
     <LinearLayout

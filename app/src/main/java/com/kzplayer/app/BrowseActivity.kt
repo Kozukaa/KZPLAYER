@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.Normalizer
 
-class BrowseActivity : AppCompatActivity() {
+class BrowseActivity : BaseActivity() {
     private lateinit var kind: String
     private var categories: List<Category> = emptyList()
     private var items: List<Item> = emptyList()
@@ -300,7 +300,7 @@ class BrowseActivity : AppCompatActivity() {
 
         val dens = resources.displayMetrics.density
         fun px(v: Int) = (v * dens).toInt()
-        val accent = ContextCompat.getColor(this, R.color.accent)
+        val accent = KzColors.accent(this)
         val textCol = ContextCompat.getColor(this, R.color.text)
         val mutedCol = ContextCompat.getColor(this, R.color.muted)
 
@@ -821,7 +821,7 @@ class BrowseActivity : AppCompatActivity() {
                         .setDuration(80)
                         .start()
                     holder.v.translationZ = if (hasFocus) 12f else 0f
-                    holder.name.setTextColor(ContextCompat.getColor(holder.name.context, if (hasFocus) R.color.accent else R.color.text))
+                    holder.name.setTextColor(if (hasFocus) KzColors.accent(holder.name.context) else ContextCompat.getColor(holder.name.context, R.color.text))
                 }
                 holder.v.setOnClickListener {
                     lastItemFocusPos = holder.bindingAdapterPosition.coerceAtLeast(0)
@@ -900,7 +900,7 @@ class BrowseActivity : AppCompatActivity() {
                     .start()
                 holder.v.translationZ = if (hasFocus) 16f else 0f
                 holder.name.setTextColor(
-                    ContextCompat.getColor(holder.name.context, if (hasFocus) R.color.accent else R.color.text)
+                    if (hasFocus) KzColors.accent(holder.name.context) else ContextCompat.getColor(holder.name.context, R.color.text)
                 )
             }
             holder.v.setOnClickListener {

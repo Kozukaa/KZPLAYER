@@ -7,7 +7,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
 // Sous-menu Parametres : choix du theme (Classique / NewTivi).
-class ThemeActivity : AppCompatActivity() {
+class ThemeActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_theme)

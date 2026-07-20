@@ -25,7 +25,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import kotlinx.coroutines.launch
 
-class LivePreviewActivity : AppCompatActivity() {
+class LivePreviewActivity : BaseActivity() {
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
     private lateinit var epgRv: RecyclerView
@@ -292,7 +292,7 @@ class LivePreviewActivity : AppCompatActivity() {
             val ch = channels[position]
             val playing = (ch.streamId ?: "") == streamId && streamId.isNotBlank()
             holder.name.text = (if (playing) "▶ " else "") + ch.name
-            holder.name.setTextColor(ContextCompat.getColor(this@LivePreviewActivity, if (playing) R.color.accent else R.color.text))
+            holder.name.setTextColor(if (playing) KzColors.accent(this@LivePreviewActivity) else ContextCompat.getColor(this@LivePreviewActivity, R.color.text))
             holder.logo.load(ch.logo) {
                 crossfade(false)
                 placeholder(R.drawable.ic_live_tv)

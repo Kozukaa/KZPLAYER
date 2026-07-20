@@ -17,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
-            android:background="@color/bg2"
+            android:background="?attr/kzBg2"
             android:src="@drawable/ic_movie"
             android:contentDescription="@null" />
         <View
@@ -39,7 +39,7 @@
         android:id="@+id/epCode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/accent"
+        android:textColor="?attr/kzAccent"
         android:textStyle="bold"
         android:textSize="10sp"
         android:letterSpacing="0.05"

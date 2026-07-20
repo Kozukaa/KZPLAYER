@@ -107,4 +107,64 @@
         <item name="kzCard">#17171E</item>
         <item name="kzStroke">#262630</item>
     </style>
+    <!-- ===== Variantes GRIS FONCE (meme accent, fond gris) ===== -->
+    <style name="Theme.KZ.RougeGris" parent="Theme.KZ">
+        <item name="kzAccent">#E50914</item>
+        <item name="kzAccent2">#B0060F</item>
+        <item name="kzAccentSoft">#33E50914</item>
+        <item name="kzBg">#15171C</item>
+        <item name="kzBg2">#1E222B</item>
+        <item name="kzCard">#262B36</item>
+        <item name="kzStroke">#363C4A</item>
+    </style>
+
+    <style name="Theme.KZ.VertGris" parent="Theme.KZ">
+        <item name="kzAccent">#22C55E</item>
+        <item name="kzAccent2">#15A34A</item>
+        <item name="kzAccentSoft">#3322C55E</item>
+        <item name="kzBg">#15171C</item>
+        <item name="kzBg2">#1E222B</item>
+        <item name="kzCard">#262B36</item>
+        <item name="kzStroke">#363C4A</item>
+    </style>
+
+    <style name="Theme.KZ.OrangeGris" parent="Theme.KZ">
+        <item name="kzAccent">#FF7A18</item>
+        <item name="kzAccent2">#E85D04</item>
+        <item name="kzAccentSoft">#33FF7A18</item>
+        <item name="kzBg">#15171C</item>
+        <item name="kzBg2">#1E222B</item>
+        <item name="kzCard">#262B36</item>
+        <item name="kzStroke">#363C4A</item>
+    </style>
+
+    <style name="Theme.KZ.VioletGris" parent="Theme.KZ">
+        <item name="kzAccent">#8B5CF6</item>
+        <item name="kzAccent2">#6D28D9</item>
+        <item name="kzAccentSoft">#338B5CF6</item>
+        <item name="kzBg">#15171C</item>
+        <item name="kzBg2">#1E222B</item>
+        <item name="kzCard">#262B36</item>
+        <item name="kzStroke">#363C4A</item>
+    </style>
+
+    <style name="Theme.KZ.CyanGris" parent="Theme.KZ">
+        <item name="kzAccent">#06B6D4</item>
+        <item name="kzAccent2">#0E7490</item>
+        <item name="kzAccentSoft">#3306B6D4</item>
+        <item name="kzBg">#15171C</item>
+        <item name="kzBg2">#1E222B</item>
+        <item name="kzCard">#262B36</item>
+        <item name="kzStroke">#363C4A</item>
+    </style>
+
+    <style name="Theme.KZ.RoseGris" parent="Theme.KZ">
+        <item name="kzAccent">#EC4899</item>
+        <item name="kzAccent2">#BE185D</item>
+        <item name="kzAccentSoft">#33EC4899</item>
+        <item name="kzBg">#15171C</item>
+        <item name="kzBg2">#1E222B</item>
+        <item name="kzCard">#262B36</item>
+        <item name="kzStroke">#363C4A</item>
+    </style>
 </resources>

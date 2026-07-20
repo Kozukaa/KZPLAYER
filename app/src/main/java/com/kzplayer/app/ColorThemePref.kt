@@ -25,7 +25,13 @@ object ColorThemePref {
         Palette("orange_black", "Orange et Noir", R.style.Theme_KZ_OrangeNoir, 0xFFFF7A18.toInt(), 0xFF0A0A0C.toInt()),
         Palette("purple_black", "Violet et Noir", R.style.Theme_KZ_VioletNoir, 0xFF8B5CF6.toInt(), 0xFF0A0A0C.toInt()),
         Palette("cyan_black", "Cyan et Noir", R.style.Theme_KZ_CyanNoir, 0xFF06B6D4.toInt(), 0xFF0A0A0C.toInt()),
-        Palette("pink_black", "Rose et Noir", R.style.Theme_KZ_RoseNoir, 0xFFEC4899.toInt(), 0xFF0A0A0C.toInt())
+        Palette("pink_black", "Rose et Noir", R.style.Theme_KZ_RoseNoir, 0xFFEC4899.toInt(), 0xFF0A0A0C.toInt()),
+        Palette("red_gray", "Rouge et Gris fonce", R.style.Theme_KZ_RougeGris, 0xFFE50914.toInt(), 0xFF15171C.toInt()),
+        Palette("green_gray", "Vert et Gris fonce", R.style.Theme_KZ_VertGris, 0xFF22C55E.toInt(), 0xFF15171C.toInt()),
+        Palette("orange_gray", "Orange et Gris fonce", R.style.Theme_KZ_OrangeGris, 0xFFFF7A18.toInt(), 0xFF15171C.toInt()),
+        Palette("purple_gray", "Violet et Gris fonce", R.style.Theme_KZ_VioletGris, 0xFF8B5CF6.toInt(), 0xFF15171C.toInt()),
+        Palette("cyan_gray", "Cyan et Gris fonce", R.style.Theme_KZ_CyanGris, 0xFF06B6D4.toInt(), 0xFF15171C.toInt()),
+        Palette("pink_gray", "Rose et Gris fonce", R.style.Theme_KZ_RoseGris, 0xFFEC4899.toInt(), 0xFF15171C.toInt())
     )
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)

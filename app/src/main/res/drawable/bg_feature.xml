@@ -1,22 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Tuiles de menu (Recharger, Favoris, Parametres...) : degrade + lisere pour du relief. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="?attr/kzCard" />
+            <gradient
+                android:startColor="?attr/kzCard"
+                android:endColor="?attr/kzBg2"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="16dp" />
             <stroke android:width="3dp" android:color="?attr/kzAccent" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="?attr/kzCard" />
+            <gradient
+                android:startColor="?attr/kzCard"
+                android:endColor="?attr/kzBg2"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="16dp" />
             <stroke android:width="3dp" android:color="?attr/kzAccent" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="?attr/kzCard" />
+            <gradient
+                android:startColor="?attr/kzCard"
+                android:endColor="?attr/kzBg2"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="16dp" />
             <stroke android:width="1dp" android:color="?attr/kzStroke" />
         </shape>

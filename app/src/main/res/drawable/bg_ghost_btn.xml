@@ -2,20 +2,33 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="?attr/kzAccent" />
+            <gradient
+                android:startColor="?attr/kzAccent"
+                android:endColor="?attr/kzAccent2"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="22dp" />
             <stroke android:width="2dp" android:color="@color/text" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
-            <solid android:color="?attr/kzAccent2" />
+            <gradient
+                android:startColor="?attr/kzAccent2"
+                android:endColor="?attr/kzAccent"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="22dp" />
         </shape>
     </item>
+    <!-- Normal : verre translucide + lisere clair -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#1FFFFFFF" />
+            <gradient
+                android:startColor="#26FFFFFF"
+                android:endColor="#08FFFFFF"
+                android:angle="270"
+                android:type="linear" />
             <corners android:radius="22dp" />
             <stroke android:width="1dp" android:color="#4DFFFFFF" />
         </shape>

@@ -602,6 +602,22 @@ object Api {
         return ""
     }
 
+    // Decodage dedie a l'EPG Xtream : les titres/descriptions sont souvent en Base64.
+    // On decode quand c'est possible ET lisible, sinon on renvoie le texte tel quel.
+    // Contrairement a decodeXtreamText (resumes de series), on ne renvoie JAMAIS vide,
+    // sinon les entrees EPG disparaissent completement.
+    private fun decodeEpgText(raw: String): String {
+        val t = raw.trim()
+        if (t.isBlank()) return ""
+        if (t.length >= 4 && t.length % 4 == 0 && t.matches(Regex("^[A-Za-z0-9+/=]+\$"))) {
+            try {
+                val decoded = String(android.util.Base64.decode(t, android.util.Base64.DEFAULT), Charsets.UTF_8).trim()
+                if (decoded.isNotBlank() && looksReadable(decoded)) return decoded
+            } catch (e: Exception) {}
+        }
+        return t
+    }
+
     suspend fun xtreamShortEpg(pl: Playlist, streamId: String, limit: Int = 6): List<EpgEntry> = withContext(Dispatchers.IO) {
         if (streamId.isBlank()) return@withContext emptyList()
         val obj = httpObject(xtreamApi(pl, "get_short_epg", "&stream_id=${enc(streamId)}&limit=$limit"))
@@ -609,8 +625,8 @@ object Api {
         val out = ArrayList<EpgEntry>()
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
-            val title = decodeXtreamText(o.optString("title").ifBlank { o.optString("name") })
-            val desc = decodeXtreamText(o.optString("description").ifBlank { o.optString("descr") })
+            val title = decodeEpgText(o.optString("title").ifBlank { o.optString("name") })
+            val desc = decodeEpgText(o.optString("description").ifBlank { o.optString("descr") })
             val start = o.optString("start").ifBlank { o.optString("start_timestamp") }
             val end = o.optString("end").ifBlank { o.optString("stop").ifBlank { o.optString("end_timestamp") } }
             val time = when {
@@ -643,9 +659,9 @@ object Api {
         val out = ArrayList<EpgEntry>()
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
-            val title = decodeXtreamText(o.optString("title").ifBlank { o.optString("name") })
+            val title = decodeEpgText(o.optString("title").ifBlank { o.optString("name") })
             if (title.isBlank()) continue
-            val desc = decodeXtreamText(o.optString("description").ifBlank { o.optString("descr") })
+            val desc = decodeEpgText(o.optString("description").ifBlank { o.optString("descr") })
             val startTs = (o.optString("start_timestamp").toLongOrNull() ?: 0L) * 1000L
             val stopTs = (o.optString("stop_timestamp").ifBlank { o.optString("end_timestamp") }.toLongOrNull() ?: 0L) * 1000L
             val nowFlag = o.optString("now_playing") == "1" || (startTs in 1 until now && stopTs > now)
@@ -736,9 +752,6 @@ object Api {
 
     private var stalkerToken: String? = null
     private var stalkerBase: String? = null
-    // Profil "complet" facon SFVipPlayer : active uniquement en dernier recours pour
-    // les portails proteges (ex: 900900.eu). Les serveurs normaux restent en profil V112.
-    private var stalkerFullProfile = false
     // Dernier diagnostic de resolution de flux (affiche dans le lecteur en cas d'echec).
     var lastStreamLog: String = ""
     var lastStalkerLog: String = ""
@@ -749,10 +762,6 @@ object Api {
 
     private fun sha256Hex(s: String): String =
         java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray())
-            .joinToString("") { "%02x".format(it) }
-
-    private fun sha1Hex(s: String): String =
-        java.security.MessageDigest.getInstance("SHA-1").digest(s.toByteArray())
             .joinToString("") { "%02x".format(it) }
 
     // Identite "boitier MAG" derivee du MAC (stable). Beaucoup de portails refusent
@@ -832,9 +841,7 @@ object Api {
                 stalkerToken = tok
                 stalkerBase = portal
                 stalkerGetProfile(pl, portal)
-                // get_main_info seulement pour les profils personnalises ou le mode profil
-                // complet (fallback serveurs proteges). Serveurs normaux = comportement V112.
-                if (hasCustomStalkerProfile(pl) || stalkerFullProfile) stalkerAccountInfo(pl, portal)
+                if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, portal)
                 lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${currentStbProfile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}"
                 return true
             }
@@ -896,31 +903,13 @@ object Api {
             // les champs speciaux ajoutes pour les portails avec SN obligatoire.
             val sn = stbSerial(pl)
             val did = stbDeviceId(pl)
-            val sig = sha256Hex((sn + pl.mac).uppercase()).uppercase()
-            if (!stalkerFullProfile) {
-                // Profil LEGER = comportement V112 exact (serveurs normaux). C'est ce qui
-                // garantit que listes et EPG marchent comme avant.
-                val ver = enc(currentStbProfile.ver)
-                val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}")
-                val q = "type=stb&action=get_profile&hd=1&ver=$ver" +
-                    "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
-                    "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
-                    "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics" +
-                    "&JsHttpRequest=1-xml"
-                stbCall(pl, portal, q)
-                return
-            }
-            // Profil COMPLET (identique a SFVipPlayer) : uniquement en dernier recours quand
-            // le profil leger n'a renvoye aucune liste (portail protege type 900900.eu).
-            val hw2 = sha1Hex(pl.mac.lowercase())
-            val ts = (System.currentTimeMillis() / 1000).toString()
+            val sig = sha256Hex((pl.mac + sn).uppercase()).uppercase()
             val ver = enc(currentStbProfile.ver)
-            val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"type\":\"STB\",\"model\":\"${currentStbProfile.model}\",\"uid\":\"\",\"random\":\"\"}")
+            val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}")
             val q = "type=stb&action=get_profile&hd=1&ver=$ver" +
                 "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
                 "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
                 "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics" +
-                "&hw_version_2=$hw2&timestamp=$ts&api_signature=262&prehash=" +
                 "&JsHttpRequest=1-xml"
             stbCall(pl, portal, q)
             return
@@ -935,7 +924,7 @@ object Api {
         val sn = pl.stalkerSn.ifBlank { stbSerial(pl) }
         val did = pl.stalkerDeviceId.ifBlank { stbDeviceId(pl) }
         val did2 = pl.stalkerDeviceId2.ifBlank { did }
-        val sig = pl.stalkerSignature.ifBlank { sha256Hex((sn + pl.mac).uppercase()).uppercase() }
+        val sig = pl.stalkerSignature.ifBlank { sha256Hex((pl.mac + sn).uppercase()).uppercase() }
         val imageVersion = pl.stalkerImageVersion.ifBlank { currentStbProfile.imageVersion }
         val verRaw = pl.stalkerVer.ifBlank {
             currentStbProfile.ver
@@ -961,8 +950,6 @@ object Api {
     private fun ensureStalker(pl: Playlist): String? {
         val base = stalkerBase
         if (stalkerToken.isNullOrBlank() || base == null || !base.startsWith(pl.serverUrl)) {
-            // Nouveau serveur -> on repart toujours en profil leger (comportement V112).
-            if (base != null && !base.startsWith(pl.serverUrl)) stalkerFullProfile = false
             stalkerToken = null; stalkerBase = null
             if (!stalkerHandshake(pl)) return null
         }
@@ -970,54 +957,27 @@ object Api {
     }
 
     suspend fun stalkerCategories(pl: Playlist, kind: String): List<Category> = withContext(Dispatchers.IO) {
-        var portal = ensureStalker(pl) ?: return@withContext listOf(Category("__all__", "Tout"))
+        val portal = ensureStalker(pl) ?: return@withContext listOf(Category("__all__", "Tout"))
         val type = when (kind) { "movie" -> "vod"; "series" -> "series"; else -> "itv" }
         val action = if (type == "itv") "get_genres" else "get_categories"
-
-        fun fetchCats(p: String): Pair<ArrayList<Category>, String> {
-            var txt = stbCall(pl, p, "type=$type&action=$action&JsHttpRequest=1-xml")
-            if (!txt.contains("\"js\"")) {
-                // Certains portails repondent mieux sans JsHttpRequest sur les listes.
-                txt = stbCall(pl, p, "type=$type&action=$action")
-            }
-            val res = ArrayList<Category>()
-            res.add(Category("__all__", "Tout"))
-            try {
-                val js = JSONObject(txt).optJSONArray("js") ?: JSONArray()
-                for (i in 0 until js.length()) {
-                    val o = js.optJSONObject(i) ?: continue
-                    val id = o.optString("id")
-                    if (id.isBlank() || id == "*" || id == "0") continue
-                    res.add(Category(id, o.optString("title", o.optString("name"))))
-                }
-            } catch (e: Exception) {
-                lastStalkerLog = "Erreur parsing categories\nPortail: $p\nAction: $type/$action\nReponse: ${txt.take(500)}"
-            }
-            return res to txt
+        var txt = stbCall(pl, portal, "type=$type&action=$action&JsHttpRequest=1-xml")
+        if (!txt.contains("\"js\"")) {
+            // Certains portails repondent mieux sans JsHttpRequest sur les listes.
+            txt = stbCall(pl, portal, "type=$type&action=$action")
         }
-
-        var out: ArrayList<Category>
-        var txt: String
-        val first = fetchCats(portal)
-        out = first.first
-        txt = first.second
-
-        // Dernier recours (portails proteges type 900900.eu) : si le profil leger ne
-        // renvoie aucune categorie, on bascule en profil complet facon SFVipPlayer puis
-        // on refait handshake + une seule tentative. Les serveurs normaux ne passent
-        // jamais ici -> EPG et listes strictement comme avant.
-        if (out.size <= 1 && !hasCustomStalkerProfile(pl) && !stalkerFullProfile) {
-            stalkerFullProfile = true
-            stalkerToken = null; stalkerBase = null
-            val portal2 = ensureStalker(pl)
-            if (portal2 != null) {
-                portal = portal2
-                val retry = fetchCats(portal2)
-                out = retry.first
-                txt = retry.second
+        val out = ArrayList<Category>()
+        out.add(Category("__all__", "Tout"))
+        try {
+            val js = JSONObject(txt).optJSONArray("js") ?: JSONArray()
+            for (i in 0 until js.length()) {
+                val o = js.optJSONObject(i) ?: continue
+                val id = o.optString("id")
+                if (id.isBlank() || id == "*" || id == "0") continue
+                out.add(Category(id, o.optString("title", o.optString("name"))))
             }
+        } catch (e: Exception) {
+            lastStalkerLog = "Erreur parsing categories\nPortail: $portal\nAction: $type/$action\nReponse: ${txt.take(500)}"
         }
-
         if (out.size <= 1) {
             lastStalkerLog = "Aucune categorie Stalker\nPortail: $portal\nAction: $type/$action\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nReponse: ${txt.take(700)}"
         } else {

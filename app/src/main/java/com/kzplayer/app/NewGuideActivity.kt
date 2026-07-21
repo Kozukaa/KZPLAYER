@@ -37,6 +37,7 @@ open class NewGuideActivity : NtBase() {
     private var heroPlayer: PlayerView? = null
     private var playingUrl: String = ""
     private var playingItem: Item? = null
+    private var voicePlayName: String = ""
     private lateinit var catRv: RecyclerView
     private lateinit var channelRv: RecyclerView
     private lateinit var progress: ProgressBar
@@ -88,7 +89,11 @@ open class NewGuideActivity : NtBase() {
         channelRv.setItemViewCacheSize(20)
         clockRunnable.run()
         bindTimeHeader()
-        ensureSession { loadCategories() }
+        voicePlayName = if (playsInline) intent.getStringExtra("voicePlay")?.trim().orEmpty() else ""
+        ensureSession {
+            loadCategories()
+            if (voicePlayName.isNotBlank()) startVoicePlay(voicePlayName)
+        }
     }
 
     private fun bindTimeHeader() {
@@ -126,7 +131,7 @@ open class NewGuideActivity : NtBase() {
                 catRv.adapter = catAdapter
                 setLoading(false)
                 val firstReal = categories.firstOrNull { !it.id.startsWith("__") } ?: categories.firstOrNull()
-                if (firstReal != null) selectCategory(firstReal)
+                if (firstReal != null && voicePlayName.isBlank()) selectCategory(firstReal)
             } catch (e: Exception) {
                 setLoading(false); msgTv.text = "Erreur : ${e.message}"
             }
@@ -299,6 +304,53 @@ open class NewGuideActivity : NtBase() {
                 .putExtra("logo", item.logo).putExtra("streamId", item.streamId ?: "")
         )
     }
+
+    // Commande vocale "Mets ..." en NewTivi : charge toutes les chaines du serveur, trouve la
+    // correspondance par nom et LANCE la lecture directement dans l'apercu reduit (playsInline).
+    private fun startVoicePlay(name: String) {
+        val pl = Session.current ?: return
+        val q = normName(name)
+        if (q.isBlank()) return
+        setLoading(true); msgTv.text = "Recherche de la chaine..."
+        lifecycleScope.launch {
+            val all = ArrayList<Item>()
+            try {
+                when (pl.type) {
+                    "stalker" -> Api.stalkerItemsPaged(pl, "live", "__all__") { b ->
+                        withContext(Dispatchers.Main) { all.addAll(b) }
+                    }
+                    "m3u" -> all.addAll(Api.m3uItems(pl, "live", "__all__"))
+                    else -> all.addAll(Api.xtreamItems(pl, "live", "__all__"))
+                }
+            } catch (e: Exception) { }
+            setLoading(false)
+            val live = all.filter { it.kind == "live" }
+            val match = findChannel(q, live)
+            if (match != null) {
+                channels = live
+                bindChannels()
+                msgTv.text = ""
+                playChannel(match)
+            } else {
+                msgTv.text = "Chaine introuvable : $name"
+            }
+        }
+    }
+
+    private fun findChannel(q: String, list: List<Item>): Item? {
+        val toks = q.split(" ").filter { it.isNotBlank() }
+        return list.firstOrNull { normName(it.name) == q }
+            ?: list.firstOrNull { normName(it.name).startsWith(q) }
+            ?: list.firstOrNull { normName(it.name).contains(q) }
+            ?: list.firstOrNull { c -> toks.isNotEmpty() && toks.all { normName(c.name).contains(it) } }
+    }
+
+    private fun normName(s: String): String =
+        java.text.Normalizer.normalize(s.lowercase(Locale.FRENCH), java.text.Normalizer.Form.NFD)
+            .replace("\\p{Mn}".toRegex(), "")
+            .replace("[^a-z0-9 ]".toRegex(), " ")
+            .replace("\\s+".toRegex(), " ")
+            .trim()
 
     inner class CatAdapter(val data: List<Category>, val onClick: (Category) -> Unit) :
         RecyclerView.Adapter<CatAdapter.VH>() {

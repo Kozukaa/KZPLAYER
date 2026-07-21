@@ -120,17 +120,26 @@ class VoiceActivity : Activity() {
         startActivity(i)
     }
 
-    private fun openChannel(name: String) {
+    private fun openChannel(rawName: String) {
+        val name = stripFillers(rawName)
         if (name.isBlank()) { openSection("live"); return }
         toast("Chaine : $name")
-        // "voicePlay" : Browse charge toutes les chaines, trouve la correspondance et LANCE
-        // directement la chaine (repli sur la liste filtree si introuvable).
         Session.browseTitle = "TV"
-        startActivity(
-            Intent(this, BrowseActivity::class.java)
-                .putExtra("kind", "live")
-                .putExtra("voicePlay", name)
-        )
+        // On lance la chaine dans l'ecran du THEME actif : mode reduit NewTivi (NewLiveActivity)
+        // ou liste classique (BrowseActivity). Les deux trouvent la chaine par nom puis LANCENT la lecture.
+        val i = if (ThemePref.isNew(this))
+            Intent(this, NewLiveActivity::class.java).putExtra("voicePlay", name)
+        else
+            Intent(this, BrowseActivity::class.java).putExtra("kind", "live").putExtra("voicePlay", name)
+        startActivity(i)
+    }
+
+    // Retire les mots parasites frequents ("mets TELE france 2", "sur", "chaine"...) pour
+    // ne garder que le nom utile de la chaine.
+    private fun stripFillers(s: String): String {
+        val fillers = setOf("tele", "teles", "television", "televisions", "chaine", "chaines", "sur")
+        val kept = norm(s).split(" ").filter { it.isNotBlank() && it !in fillers }
+        return kept.joinToString(" ").trim().ifBlank { norm(s) }
     }
 
     // Recherche VOD : par defaut dans les films, mais si la phrase precise "serie(s)" ou
@@ -154,7 +163,14 @@ class VoiceActivity : Activity() {
         val q = query.trim()
         if (q.isBlank()) { openSection(if (kind == "series") "series" else "movie"); return }
         toast(if (kind == "series") "Recherche serie : $q" else "Recherche film : $q")
-        openBrowse(kind, q, "Recherche")
+        // Recherche dans l'ecran du THEME actif (NewTivi natif ou classique).
+        if (ThemePref.isNew(this)) {
+            Session.browseTitle = "Recherche"
+            val cls = if (kind == "series") NewSeriesActivity::class.java else NewMoviesActivity::class.java
+            startActivity(Intent(this, cls).putExtra("voiceQuery", q))
+        } else {
+            openBrowse(kind, q, "Recherche")
+        }
     }
 
     // Recharge licence + listes de lecture (equivaut au bouton "Recharger"), puis revient a l'accueil.

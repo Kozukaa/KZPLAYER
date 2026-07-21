@@ -45,6 +45,10 @@ abstract class NtCatalogActivity : NtBase() {
     private var items: List<Item> = emptyList()
     private var filtered: List<Item> = emptyList()
     private var selectedCat: String = ""
+    private var voiceQuery: String = ""
+    private var multiMode: Boolean = false
+    private var searchEpoch: Int = 0
+    private var searchJob: kotlinx.coroutines.Job? = null
     private var catAdapter: CatAdapter? = null
     private var itemAdapter: TileAdapter? = null
     private lateinit var glm: GridLayoutManager
@@ -67,13 +71,25 @@ abstract class NtCatalogActivity : NtBase() {
         glm = GridLayoutManager(this, computeSpan())
         itemRv.layoutManager = glm
         itemRv.setItemViewCacheSize(24)
-        itemAdapter = TileAdapter { openItem(it) }
+        itemAdapter = TileAdapter { onTileClick(it) }
         itemRv.adapter = itemAdapter
         searchEt.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) { applyFilter() }
+            override fun afterTextChanged(s: Editable?) {
+                val q = searchEt.text.toString().trim()
+                // Films/Series NewTivi : la recherche interroge TOUS les serveurs (comme le classique).
+                if (q.length >= 2) {
+                    runMultiServerSearch(q)
+                } else {
+                    multiMode = false
+                    searchJob?.cancel()
+                    applyFilter()
+                }
+            }
             override fun beforeTextChanged(a: CharSequence?, b: Int, c: Int, d: Int) {}
             override fun onTextChanged(a: CharSequence?, b: Int, c: Int, d: Int) {}
         })
+        voiceQuery = intent.getStringExtra("voiceQuery")?.trim().orEmpty()
+        if (voiceQuery.isNotBlank()) { searchEt.setText(voiceQuery); searchEt.setSelection(voiceQuery.length) }
         ensureSession { loadCategories() }
     }
 
@@ -139,9 +155,52 @@ abstract class NtCatalogActivity : NtBase() {
         }
     }
 
+    // Recherche multi-serveurs (Films/Series) : interroge TOUS les serveurs ajoutes, fusionne les
+    // doublons et affiche chaque resultat avec le(s) serveur(s) ou il se trouve (identique au classique).
+    private fun runMultiServerSearch(q: String) {
+        multiMode = true
+        searchJob?.cancel()
+        val epoch = ++searchEpoch
+        val playlists = Session.playlists
+        if (playlists.isEmpty()) { msgTv.text = "Aucun serveur ajoute."; return }
+        setLoading(true); msgTv.text = ""
+        searchJob = lifecycleScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(250) // anti-rebond pendant la frappe
+            if (epoch != searchEpoch) return@launch
+            try {
+                Api.searchAllServers(playlists, q, kind) { done, total, merged ->
+                    withContext(Dispatchers.Main) {
+                        if (!multiMode || epoch != searchEpoch) return@withContext
+                        filtered = merged
+                        itemAdapter?.submit(filtered)
+                        filtered.firstOrNull()?.let { updateHero(it) }
+                        if (merged.isNotEmpty()) { setLoading(false); msgTv.text = "" }
+                        else if (done >= total) { setLoading(false); msgTv.text = "Aucun resultat pour \"$q\"." }
+                        else msgTv.text = ""
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { msgTv.text = "Erreur : ${e.message}"; setLoading(false) }
+            }
+        }
+    }
+
+    // Clic sur une tuile : si le resultat vient d'un autre serveur, on bascule dessus avant d'ouvrir.
+    private fun onTileClick(item: Item) {
+        if (item.ownerPlaylistId.isNotBlank() && item.ownerPlaylistId != Session.current?.id) {
+            Session.playlists.firstOrNull { it.id == item.ownerPlaylistId }?.let { Session.current = it }
+        }
+        openItem(item)
+    }
+
+    private fun ntNorm(s: String): String =
+        java.text.Normalizer.normalize(s.trim().lowercase(), java.text.Normalizer.Form.NFD)
+            .replace("\\p{Mn}".toRegex(), "")
+
     private fun applyFilter() {
-        val q = searchEt.text.toString().trim().lowercase()
-        filtered = if (q.isBlank()) items else items.filter { it.kind != "header" && it.name.lowercase().contains(q) }
+        if (multiMode) return
+        val q = ntNorm(searchEt.text.toString())
+        filtered = if (q.isBlank()) items else items.filter { it.kind != "header" && ntNorm(it.name).contains(q) }
         itemAdapter?.submit(filtered)
         filtered.firstOrNull()?.let { updateHero(it) }
     }
@@ -192,7 +251,8 @@ abstract class NtCatalogActivity : NtBase() {
             val item = data[position]
             holder.name.text = item.name
             holder.progressWrap.visibility = View.GONE
-            holder.serverChip.visibility = View.GONE
+            if (item.serverLabel.isNotBlank()) { holder.serverChip.text = item.serverLabel; holder.serverChip.visibility = View.VISIBLE }
+            else holder.serverChip.visibility = View.GONE
             val q = when {
                 Regex("(?i)(4k|uhd|2160)").containsMatchIn(item.name) -> "4K"
                 Regex("(?i)(fhd|1080)").containsMatchIn(item.name) -> "FHD"

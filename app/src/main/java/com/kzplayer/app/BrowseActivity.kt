@@ -124,6 +124,12 @@ class BrowseActivity : BaseActivity() {
         })
 
         loadCategories()
+
+        // Pre-remplissage de la recherche via la commande vocale ("Mets ...", "Recherche ...").
+        intent.getStringExtra("voiceQuery")?.takeIf { it.isNotBlank() }?.let { q ->
+            searchEt.setText(q)
+            searchEt.setSelection(q.length)
+        }
     }
 
     private fun loadCategories() {

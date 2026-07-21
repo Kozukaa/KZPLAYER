@@ -26,6 +26,7 @@ object NavHelper {
         NavItem(R.id.navMovies, R.id.navMoviesImg, R.id.navMoviesLabel, "movies"),
         NavItem(R.id.navSeries, R.id.navSeriesImg, R.id.navSeriesLabel, "series"),
         NavItem(R.id.navSearch, R.id.navSearchImg, R.id.navSearchLabel, "search"),
+        NavItem(R.id.navMic, R.id.navMicImg, R.id.navMicLabel, "mic"),
         NavItem(R.id.navSettings, R.id.navSettingsImg, R.id.navSettingsLabel, "settings")
     )
 
@@ -36,6 +37,9 @@ object NavHelper {
         wire(act, R.id.navSeries, R.id.navSeriesImg, active == "series") { go(act, NewSeriesActivity::class.java, active, "series") }
         wire(act, R.id.navSearch, R.id.navSearchImg, false) {
             act.findViewById<EditText?>(R.id.searchEt)?.requestFocus()
+        }
+        wire(act, R.id.navMic, R.id.navMicImg, false) {
+            act.startActivity(Intent(act, VoiceActivity::class.java))
         }
         wire(act, R.id.navSettings, R.id.navSettingsImg, false) {
             act.startActivity(Intent(act, SettingsActivity::class.java))

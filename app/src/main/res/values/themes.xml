@@ -167,4 +167,11 @@
         <item name="kzCard">#262B36</item>
         <item name="kzStroke">#363C4A</item>
     </style>
+    <!-- Theme transparent pour l'ecran de commande vocale (aucun fond visible) -->
+    <style name="Theme.KZ.Voice" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>

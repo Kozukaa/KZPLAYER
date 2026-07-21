@@ -713,12 +713,12 @@ class BrowseActivity : BaseActivity() {
         if (voicePlay.isBlank() || kind != "live") return
         val allCat = categories.firstOrNull { it.id == "__all__" }
             ?: categories.firstOrNull { !it.id.startsWith("__") } ?: return
-        msgTv.text = "Recherche de la chaine \u00ab $voicePlay \u00bb..."
+        msgTv.text = "Recherche de la chaine \u00ab ${voicePlay.split("\n").first()} \u00bb..."
         selectCategory(allCat)
         // Repli : si la chaine reste introuvable apres chargement, on affiche la liste filtree.
         itemRv.postDelayed({
             if (voicePlay.isNotBlank() && !voiceTriedPlay) {
-                val q = voicePlay; voicePlay = ""
+                val q = voicePlay.split("\n").first(); voicePlay = ""
                 searchEt.setText(q); searchEt.setSelection(q.length)
                 msgTv.text = "Chaine introuvable : voici les resultats."
             }
@@ -728,19 +728,27 @@ class BrowseActivity : BaseActivity() {
     // Lance directement la chaine dont le nom correspond a l'ordre vocal.
     private fun tryVoicePlay() {
         if (voicePlay.isBlank() || voiceTriedPlay || kind != "live") return
-        val match = findChannelMatch(voicePlay, items) ?: return
+        // Plusieurs hypotheses de reconnaissance (separees par des sauts de ligne) : on essaie chacune.
+        val cands = voicePlay.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+        val match = cands.firstNotNullOfOrNull { findChannelMatch(it, items) } ?: return
         voiceTriedPlay = true
         voicePlay = ""
         openItem(match)
     }
 
+    // Colle un sigle court a un nombre ("t 18" -> "t18", "m 6" -> "m6") pour matcher les chaines
+    // alphanumeriques que la reconnaissance vocale separe (T18, M6, W9, C8, TF1...).
+    private fun glueVoice(s: String): String =
+        Regex("\\b([a-z]{1,3}) (\\d+)").replace(s) { it.groupValues[1] + it.groupValues[2] }
+
     private fun findChannelMatch(query: String, list: List<Item>): Item? {
         val q = cleanSearch(query).trim()
         if (q.isBlank()) return null
+        val g = glueVoice(q)
         val chans = list.filter { it.kind == "live" }
         val tokens = q.split(" ").filter { it.isNotBlank() }
-        return chans.firstOrNull { cleanSearch(it.name).trim() == q }
-            ?: chans.firstOrNull { cleanSearch(it.name).trim().startsWith(q) }
+        return chans.firstOrNull { cleanSearch(it.name).trim() == q || glueVoice(cleanSearch(it.name).trim()) == g }
+            ?: chans.firstOrNull { cleanSearch(it.name).trim().startsWith(q) || glueVoice(cleanSearch(it.name).trim()).startsWith(g) }
             ?: chans.firstOrNull { cleanSearch(it.name).contains(q) }
             ?: chans.firstOrNull { c -> tokens.isNotEmpty() && tokens.all { cleanSearch(c.name).contains(it) } }
     }

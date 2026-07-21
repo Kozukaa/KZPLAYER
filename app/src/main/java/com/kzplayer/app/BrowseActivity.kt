@@ -36,6 +36,8 @@ class BrowseActivity : BaseActivity() {
     private var loadingAllForSearch: Boolean = false
     private var searchJob: Job? = null
     private var multiMode: Boolean = false
+    private var voicePlay: String = ""
+    private var voiceTriedPlay = false
 
     private lateinit var catRv: RecyclerView
     private lateinit var itemRv: RecyclerView
@@ -125,10 +127,14 @@ class BrowseActivity : BaseActivity() {
 
         loadCategories()
 
-        // Pre-remplissage de la recherche via la commande vocale ("Mets ...", "Recherche ...").
-        intent.getStringExtra("voiceQuery")?.takeIf { it.isNotBlank() }?.let { q ->
-            searchEt.setText(q)
-            searchEt.setSelection(q.length)
+        // Commande vocale : "voicePlay" = lancer directement une chaine (traite apres le
+        // chargement des categories, cf. maybeStartVoicePlay) ; "voiceQuery" = pre-remplir la recherche.
+        voicePlay = intent.getStringExtra("voicePlay")?.trim().orEmpty()
+        if (voicePlay.isBlank() || kind != "live") {
+            intent.getStringExtra("voiceQuery")?.takeIf { it.isNotBlank() }?.let { q ->
+                searchEt.setText(q)
+                searchEt.setSelection(q.length)
+            }
         }
     }
 
@@ -207,6 +213,7 @@ class BrowseActivity : BaseActivity() {
                         msgTv.text = if (kind == "replay") "Choisis une catégorie replay à gauche." else "Choisis une categorie a gauche."
                     }
                 }
+                maybeStartVoicePlay()
                 autoSyncWhitelist(pl.id)
                 // Prechauffe la recherche multi-serveurs en arriere-plan (Films/Series) pour
                 // des resultats quasi instantanes des que l'utilisateur commence a taper.
@@ -518,6 +525,7 @@ class BrowseActivity : BaseActivity() {
                 }
             }
         }
+        tryVoicePlay()
     }
 
     private fun applySort(list: List<Item>): List<Item> = when (sortMode) {
@@ -698,6 +706,43 @@ class BrowseActivity : BaseActivity() {
                 .putExtra("historyKind", historyKind)
                 .putExtra("mode", if (historyKind == "movie" || historyKind == "series") "vod" else "live")
         )
+    }
+
+    // Commande vocale "Mets ..." : on charge toutes les chaines puis on lance la correspondance.
+    private fun maybeStartVoicePlay() {
+        if (voicePlay.isBlank() || kind != "live") return
+        val allCat = categories.firstOrNull { it.id == "__all__" }
+            ?: categories.firstOrNull { !it.id.startsWith("__") } ?: return
+        msgTv.text = "Recherche de la chaine \u00ab $voicePlay \u00bb..."
+        selectCategory(allCat)
+        // Repli : si la chaine reste introuvable apres chargement, on affiche la liste filtree.
+        itemRv.postDelayed({
+            if (voicePlay.isNotBlank() && !voiceTriedPlay) {
+                val q = voicePlay; voicePlay = ""
+                searchEt.setText(q); searchEt.setSelection(q.length)
+                msgTv.text = "Chaine introuvable : voici les resultats."
+            }
+        }, 6000)
+    }
+
+    // Lance directement la chaine dont le nom correspond a l'ordre vocal.
+    private fun tryVoicePlay() {
+        if (voicePlay.isBlank() || voiceTriedPlay || kind != "live") return
+        val match = findChannelMatch(voicePlay, items) ?: return
+        voiceTriedPlay = true
+        voicePlay = ""
+        openItem(match)
+    }
+
+    private fun findChannelMatch(query: String, list: List<Item>): Item? {
+        val q = cleanSearch(query).trim()
+        if (q.isBlank()) return null
+        val chans = list.filter { it.kind == "live" }
+        val tokens = q.split(" ").filter { it.isNotBlank() }
+        return chans.firstOrNull { cleanSearch(it.name).trim() == q }
+            ?: chans.firstOrNull { cleanSearch(it.name).trim().startsWith(q) }
+            ?: chans.firstOrNull { cleanSearch(it.name).contains(q) }
+            ?: chans.firstOrNull { c -> tokens.isNotEmpty() && tokens.all { cleanSearch(c.name).contains(it) } }
     }
 
     private fun computeSpan(): Int {

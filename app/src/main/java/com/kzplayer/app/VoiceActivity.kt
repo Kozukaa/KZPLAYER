@@ -112,7 +112,14 @@ class VoiceActivity : Activity() {
     private fun openChannel(name: String) {
         if (name.isBlank()) { openSection("live"); return }
         toast("Chaine : $name")
-        openBrowse("live", name, "TV")
+        // "voicePlay" : Browse charge toutes les chaines, trouve la correspondance et LANCE
+        // directement la chaine (repli sur la liste filtree si introuvable).
+        Session.browseTitle = "TV"
+        startActivity(
+            Intent(this, BrowseActivity::class.java)
+                .putExtra("kind", "live")
+                .putExtra("voicePlay", name)
+        )
     }
 
     private fun openSearch(query: String) {

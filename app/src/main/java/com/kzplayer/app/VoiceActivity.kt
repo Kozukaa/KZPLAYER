@@ -6,6 +6,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.text.Normalizer
 import java.util.Locale
 
@@ -51,11 +54,17 @@ class VoiceActivity : Activity() {
         val rest = words.drop(1).joinToString(" ").trim()
 
         when {
+            // 0. Recharger / mettre a jour les listes de lecture
+            t.contains("recharge") || t.contains("actualise") || t.contains("rafraichi") ||
+                t.contains("mets a jour") || t.contains("met a jour") || t.contains("mise a jour") ||
+                first == "reload" || first == "refresh" ->
+                reloadPlaylists()
+
             // 1. Changer de serveur / liste de lecture
             first == "serveur" || first == "server" || first == "liste" ->
                 switchServer(rest)
 
-            // 2. Recherche VOD
+            // 2. Recherche VOD (detecte film / serie dans la phrase)
             first == "recherche" || first == "rechercher" || first == "cherche" ||
                 first == "chercher" || first == "trouve" || first == "trouver" ->
                 openSearch(rest)
@@ -91,8 +100,10 @@ class VoiceActivity : Activity() {
             // 7. Ouvrir une section (mot seul)
             t.contains("parametre") || t.contains("reglage") || t.contains("option") -> openSection("settings")
             t.contains("favori") -> openSection("favorites")
-            first == "film" || first == "films" || first == "cinema" -> openSection("movie")
-            first == "serie" || first == "series" -> openSection("series")
+            first == "film" || first == "films" || first == "cinema" ->
+                if (rest.isBlank()) openSection("movie") else searchIn("movie", rest)
+            first == "serie" || first == "series" ->
+                if (rest.isBlank()) openSection("series") else searchIn("series", rest)
             first == "direct" || first == "tv" || first == "television" ||
                 first == "live" || first == "guide" -> openSection("live")
 
@@ -122,10 +133,54 @@ class VoiceActivity : Activity() {
         )
     }
 
+    // Recherche VOD : par defaut dans les films, mais si la phrase precise "serie(s)" ou
+    // "film(s)" (ex : "recherche serie Breaking Bad"), on cible la bonne section.
     private fun openSearch(query: String) {
         if (query.isBlank()) { openSection("movie"); return }
-        toast("Recherche : $query")
-        openBrowse("movie", query, "Recherche")
+        val words = norm(query).split(" ").filter { it.isNotBlank() }.toMutableList()
+        var kind = "movie"
+        if (words.isNotEmpty()) {
+            when (words[0]) {
+                "serie", "series", "seri", "seriz" -> { kind = "series"; words.removeAt(0) }
+                "film", "films", "cinema" -> { kind = "movie"; words.removeAt(0) }
+            }
+        }
+        val term = words.joinToString(" ").trim().ifBlank { norm(query) }
+        searchIn(kind, term)
+    }
+
+    // Lance la recherche integree de Browse dans la bonne section (films ou series).
+    private fun searchIn(kind: String, query: String) {
+        val q = query.trim()
+        if (q.isBlank()) { openSection(if (kind == "series") "series" else "movie"); return }
+        toast(if (kind == "series") "Recherche serie : $q" else "Recherche film : $q")
+        openBrowse(kind, q, "Recherche")
+    }
+
+    // Recharge licence + listes de lecture (equivaut au bouton "Recharger"), puis revient a l'accueil.
+    private fun reloadPlaylists() {
+        toast("Rechargement des listes...")
+        val appCtx = applicationContext
+        CoroutineScope(Dispatchers.Main).launch {
+            val res = try {
+                Api.checkLicense(
+                    DeviceIdentity.stableId(appCtx),
+                    DeviceIdentity.licenseCode(appCtx),
+                    android.os.Build.MODEL ?: "Android TV", "1.0"
+                )
+            } catch (e: Exception) { null }
+            if (res != null && res.ok && res.active) {
+                Session.playlists = res.playlists
+                Session.expiration = res.expiration
+                if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
+                    Session.current = Session.playlists.firstOrNull()
+                }
+                Toast.makeText(appCtx, "Listes mises a jour.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(appCtx, res?.message?.ifBlank { "Echec du rechargement." } ?: "Echec du rechargement.", Toast.LENGTH_SHORT).show()
+            }
+            relaunchHome()
+        }
     }
 
     private fun openSection(kind: String) {

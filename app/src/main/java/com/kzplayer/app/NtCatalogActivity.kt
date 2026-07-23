@@ -17,6 +17,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -48,6 +50,11 @@ abstract class NtCatalogActivity : NtBase() {
     private var catAdapter: CatAdapter? = null
     private var itemAdapter: TileAdapter? = null
     private lateinit var glm: GridLayoutManager
+    // Recherche multi-serveurs (comme le Classique) : cherche sur TOUS les serveurs ajoutes.
+    private var multiMode: Boolean = false
+    private var searchEpoch: Int = 0
+    private var searchJob: Job? = null
+    private var voiceQuery: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,13 +74,25 @@ abstract class NtCatalogActivity : NtBase() {
         glm = GridLayoutManager(this, computeSpan())
         itemRv.layoutManager = glm
         itemRv.setItemViewCacheSize(24)
-        itemAdapter = TileAdapter { openItem(it) }
+        itemAdapter = TileAdapter { onTileClick(it) }
         itemRv.adapter = itemAdapter
         searchEt.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) { applyFilter() }
+            override fun afterTextChanged(s: Editable?) {
+                val q = searchEt.text.toString().trim()
+                // Films/Series : la recherche cherche sur TOUS les serveurs (comme le Classique).
+                if (q.length >= 2) {
+                    runMultiServerSearch(q)
+                } else {
+                    multiMode = false
+                    searchJob?.cancel()
+                    applyFilter()
+                }
+            }
             override fun beforeTextChanged(a: CharSequence?, b: Int, c: Int, d: Int) {}
             override fun onTextChanged(a: CharSequence?, b: Int, c: Int, d: Int) {}
         })
+        // Commande vocale : "voiceQuery" pre-remplit la recherche (traitee apres chargement des categories).
+        voiceQuery = intent.getStringExtra("voiceQuery")?.trim().orEmpty()
         ensureSession { loadCategories() }
     }
 
@@ -98,18 +117,28 @@ abstract class NtCatalogActivity : NtBase() {
                 }
                 categories = listOf(
                     Category("__favorites__", "Favoris"),
-                    Category("__recent__", "Vu r\u00e9cemment")
+                    Category("__recent__", "Vu r\u00e9cemment"),
+                    Category("__all__", "Tout")
                 ) + base.filter { !it.id.startsWith("__") }
                 catAdapter = CatAdapter(categories) { selectCategory(it) }
                 catRv.adapter = catAdapter
                 setLoading(false)
-                val firstReal = categories.firstOrNull { !it.id.startsWith("__") } ?: categories.firstOrNull()
-                if (firstReal != null) selectCategory(firstReal)
+                if (voiceQuery.isNotBlank()) {
+                    // Recherche vocale : on lance directement la recherche multi-serveurs.
+                    val q = voiceQuery; voiceQuery = ""
+                    searchEt.setText(q); searchEt.setSelection(q.length)
+                } else {
+                    val firstReal = categories.firstOrNull { !it.id.startsWith("__") } ?: categories.firstOrNull()
+                    if (firstReal != null) selectCategory(firstReal)
+                }
             } catch (e: Exception) { setLoading(false); msgTv.text = "Erreur : ${e.message}" }
         }
     }
 
     private fun selectCategory(cat: Category) {
+        // Choisir une categorie = navigation : on quitte le mode recherche multi-serveurs.
+        multiMode = false
+        searchJob?.cancel()
         selectedCat = cat.id
         catAdapter?.notifyDataSetChanged()
         val pl = Session.current ?: return
@@ -139,7 +168,48 @@ abstract class NtCatalogActivity : NtBase() {
         }
     }
 
+    // Clic sur une affiche : bascule d'abord sur le serveur d'origine (resultats multi-serveurs).
+    private fun onTileClick(item: Item) {
+        if (item.ownerPlaylistId.isNotBlank() && item.ownerPlaylistId != Session.current?.id) {
+            Session.playlists.firstOrNull { it.id == item.ownerPlaylistId }?.let { Session.current = it }
+        }
+        openItem(item)
+    }
+
+    // Recherche multi-serveurs (Films/Series) : interroge tous les serveurs, fusionne les doublons
+    // et affiche chaque resultat avec le(s) serveur(s) ou il est disponible.
+    private fun runMultiServerSearch(q: String) {
+        multiMode = true
+        searchJob?.cancel()
+        // Garde d'epoque : seule la DERNIERE recherche a le droit de mettre a jour l'ecran.
+        val epoch = ++searchEpoch
+        val playlists = Session.playlists
+        if (playlists.isEmpty()) { msgTv.text = "Aucun serveur ajoute."; return }
+        setLoading(true); msgTv.text = ""
+        searchJob = lifecycleScope.launch(Dispatchers.IO) {
+            delay(250) // anti-rebond pendant la frappe
+            if (epoch != searchEpoch) return@launch
+            try {
+                Api.searchAllServers(playlists, q, kind) { done, total, merged ->
+                    withContext(Dispatchers.Main) {
+                        if (!multiMode || epoch != searchEpoch) return@withContext
+                        filtered = merged
+                        itemAdapter?.submit(filtered)
+                        filtered.firstOrNull()?.let { updateHero(it) }
+                        if (merged.isNotEmpty()) { setLoading(false); msgTv.text = "" }
+                        else if (done >= total) { setLoading(false); msgTv.text = "Aucun resultat pour \"$q\"." }
+                        else msgTv.text = ""
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) { msgTv.text = "Erreur : ${e.message}"; setLoading(false) }
+            }
+        }
+    }
+
     private fun applyFilter() {
+        // En mode recherche multi-serveurs, les resultats sont geres par runMultiServerSearch.
+        if (multiMode) return
         val q = searchEt.text.toString().trim().lowercase()
         filtered = if (q.isBlank()) items else items.filter { it.kind != "header" && it.name.lowercase().contains(q) }
         itemAdapter?.submit(filtered)
@@ -192,7 +262,11 @@ abstract class NtCatalogActivity : NtBase() {
             val item = data[position]
             holder.name.text = item.name
             holder.progressWrap.visibility = View.GONE
-            holder.serverChip.visibility = View.GONE
+            // Resultat multi-serveurs : on affiche la pastille du/des serveur(s).
+            if (item.serverLabel.isNotBlank()) {
+                holder.serverChip.visibility = View.VISIBLE
+                holder.serverChip.text = item.serverLabel
+            } else holder.serverChip.visibility = View.GONE
             val q = when {
                 Regex("(?i)(4k|uhd|2160)").containsMatchIn(item.name) -> "4K"
                 Regex("(?i)(fhd|1080)").containsMatchIn(item.name) -> "FHD"

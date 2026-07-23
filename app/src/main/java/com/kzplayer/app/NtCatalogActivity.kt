@@ -55,6 +55,8 @@ abstract class NtCatalogActivity : NtBase() {
     private var searchEpoch: Int = 0
     private var searchJob: Job? = null
     private var voiceQuery: String = ""
+    // Empeche le TextWatcher de relancer une recherche quand on vide le champ nous-memes.
+    private var ignoreSearchChange: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,6 +84,7 @@ abstract class NtCatalogActivity : NtBase() {
         itemRv.adapter = itemAdapter
         searchEt.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
+                if (ignoreSearchChange) return
                 val q = searchEt.text.toString().trim()
                 // Films/Series : la recherche cherche sur TOUS les serveurs (comme le Classique).
                 if (q.length >= 2) {
@@ -127,6 +130,11 @@ abstract class NtCatalogActivity : NtBase() {
                 catAdapter = CatAdapter(categories) { selectCategory(it) }
                 catRv.adapter = catAdapter
                 setLoading(false)
+                // Prechauffe en arriere-plan les catalogues de TOUS les serveurs (Films/Series) pour
+                // que la recherche (micro ou manuelle) trouve vraiment sur tous les serveurs, et vite.
+                if (kind == "movie" || kind == "series") {
+                    lifecycleScope.launch(Dispatchers.IO) { try { Api.prefetchCatalogs(Session.playlists, kind) } catch (e: Exception) {} }
+                }
                 if (voiceQuery.isNotBlank()) {
                     // Recherche vocale : on lance directement la recherche multi-serveurs.
                     val q = voiceQuery; voiceQuery = ""
@@ -143,6 +151,9 @@ abstract class NtCatalogActivity : NtBase() {
         // Choisir une categorie = navigation : on quitte le mode recherche multi-serveurs.
         multiMode = false
         searchJob?.cancel()
+        // On efface une eventuelle recherche en cours (ex. apres une recherche vocale) pour ne pas
+        // filtrer la categorie choisie avec un ancien texte -> sinon "Tout" semble ne rien afficher.
+        if (searchEt.text.isNotEmpty()) { ignoreSearchChange = true; searchEt.setText(""); ignoreSearchChange = false }
         selectedCat = cat.id
         catAdapter?.notifyDataSetChanged()
         val pl = Session.current ?: return

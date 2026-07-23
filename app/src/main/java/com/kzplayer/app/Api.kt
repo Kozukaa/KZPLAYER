@@ -1153,7 +1153,8 @@ object Api {
         }
 
         val (firstItems, totalPages) = first
-        if (firstItems.isNotEmpty()) onBatch(firstItems)
+        var emitted = 0
+        if (firstItems.isNotEmpty()) { onBatch(firstItems); emitted += firstItems.size }
 
         val last = minOf(totalPages, maxPages)
         var p = 2
@@ -1164,8 +1165,20 @@ object Api {
                     async { fetchStalkerPage(pl, activePortal, type, param, sel, pg).first }
                 }.awaitAll().flatten()
             }
-            if (batch.isNotEmpty()) onBatch(batch)
+            if (batch.isNotEmpty()) { onBatch(batch); emitted += batch.size }
             p = end + 1
+        }
+
+        // Repli "Tout" : beaucoup de portails Stalker renvoient VIDE pour la categorie * (tout).
+        // Dans ce cas on parcourt chaque vraie categorie et on pagine, en streamant les resultats
+        // au fur et a mesure. Ainsi la categorie "Tout" fonctionne partout.
+        if (emitted == 0 && sel == "*") {
+            val cats = try { stalkerCategories(pl, kind) } catch (e: Exception) { emptyList() }
+            for (c in cats) {
+                if (c.id.startsWith("__")) continue
+                val its = try { stalkerItems(pl, kind, c.id) } catch (e: Exception) { emptyList() }
+                if (its.isNotEmpty()) onBatch(its)
+            }
         }
     }
 
@@ -1574,7 +1587,7 @@ object Api {
             val jobs = ordered.map { pl ->
                 async(Dispatchers.IO) {
                     val items = sem.withPermit {
-                        try { withTimeoutOrNull(8000L) { searchServer(pl, query, kind) } ?: emptyList() }
+                        try { withTimeoutOrNull(12000L) { searchServer(pl, query, kind) } ?: emptyList() }
                         catch (e: Exception) { emptyList<Item>() }
                     }
                     // Fusion + progression sequentialisees (thread-safe) puis notification UI.

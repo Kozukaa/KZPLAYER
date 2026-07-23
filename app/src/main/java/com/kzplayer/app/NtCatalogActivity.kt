@@ -71,8 +71,12 @@ abstract class NtCatalogActivity : NtBase() {
         heroMeta = findViewById(R.id.heroMeta)
         heroDesc = findViewById(R.id.heroDesc)
         catRv.layoutManager = LinearLayoutManager(this)
+        catRv.setHasFixedSize(true)
         glm = GridLayoutManager(this, computeSpan())
         itemRv.layoutManager = glm
+        // Taille de grille fixe + cache plus grand : moins de recalculs pendant le defilement
+        // et le chargement page par page (perf).
+        itemRv.setHasFixedSize(true)
         itemRv.setItemViewCacheSize(24)
         itemAdapter = TileAdapter { onTileClick(it) }
         itemRv.adapter = itemAdapter
@@ -157,7 +161,9 @@ abstract class NtCatalogActivity : NtBase() {
                     "stalker" -> {
                         val acc = ArrayList<Item>()
                         Api.stalkerItemsPaged(pl, kind, cat.id) { batch ->
-                            withContext(Dispatchers.Main) { acc.addAll(batch); items = acc.toList(); applyFilter(); setLoading(false) }
+                            // On passe la reference (pas de copie complete a chaque lot) : combine a
+                            // l'insertion incrementale de l'adaptateur, l'affichage reste fluide.
+                            withContext(Dispatchers.Main) { acc.addAll(batch); items = acc; applyFilter(); setLoading(false) }
                         }
                     }
                     "m3u" -> { items = Api.m3uItems(pl, kind, cat.id); applyFilter(); setLoading(false) }
@@ -216,6 +222,7 @@ abstract class NtCatalogActivity : NtBase() {
         filtered.firstOrNull()?.let { updateHero(it) }
     }
 
+    private var heroLogo: String = ""
     private fun updateHero(item: Item) {
         heroTitle.text = item.name
         heroMeta.text = item.duration
@@ -224,7 +231,12 @@ abstract class NtCatalogActivity : NtBase() {
             item.summary.isNotBlank() -> item.summary
             else -> ""
         }
-        heroImg.load(item.logo) { crossfade(true); placeholder(R.drawable.bg_tile); error(R.drawable.ic_movie) }
+        // Ne recharge l'affiche que si elle a change : evite de recharger la meme image en boucle
+        // pendant le chargement page par page (le 1er element reste le meme a chaque lot).
+        if (item.logo != heroLogo) {
+            heroLogo = item.logo
+            heroImg.load(item.logo) { crossfade(true); placeholder(R.drawable.bg_tile); error(R.drawable.ic_movie) }
+        }
     }
 
     inner class CatAdapter(val data: List<Category>, val onClick: (Category) -> Unit) :
@@ -247,7 +259,23 @@ abstract class NtCatalogActivity : NtBase() {
 
     inner class TileAdapter(val onClick: (Item) -> Unit) : RecyclerView.Adapter<TileAdapter.VH>() {
         private val data = ArrayList<Item>()
-        fun submit(list: List<Item>) { data.clear(); data.addAll(list); notifyDataSetChanged() }
+        fun submit(list: List<Item>) {
+            // Ajout incremental : si la liste ne fait que s'allonger (meme prefixe), on insere
+            // seulement les nouveaux elements au lieu de tout reconstruire. notifyDataSetChanged
+            // rebind TOUTE la grille et recharge toutes les affiches a chaque lot Stalker -> lenteur.
+            if (list.size > data.size && isPrefix(data, list)) {
+                val start = data.size
+                data.addAll(list.subList(start, list.size))
+                notifyItemRangeInserted(start, list.size - start)
+                return
+            }
+            data.clear(); data.addAll(list); notifyDataSetChanged()
+        }
+        private fun isPrefix(old: List<Item>, new: List<Item>): Boolean {
+            if (new.size < old.size) return false
+            for (i in old.indices) if (old[i] != new[i]) return false
+            return true
+        }
         inner class VH(val v: View) : RecyclerView.ViewHolder(v) {
             val name: TextView = v.findViewById(R.id.nameTv)
             val poster: ImageView = v.findViewById(R.id.posterIv)

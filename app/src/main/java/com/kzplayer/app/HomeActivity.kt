@@ -67,11 +67,14 @@ class HomeActivity : BaseActivity() {
         findViewById<View>(R.id.favorisCard).setOnClickListener { open("favorites", "Favoris") }
         findViewById<View>(R.id.reloadCard).setOnClickListener { reloadPlaylists() }
         findViewById<View>(R.id.settingsCard).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        // Bouton micro (commande vocale) : present dans le layout mais non branche -> on le rebranche.
+        val micBtn = findViewById<View>(R.id.micBtn)
+        micBtn.setOnClickListener { startActivity(Intent(this, VoiceActivity::class.java)) }
 
         // ---------- Adaptation boitier / TV Android ----------
         applyTvOverscan()
         val focusables = listOf<View>(
-            liveCard, moviesCard, seriesCard,
+            micBtn, liveCard, moviesCard, seriesCard,
             findViewById(R.id.favorisCard),
             findViewById(R.id.reloadCard), findViewById(R.id.settingsCard), findViewById(R.id.subCard)
         )

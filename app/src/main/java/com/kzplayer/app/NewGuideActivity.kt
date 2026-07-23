@@ -187,24 +187,42 @@ open class NewGuideActivity : NtBase() {
         msgTv.text = "Recherche de la cha\u00eene..."
         lifecycleScope.launch {
             val all = ArrayList<Item>()
+            var played = false
             try {
                 when (pl.type) {
+                    // Stalker : on tente le match AU FIL des lots -> la chaine se lance des qu'elle
+                    // apparait, sans attendre le chargement complet du catalogue (bien plus rapide).
                     "stalker" -> Api.stalkerItemsPaged(pl, "live", "__all__") { batch ->
-                        withContext(Dispatchers.Main) { all.addAll(batch) }
+                        withContext(Dispatchers.Main) {
+                            if (played) return@withContext
+                            all.addAll(batch)
+                            val liveNow = all.filter { it.kind == "live" }
+                            val m = cands.firstNotNullOfOrNull { findChannel(it, liveNow) }
+                            if (m != null) {
+                                played = true
+                                channels = liveNow
+                                bindChannels()
+                                msgTv.text = ""
+                                playChannel(m)
+                            }
+                        }
                     }
                     "m3u" -> all.addAll(Api.m3uItems(pl, "live", "__all__"))
                     else -> all.addAll(Api.xtreamItems(pl, "live", "__all__"))
                 }
             } catch (e: Exception) {}
-            val live = all.filter { it.kind == "live" }
-            val match = cands.firstNotNullOfOrNull { findChannel(it, live) }
-            if (match != null) {
-                channels = live
-                bindChannels()
-                msgTv.text = ""
-                playChannel(match)
-            } else {
-                msgTv.text = "Cha\u00eene introuvable."
+            withContext(Dispatchers.Main) {
+                if (played) return@withContext
+                val live = all.filter { it.kind == "live" }
+                val match = cands.firstNotNullOfOrNull { findChannel(it, live) }
+                if (match != null) {
+                    channels = live
+                    bindChannels()
+                    msgTv.text = ""
+                    playChannel(match)
+                } else {
+                    msgTv.text = "Cha\u00eene introuvable."
+                }
             }
         }
     }

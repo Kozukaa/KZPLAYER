@@ -29,10 +29,20 @@ jobs:
 
       - name: Generer le wrapper Gradle si absent
         run: |
-          if [ ! -f "./gradlew" ]; then
-            gradle wrapper --gradle-version 8.7 --distribution-type bin
+          if [ ! -f "./gradlew" ] || [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Wrapper absent ou incomplet -> generation dans un dossier vide (n'analyse PAS le projet Android)"
+            WRAPGEN="$RUNNER_TEMP/wrapgen"
+            mkdir -p "$WRAPGEN"
+            ( cd "$WRAPGEN" && gradle wrapper --gradle-version 8.7 --distribution-type bin )
+            mkdir -p gradle/wrapper
+            cp "$WRAPGEN/gradlew" ./gradlew
+            cp "$WRAPGEN/gradlew.bat" ./gradlew.bat 2>/dev/null || true
+            cp "$WRAPGEN/gradle/wrapper/gradle-wrapper.jar" gradle/wrapper/gradle-wrapper.jar
+            cp "$WRAPGEN/gradle/wrapper/gradle-wrapper.properties" gradle/wrapper/gradle-wrapper.properties
           fi
           chmod +x ./gradlew
+          echo "=== Verification du wrapper ==="
+          ls -l ./gradlew gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
 
       - name: Build release (APK non signe)
         run: ./gradlew clean :app:assembleRelease --no-daemon --stacktrace

@@ -11,6 +11,7 @@ android {
         applicationId "com.kzplayer.app"
         minSdk 21
         targetSdk 34
+<<<<<<< HEAD
         // versionCode calcule de facon totalement robuste : ne peut JAMAIS etre null.
         // 1) si le CI fournit VERSION_CODE et que c'est un entier -> on l'utilise
         // 2) sinon si GitHub fournit GITHUB_RUN_NUMBER -> on l'utilise (auto-increment)
@@ -24,6 +25,10 @@ android {
             resolvedVc = runVc.trim().toInteger()
         }
         versionCode resolvedVc
+=======
+        def vcEnv = System.getenv("VERSION_CODE")
+        versionCode (vcEnv != null && !vcEnv.trim().isEmpty()) ? vcEnv.trim().toInteger() : 1
+>>>>>>> b8ac5ccf65cbf2f4258479e0413610bcb941190b
         versionName "1.0"
     }
 

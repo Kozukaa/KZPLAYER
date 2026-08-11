@@ -1,25 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="220dp"
+    android:layout_width="224dp"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:layout_marginEnd="12dp"
-    android:padding="4dp"
+    android:background="@drawable/bg_nflx_card"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:orientation="vertical"
+    android:padding="5dp">
+
     <ImageView
         android:id="@+id/posterIv"
-        android:layout_width="220dp"
-        android:layout_height="124dp"
-        android:scaleType="centerCrop"
-        android:background="@drawable/bg_tile" />
+        android:layout_width="match_parent"
+        android:layout_height="126dp"
+        android:background="@drawable/bg_tile"
+        android:contentDescription="@null"
+        android:padding="6dp"
+        android:scaleType="fitCenter" />
+
     <TextView
         android:id="@+id/nameTv"
-        android:layout_width="220dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxLines="1"
+        android:layout_marginTop="6dp"
         android:ellipsize="end"
+        android:maxLines="1"
         android:textColor="@color/text"
-        android:textSize="13sp"
-        android:layout_marginTop="6dp" />
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/subTv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/muted"
+        android:textSize="11sp"
+        android:visibility="gone" />
 </LinearLayout>

@@ -198,13 +198,11 @@ abstract class NflxCatalogActivity : NtBase() {
     inner class RowVH(v: View) : RecyclerView.ViewHolder(v) {
         private val rowTitle: TextView = v.findViewById(R.id.rowTitle)
         private val rowRv: RecyclerView = v.findViewById(R.id.rowRv)
+        init {
+            rowRv.layoutManager = LinearLayoutManager(rowRv.context, RecyclerView.HORIZONTAL, false)
+        }
         fun bind(row: Row) {
             rowTitle.text = row.title
-            rowRv.layoutManager = LinearLayoutManager(rowRv.context, RecyclerView.HORIZONTAL, false)
-<<<<<<< HEAD
-=======
-            rowRv.setHasFixedSize(false)
->>>>>>> ef35bb7fd89d22073e65a49c318f3de3f6011627
             rowRv.adapter = CardAdapter(row.items)
         }
     }

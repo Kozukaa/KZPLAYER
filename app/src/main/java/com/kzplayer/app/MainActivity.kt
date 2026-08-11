@@ -53,8 +53,7 @@ class MainActivity : BaseActivity() {
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                         Session.current = Session.playlists.firstOrNull()
                     }
-                    val homeCls = if (ThemePref.isNew(this@MainActivity)) NewLiveActivity::class.java else HomeActivity::class.java
-                    startActivity(Intent(this@MainActivity, homeCls))
+                    startActivity(Intent(this@MainActivity, ThemePref.homeClass(this@MainActivity)))
                 } else {
                     codeTv.text = res.deviceCode.ifBlank { deviceCode() }
                     statusTv.text = res.message.ifBlank {

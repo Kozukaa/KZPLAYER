@@ -9,7 +9,7 @@
         android:id="@+id/backBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="\u2190 Retour"
+        android:text="← Retour"
         android:textColor="@color/muted"
         android:textSize="14sp"
         android:clickable="true"
@@ -18,14 +18,14 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Th\u00e8me"
+        android:text="Thème"
         android:textColor="@color/text"
         android:textSize="28sp"
         android:textStyle="bold" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Choisis ton th\u00e8me d'interface"
+        android:text="Choisis ton thème d'interface"
         android:textColor="@color/muted"
         android:textSize="14sp"
         android:layout_marginTop="4dp"
@@ -49,7 +49,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Th\u00e8me 1"
+                android:text="Thème 1"
                 android:textColor="@color/text"
                 android:textSize="16sp" />
             <TextView
@@ -81,6 +81,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:layout_marginEnd="12dp"
             android:orientation="vertical"
             android:gravity="center"
             android:background="@drawable/grad_movies"
@@ -90,7 +91,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Th\u00e8me 2"
+                android:text="Thème 2"
                 android:textColor="@color/text"
                 android:textSize="16sp" />
             <TextView
@@ -104,13 +105,55 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Guide TV, grand visuel, menu lat\u00e9ral"
+                android:text="Guide TV, grand visuel, menu latéral"
                 android:textColor="#CCFFFFFF"
                 android:textSize="13sp"
                 android:gravity="center"
                 android:layout_marginTop="6dp" />
             <TextView
                 android:id="@+id/newState"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/kzAccent"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:layout_marginTop="10dp" />
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/themeNetflix"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_nflx_hero"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="18dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thème 3"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Netflix"
+                android:textColor="@color/text"
+                android:textStyle="bold"
+                android:textSize="24sp"
+                android:layout_marginTop="4dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Accueil cinéma, grandes affiches"
+                android:textColor="#CCFFFFFF"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:layout_marginTop="6dp" />
+            <TextView
+                android:id="@+id/netflixState"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="?attr/kzAccent"

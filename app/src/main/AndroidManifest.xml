@@ -132,6 +132,34 @@
             android:exported="false" />
 
         <activity
+            android:name=".NetflixHomeActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
+            android:name=".NflxMoviesActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
+            android:name=".NflxSeriesActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
+            android:name=".NflxLiveActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
             android:name=".VoiceActivity"
             android:theme="@style/Theme.KZ.Voice"
             android:configChanges="orientation|screenSize|keyboardHidden"

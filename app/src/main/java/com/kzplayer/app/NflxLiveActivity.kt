@@ -1,0 +1,37 @@
+package com.kzplayer.app
+
+import android.content.Intent
+import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
+class NflxLiveActivity : NflxCatalogActivity() {
+    override val kind = "live"
+    override val screenTitle = "TV en direct"
+    override val landscape = true
+    override fun onCardClick(item: Item) {
+        Session.liveChannels = allLoadedItems().filter { it.kind == "live" }
+        val pl = Session.current
+        val direct = item.directUrl
+        val cmd = item.cmd
+        lifecycleScope.launch {
+            val url = when {
+                !direct.isNullOrBlank() -> direct
+                pl != null && !cmd.isNullOrBlank() -> Api.stalkerLink(pl, cmd, "live")
+                else -> null
+            }
+            if (url.isNullOrBlank()) {
+                Toast.makeText(this@NflxLiveActivity, "Lecture indisponible.", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            startActivity(
+                Intent(this@NflxLiveActivity, PlayerActivity::class.java)
+                    .putExtra("url", url)
+                    .putExtra("title", item.name)
+                    .putExtra("logo", item.logo)
+                    .putExtra("historyKind", "live")
+                    .putExtra("mode", "live")
+            )
+        }
+    }
+}

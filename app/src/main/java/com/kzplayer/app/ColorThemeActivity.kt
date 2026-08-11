@@ -105,7 +105,7 @@ class ColorThemeActivity : BaseActivity() {
     private fun applyTheme(id: String) {
         ColorThemePref.set(this, id)
         // Relance l'ecran d'accueil du theme d'interface actif pour appliquer partout.
-        val cls = ThemePref.homeClass(this)
+        val cls = if (ThemePref.isNew(this)) NewLiveActivity::class.java else HomeActivity::class.java
         startActivity(Intent(this, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         finish()
     }

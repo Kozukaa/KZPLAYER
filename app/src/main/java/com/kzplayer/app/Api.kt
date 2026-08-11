@@ -341,33 +341,6 @@ object Api {
             )
         }
 
-    data class UpdateInfo(
-        val ok: Boolean,
-        val versionCode: Int,
-        val versionName: String,
-        val url: String,
-        val note: String
-    )
-
-    // Recupere les infos de la derniere version publiee (pilote par le panel admin).
-    suspend fun getAppUpdate(): UpdateInfo = withContext(Dispatchers.IO) {
-        try {
-            val payload = FormBody.Builder().add("action", "appVersionGet").build()
-            val req = Request.Builder().url(Config.LOGIN_URL).post(payload).build()
-            val (_, txt) = callText(req)
-            val o = JSONObject(txt)
-            UpdateInfo(
-                ok = o.optBoolean("ok", false),
-                versionCode = o.optInt("version_code", 0),
-                versionName = o.optString("version_name", ""),
-                url = o.optString("url", ""),
-                note = o.optString("note", "")
-            )
-        } catch (e: Exception) {
-            UpdateInfo(false, 0, "", "", "")
-        }
-    }
-
     // Envoie au backend la liste des categories d'un serveur (l'app sait les recuperer pour tous
     // les types, y compris Stalker). Le panel les affiche ensuite en cases a cocher. Best-effort.
     suspend fun reportCategories(license: String, playlistId: String, kind: String, names: List<String>) = withContext(Dispatchers.IO) {

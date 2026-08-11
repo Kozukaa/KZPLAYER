@@ -27,6 +27,7 @@ class SettingsActivity : BaseActivity() {
             startActivity(Intent(this, PlaylistSettingsActivity::class.java))
         }
         findViewById<View>(R.id.reloadMenu).setOnClickListener { reloadPlaylists() }
+        findViewById<View>(R.id.updateMenu).setOnClickListener { startActivity(Intent(this, UpdateActivity::class.java)) }
         findViewById<View>(R.id.themeMenu).requestFocus()
     }
 
@@ -70,5 +71,22 @@ class SettingsActivity : BaseActivity() {
         val plName = Session.current?.nom
         findViewById<TextView>(R.id.playlistStateTv).text =
             if (!plName.isNullOrBlank()) "Active : $plName" else "Choisir le serveur / la liste active"
+        checkUpdateBadge()
+    }
+
+    // Indique discretement si une mise a jour est disponible (sous-titre de la tuile).
+    private fun checkUpdateBadge() {
+        val tv = findViewById<TextView>(R.id.updateStateTv)
+        lifecycleScope.launch {
+            try {
+                val info = Api.getAppUpdate()
+                val cur = try {
+                    val pi = packageManager.getPackageInfo(packageName, 0)
+                    if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode.toInt() else @Suppress("DEPRECATION") pi.versionCode
+                } catch (e: Exception) { 0 }
+                tv.text = if (info.ok && info.versionCode > cur && info.url.isNotBlank())
+                    "Mise \u00e0 jour disponible \u2713" else "Application \u00e0 jour"
+            } catch (e: Exception) { tv.text = "V\u00e9rifier les mises \u00e0 jour" }
+        }
     }
 }

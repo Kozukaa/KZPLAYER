@@ -6,9 +6,14 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VERSION_CODE: ${{ github.run_number }}
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
@@ -52,6 +57,28 @@ jobs:
         run: |
           BT=$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -n 1)
           "$BT/apksigner" verify --print-certs app-release-signed.apk
+
+      - name: Preparer l'APK pour la Release
+        run: cp app-release-signed.apk KZPlayer.apk
+
+      - name: Publier la Release GitHub (URL fixe pour l'app)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: KZ Player v${{ github.run_number }}
+          files: KZPlayer.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notifier le panel (mise a jour dispo dans l'app)
+        run: |
+          curl -s -X POST "https://script.google.com/macros/s/AKfycbx31seeUfUfgHkBj8Zjxjl9QizKfWNbLFTVGl-iKMSxzqoHhCSvxPyUtni5w9NE71az/exec" \
+            --data-urlencode "action=appVersionSet" \
+            --data-urlencode "pwd=${{ secrets.PANEL_ADMIN_PASSWORD }}" \
+            --data-urlencode "code=${{ github.run_number }}" \
+            --data-urlencode "name=MaJ ${{ github.run_number }}" \
+            --data-urlencode "url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/v$GITHUB_RUN_NUMBER/KZPlayer.apk" \
+            --data-urlencode "note=Nouvelle mise a jour disponible" || true
 
       - name: Uploader l'APK signe (artifact v4)
         uses: actions/upload-artifact@v4

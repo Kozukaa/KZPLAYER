@@ -65,7 +65,7 @@ class SettingsActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         // Met a jour les libelles avec les valeurs actuelles (theme + liste active).
-        val themeName = if (ThemePref.isNew(this)) "NewTivi" else "Classique"
+        val themeName = when (ThemePref.get(this)) { ThemePref.NETFLIX -> "Netflix"; ThemePref.NEWTIVI -> "NewTivi"; else -> "Classique" }
         findViewById<TextView>(R.id.themeStateTv).text = "Actuel : $themeName"
         findViewById<TextView>(R.id.colorStateTv).text = "Actuel : " + ColorThemePref.current(this).label
         val plName = Session.current?.nom

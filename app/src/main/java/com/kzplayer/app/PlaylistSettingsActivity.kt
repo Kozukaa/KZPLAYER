@@ -96,7 +96,7 @@ class PlaylistSettingsActivity : BaseActivity() {
         }
         Session.current = pl
         Toast.makeText(this, "Liste active : ${pl.nom}", Toast.LENGTH_SHORT).show()
-        val cls = if (ThemePref.isNew(this)) NewLiveActivity::class.java else HomeActivity::class.java
+        val cls = ThemePref.homeClass(this)
         startActivity(Intent(this, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         finish()
     }

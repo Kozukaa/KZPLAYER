@@ -11,8 +11,7 @@ android {
         applicationId "com.kzplayer.app"
         minSdk 21
         targetSdk 34
-        def vc = System.getenv("VERSION_CODE")
-        versionCode vc ? vc.toInteger() : 1
+        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
         versionName "1.0"
     }
 

@@ -16,13 +16,13 @@ class NetflixHomeActivity : NtBase() {
         setContentView(R.layout.activity_netflix_home)
         ensureSession { }
 
-        wire(R.id.nflxPlayTv) { open(NewLiveActivity::class.java) }
-        wire(R.id.nflxHeroMovies) { open(NewMoviesActivity::class.java) }
+        wire(R.id.nflxPlayTv) { open(NflxLiveActivity::class.java) }
+        wire(R.id.nflxHeroMovies) { open(NflxMoviesActivity::class.java) }
 
-        wire(R.id.tileTv) { open(NewLiveActivity::class.java) }
+        wire(R.id.tileTv) { open(NflxLiveActivity::class.java) }
         wire(R.id.tileGuide) { open(NewGuideActivity::class.java) }
-        wire(R.id.tileMovies) { open(NewMoviesActivity::class.java) }
-        wire(R.id.tileSeries) { open(NewSeriesActivity::class.java) }
+        wire(R.id.tileMovies) { open(NflxMoviesActivity::class.java) }
+        wire(R.id.tileSeries) { open(NflxSeriesActivity::class.java) }
         wire(R.id.tileSettings) { open(SettingsActivity::class.java) }
         wire(R.id.tileTheme) { open(ThemeActivity::class.java) }
         wire(R.id.tileUpdate) { open(UpdateActivity::class.java) }

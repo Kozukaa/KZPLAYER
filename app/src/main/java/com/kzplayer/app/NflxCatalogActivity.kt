@@ -136,7 +136,7 @@ abstract class NflxCatalogActivity : NtBase() {
         fun bind(row: Row) {
             rowTitle.text = row.title
             rowRv.layoutManager = LinearLayoutManager(rowRv.context, RecyclerView.HORIZONTAL, false)
-            rowRv.setHasFixedSize(true)
+            rowRv.setHasFixedSize(false)
             rowRv.adapter = CardAdapter(row.items)
         }
     }

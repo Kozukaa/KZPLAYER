@@ -362,22 +362,96 @@ object Api {
             )
         }
 
-    // ---------------- MISE A JOUR (panel admin) ----------------
-    // Interroge le backend pour recuperer la derniere version publiee via le panel.
-    // Best-effort : on essaie plusieurs noms d'action et plusieurs noms de champs
-    // pour rester compatible avec l'evolution du backend, sans casser l'app si le
-    // backend ne repond pas ou ne connait pas cette action.
-    suspend fun checkForUpdate(license: String, currentVersion: String): UpdateInfo = withContext(Dispatchers.IO) {
-        val actions = listOf("getUpdate", "checkUpdate", "latestVersion")
-        for (action in actions) {
-            val info = try { queryUpdate(action, license, currentVersion) } catch (e: Exception) { null }
-            if (info != null && (info.hasUpdate || info.latestVersion.isNotBlank() || info.downloadUrl.isNotBlank())) {
-                return@withContext info
-            }
+    // ---------------- MISE A JOUR (GitHub Releases) ----------------
+    // Source prioritaire : l'API publique GitHub Releases du depot KZ Player. Le workflow
+    // GitHub Actions tague chaque build "v{run_number}" et attache l'APK signe -> on
+    // recupere ainsi la derniere version en une seule requete rapide, sans dependre du
+    // panel Apps Script (qui pouvait mettre 20-30 s a repondre au cold start, donnant
+    // l'impression que le bouton "Mise a jour" bloque).
+    //
+    // - Timeout global strict (6 s) : le bouton repond TOUJOURS vite.
+    // - Compare le "v{N}" du tag au versionCode installe (fourni par SettingsActivity).
+    // - Fallback best-effort sur le backend Apps Script si GitHub echoue.
+    private const val GITHUB_RELEASES_URL =
+        "https://api.github.com/repos/Kozukaa/KZPLAYER/releases/latest"
+
+    suspend fun checkForUpdate(license: String, currentVersion: String, currentVersionCode: Int = 0): UpdateInfo = withContext(Dispatchers.IO) {
+        // 1) Essaye GitHub Releases avec un timeout court : reponse rapide garantie.
+        val gh = kotlinx.coroutines.withTimeoutOrNull(6000L) {
+            try { queryGithubRelease(currentVersion, currentVersionCode) } catch (e: Exception) { null }
         }
-        UpdateInfo(ok = true, hasUpdate = false, latestVersion = "", currentVersion = currentVersion,
+        if (gh != null && (gh.hasUpdate || gh.downloadUrl.isNotBlank() || gh.latestVersion.isNotBlank())) {
+            return@withContext gh
+        }
+        // 2) Fallback best-effort : ancien chemin (Apps Script), avec timeout global.
+        val backend = kotlinx.coroutines.withTimeoutOrNull(8000L) {
+            val actions = listOf("getUpdate", "checkUpdate", "latestVersion")
+            for (action in actions) {
+                val info = try { queryUpdate(action, license, currentVersion) } catch (e: Exception) { null }
+                if (info != null && (info.hasUpdate || info.latestVersion.isNotBlank() || info.downloadUrl.isNotBlank())) {
+                    return@withTimeoutOrNull info
+                }
+            }
+            null
+        }
+        backend ?: UpdateInfo(ok = true, hasUpdate = false, latestVersion = "", currentVersion = currentVersion,
             downloadUrl = "", notes = "", message = "")
     }
+
+    // Interroge directement l'API GitHub Releases (public, pas d'auth requise). On
+    // fabrique un client OkHttp dedie avec timeouts courts pour ne JAMAIS bloquer
+    // l'UI si l'endpoint est lent.
+    private fun queryGithubRelease(currentVersion: String, currentVersionCode: Int): UpdateInfo {
+        val quick = OkHttpClient.Builder()
+            .connectTimeout(4, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .build()
+        val req = Request.Builder()
+            .url(GITHUB_RELEASES_URL)
+            .header("User-Agent", "KZPlayer-App")
+            .header("Accept", "application/vnd.github+json")
+            .build()
+        val body = quick.newCall(req).execute().use { it.body?.string() ?: "" }
+        val obj = try { JSONObject(body) } catch (e: Exception) { return emptyUpdate(currentVersion) }
+        val tag = obj.optString("tag_name").ifBlank { obj.optString("name") } // ex "v135"
+        val notes = obj.optString("body")
+        val htmlUrl = obj.optString("html_url")
+        // Trouve l'asset APK (fichier .apk).
+        val assets = obj.optJSONArray("assets")
+        var apkUrl = ""
+        if (assets != null) {
+            for (i in 0 until assets.length()) {
+                val a = assets.optJSONObject(i) ?: continue
+                val name = a.optString("name")
+                if (name.endsWith(".apk", ignoreCase = true)) {
+                    apkUrl = a.optString("browser_download_url")
+                    if (apkUrl.isNotBlank()) break
+                }
+            }
+        }
+        // Compare la version : le tag est de la forme "v{run_number}" == versionCode.
+        val tagNum = tag.trimStart('v', 'V').toIntOrNull() ?: 0
+        val has = when {
+            apkUrl.isBlank() -> false
+            currentVersionCode > 0 && tagNum > 0 -> tagNum > currentVersionCode
+            else -> tag.isNotBlank() // fallback : offre le telechargement si on ne peut pas comparer
+        }
+        return UpdateInfo(
+            ok = true,
+            hasUpdate = has,
+            latestVersion = tag,
+            currentVersion = currentVersion,
+            downloadUrl = if (apkUrl.isNotBlank()) apkUrl else htmlUrl,
+            notes = notes,
+            message = ""
+        )
+    }
+
+    private fun emptyUpdate(currentVersion: String) = UpdateInfo(
+        ok = false, hasUpdate = false, latestVersion = "", currentVersion = currentVersion,
+        downloadUrl = "", notes = "", message = ""
+    )
 
     private suspend fun queryUpdate(action: String, license: String, currentVersion: String): UpdateInfo {
         val payload = FormBody.Builder()

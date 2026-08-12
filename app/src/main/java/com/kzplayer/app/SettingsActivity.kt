@@ -37,8 +37,16 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun currentVersion(): String = try {
-        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+        val info = packageManager.getPackageInfo(packageName, 0)
+        val name = info.versionName ?: "1.0"
+        "$name (v${currentVersionCode()})"
     } catch (e: Exception) { "1.0" }
+
+    private fun currentVersionCode(): Int = try {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode.toInt()
+        else @Suppress("DEPRECATION") info.versionCode
+    } catch (e: Exception) { 0 }
 
     // Recharge la licence + les serveurs (playlists), comme l'ancien bouton "Recharger" de l'accueil.
     private fun reloadPlaylists() {
@@ -84,7 +92,7 @@ class SettingsActivity : BaseActivity() {
         lifecycleScope.launch {
             try {
                 val info = Api.checkForUpdate(
-                    DeviceIdentity.licenseCode(this@SettingsActivity), cur
+                    DeviceIdentity.licenseCode(this@SettingsActivity), cur, currentVersionCode()
                 )
                 if (info.hasUpdate && info.downloadUrl.isNotBlank()) {
                     val version = if (info.latestVersion.isNotBlank()) info.latestVersion else "nouvelle"

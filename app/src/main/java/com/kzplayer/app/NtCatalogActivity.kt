@@ -25,6 +25,14 @@ import kotlinx.coroutines.withContext
 // Ecran catalogue NewTivi (Films / Series) : categories a gauche, grand visuel en haut,
 // grille d'affiches en dessous. Reutilise 100% la logique de chargement existante (Api).
 abstract class NtCatalogActivity : NtBase() {
+    companion object {
+        // Regex precompilees (partagees par tous les binds) : eviter d'allouer 3 Regex
+        // par tuile a chaque scroll -> reduit fortement le GC sur les grosses grilles.
+        private val R_4K = Regex("(?i)(4k|uhd|2160)")
+        private val R_FHD = Regex("(?i)(fhd|1080)")
+        private val R_HD = Regex("(?i)(\\bhd\\b|720)")
+    }
+
     abstract val kind: String
     abstract val navTag: String
     abstract val screenTitle: String
@@ -307,9 +315,9 @@ abstract class NtCatalogActivity : NtBase() {
                 holder.serverChip.text = item.serverLabel
             } else holder.serverChip.visibility = View.GONE
             val q = when {
-                Regex("(?i)(4k|uhd|2160)").containsMatchIn(item.name) -> "4K"
-                Regex("(?i)(fhd|1080)").containsMatchIn(item.name) -> "FHD"
-                Regex("(?i)(\\bhd\\b|720)").containsMatchIn(item.name) -> "HD"
+                R_4K.containsMatchIn(item.name) -> "4K"
+                R_FHD.containsMatchIn(item.name) -> "FHD"
+                R_HD.containsMatchIn(item.name) -> "HD"
                 else -> ""
             }
             holder.quality.text = q
@@ -317,7 +325,13 @@ abstract class NtCatalogActivity : NtBase() {
             val fallback = R.drawable.ic_movie
             holder.poster.scaleType = ImageView.ScaleType.CENTER_CROP
             if (item.logo.isBlank()) holder.poster.setImageResource(fallback)
-            else holder.poster.load(item.logo) { crossfade(false); placeholder(R.drawable.bg_tile); error(fallback) }
+            else holder.poster.load(item.logo) {
+                crossfade(false)
+                placeholder(R.drawable.bg_tile)
+                error(fallback)
+                // Downsample a la taille du poster : bitmaps plus petits en memoire.
+                size(360, 540)
+            }
             holder.v.setOnFocusChangeListener { _, hasFocus ->
                 holder.v.animate().scaleX(if (hasFocus) 1.05f else 1f).scaleY(if (hasFocus) 1.05f else 1f).setDuration(90).start()
                 holder.v.translationZ = if (hasFocus) 16f else 0f

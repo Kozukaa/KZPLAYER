@@ -226,7 +226,12 @@ abstract class NflxCatalogActivity : NtBase() {
                 holder.sub.visibility = View.VISIBLE
             } else holder.sub.visibility = View.GONE
             if (item.logo.isBlank()) holder.poster.setImageResource(R.drawable.ic_movie)
-            else holder.poster.load(item.logo) { crossfade(false); error(R.drawable.ic_movie) }
+            else holder.poster.load(item.logo) {
+                crossfade(false)
+                error(R.drawable.ic_movie)
+                // Downsample : bitmaps plus petits en memoire, scroll plus fluide.
+                size(if (landscape) 480 else 360, if (landscape) 270 else 540)
+            }
             holder.itemView.setOnClickListener { onCardClick(item) }
             holder.itemView.setOnFocusChangeListener { view, has ->
                 val s = if (has) 1.10f else 1f

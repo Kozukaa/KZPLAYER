@@ -1,165 +1,297 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Ecran de choix du theme. Les 3 cartes utilisent la MEME structure et la meme
+     forme (coins 22dp, meme padding, meme hauteur, meme poids) : seule change la
+     couleur du gradient et l'icone. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="?attr/kzBg"
     android:padding="40dp">
+
     <TextView
         android:id="@+id/backBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="← Retour"
+        android:text="\u2190 Retour"
         android:textColor="@color/muted"
         android:textSize="14sp"
         android:clickable="true"
         android:focusable="true"
         android:paddingBottom="14dp" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Thème"
+        android:text="Th\u00e8me"
         android:textColor="@color/text"
         android:textSize="28sp"
         android:textStyle="bold" />
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Choisis ton thème d'interface"
+        android:text="Choisis ton th\u00e8me d'interface"
         android:textColor="@color/muted"
         android:textSize="14sp"
         android:layout_marginTop="4dp"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="28dp" />
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="220dp"
-        android:orientation="horizontal">
+        android:layout_height="260dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <!-- ============== THEME 1 : CLASSIQUE ============== -->
         <LinearLayout
             android:id="@+id/themeClassic"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginEnd="12dp"
+            android:layout_marginEnd="14dp"
             android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/grad_tv"
+            android:background="@drawable/bg_theme_classic"
             android:clickable="true"
             android:focusable="true"
-            android:padding="18dp">
-            <TextView
-                android:layout_width="wrap_content"
+            android:padding="20dp">
+
+            <!-- Ligne du haut : badge "Theme 1" + icone -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Thème 1"
-                android:textColor="@color/text"
-                android:textSize="16sp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TH\u00c8ME 1"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15"
+                    android:background="@drawable/bg_theme_badge"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp" />
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_live_tv"
+                    android:tint="#FFFFFFFF"
+                    android:contentDescription="@null" />
+            </LinearLayout>
+
+            <!-- Zone principale : titre + sous-titre pousses en bas -->
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Classique"
-                android:textColor="@color/text"
+                android:textColor="#FFFFFFFF"
+                android:textSize="26sp"
                 android:textStyle="bold"
-                android:textSize="24sp"
-                android:layout_marginTop="4dp" />
+                android:shadowColor="#66000000"
+                android:shadowDx="0"
+                android:shadowDy="1"
+                android:shadowRadius="3" />
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="L'interface actuelle"
-                android:textColor="#CCFFFFFF"
-                android:textSize="13sp"
-                android:layout_marginTop="6dp" />
+                android:text="Interface historique, chaines &amp; onglets"
+                android:textColor="#DDFFFFFF"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp" />
+
+            <!-- Etat : Actuel (badge plein) ou Choisir (tag discret) -->
             <TextView
                 android:id="@+id/classicState"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="?attr/kzAccent"
+                android:textColor="#FF111111"
                 android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginTop="10dp" />
+                android:textSize="11sp"
+                android:background="@drawable/bg_theme_badge_current"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:layout_marginTop="12dp"
+                android:visibility="gone" />
         </LinearLayout>
+
+        <!-- ============== THEME 2 : NEWTIVI ============== -->
         <LinearLayout
             android:id="@+id/themeNew"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginEnd="12dp"
+            android:layout_marginEnd="14dp"
             android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/grad_movies"
+            android:background="@drawable/bg_theme_newtivi"
             android:clickable="true"
             android:focusable="true"
-            android:padding="18dp">
-            <TextView
-                android:layout_width="wrap_content"
+            android:padding="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Thème 2"
-                android:textColor="@color/text"
-                android:textSize="16sp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TH\u00c8ME 2"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15"
+                    android:background="@drawable/bg_theme_badge"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp" />
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_epg"
+                    android:tint="#FFFFFFFF"
+                    android:contentDescription="@null" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="NewTivi"
-                android:textColor="@color/text"
+                android:textColor="#FFFFFFFF"
+                android:textSize="26sp"
                 android:textStyle="bold"
-                android:textSize="24sp"
-                android:layout_marginTop="4dp" />
+                android:shadowColor="#66000000"
+                android:shadowDx="0"
+                android:shadowDy="1"
+                android:shadowRadius="3" />
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Guide TV, grand visuel, menu latéral"
-                android:textColor="#CCFFFFFF"
-                android:textSize="13sp"
-                android:gravity="center"
-                android:layout_marginTop="6dp" />
+                android:text="Guide TV, grand visuel, menu lat\u00e9ral"
+                android:textColor="#DDFFFFFF"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp" />
+
             <TextView
                 android:id="@+id/newState"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="?attr/kzAccent"
+                android:textColor="#FF111111"
                 android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginTop="10dp" />
+                android:textSize="11sp"
+                android:background="@drawable/bg_theme_badge_current"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:layout_marginTop="12dp"
+                android:visibility="gone" />
         </LinearLayout>
+
+        <!-- ============== THEME 3 : NETFLIX ============== -->
         <LinearLayout
             android:id="@+id/themeNetflix"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/bg_nflx_hero"
+            android:background="@drawable/bg_theme_netflix"
             android:clickable="true"
             android:focusable="true"
-            android:padding="18dp">
-            <TextView
-                android:layout_width="wrap_content"
+            android:padding="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Thème 3"
-                android:textColor="@color/text"
-                android:textSize="16sp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TH\u00c8ME 3"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15"
+                    android:background="@drawable/bg_theme_badge"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp" />
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_movie"
+                    android:tint="#FFFFFFFF"
+                    android:contentDescription="@null" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Netflix"
-                android:textColor="@color/text"
+                android:textColor="#FFFFFFFF"
+                android:textSize="26sp"
                 android:textStyle="bold"
-                android:textSize="24sp"
-                android:layout_marginTop="4dp" />
+                android:shadowColor="#66000000"
+                android:shadowDx="0"
+                android:shadowDy="1"
+                android:shadowRadius="3" />
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Accueil cinéma, grandes affiches"
-                android:textColor="#CCFFFFFF"
-                android:textSize="13sp"
-                android:gravity="center"
-                android:layout_marginTop="6dp" />
+                android:text="Accueil cin\u00e9ma, grandes affiches"
+                android:textColor="#DDFFFFFF"
+                android:textSize="12sp"
+                android:layout_marginTop="4dp" />
+
             <TextView
                 android:id="@+id/netflixState"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="?attr/kzAccent"
+                android:textColor="#FF111111"
                 android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginTop="10dp" />
+                android:textSize="11sp"
+                android:background="@drawable/bg_theme_badge_current"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:layout_marginTop="12dp"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

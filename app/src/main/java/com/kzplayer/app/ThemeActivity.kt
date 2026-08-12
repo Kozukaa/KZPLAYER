@@ -15,13 +15,26 @@ class ThemeActivity : BaseActivity() {
         val newState = findViewById<TextView>(R.id.newState)
         val netflixState = findViewById<TextView>(R.id.netflixState)
         val cur = ThemePref.get(this)
-        classicState.text = if (cur == ThemePref.CLASSIC) "\u2713 Actuel" else ""
-        newState.text = if (cur == ThemePref.NEWTIVI) "\u2713 Actuel" else ""
-        netflixState.text = if (cur == ThemePref.NETFLIX) "\u2713 Actuel" else ""
+        // Le badge "Actuel" a un fond blanc (bg_theme_badge_current) ; on l'affiche
+        // uniquement pour le theme actif, sinon on le cache pour ne pas laisser un
+        // rectangle vide sur les 2 autres cartes.
+        setStateBadge(classicState, cur == ThemePref.CLASSIC)
+        setStateBadge(newState, cur == ThemePref.NEWTIVI)
+        setStateBadge(netflixState, cur == ThemePref.NETFLIX)
         findViewById<View>(R.id.themeClassic).setOnClickListener { apply(ThemePref.CLASSIC) }
         findViewById<View>(R.id.themeNew).setOnClickListener { apply(ThemePref.NEWTIVI) }
         findViewById<View>(R.id.themeNetflix).setOnClickListener { apply(ThemePref.NETFLIX) }
         findViewById<View>(R.id.themeClassic).requestFocus()
+    }
+
+    private fun setStateBadge(tv: TextView, isCurrent: Boolean) {
+        if (isCurrent) {
+            tv.text = "\u2713 ACTUEL"
+            tv.visibility = View.VISIBLE
+        } else {
+            tv.text = ""
+            tv.visibility = View.GONE
+        }
     }
 
     private fun apply(v: String) {

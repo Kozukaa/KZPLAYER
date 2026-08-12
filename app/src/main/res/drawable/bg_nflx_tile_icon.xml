@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cercle degrade derriere l'icone de tuile. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient
+        android:type="linear"
+        android:angle="135"
+        android:startColor="?attr/kzAccent"
+        android:endColor="?attr/kzAccent2" />
+    <stroke android:width="1dp" android:color="#33FFFFFF" />
+</shape>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pill accent pour badges chauds : TENDANCE, NOUVEAU, TOP 10. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="?attr/kzAccent" />
+    <corners android:radius="100dp" />
+</shape>

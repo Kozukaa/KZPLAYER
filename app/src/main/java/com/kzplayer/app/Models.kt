@@ -52,6 +52,17 @@ data class VodMeta(val plot: String, val duration: String)
 data class SearchHit(val item: Item, val playlist: Playlist)
 
 
+// Resultat de la verification de mise a jour (panel admin).
+data class UpdateInfo(
+    val ok: Boolean,
+    val hasUpdate: Boolean,
+    val latestVersion: String,
+    val currentVersion: String,
+    val downloadUrl: String,
+    val notes: String,
+    val message: String
+)
+
 data class EpgEntry(
     val title: String,
     val time: String = "",

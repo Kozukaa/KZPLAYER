@@ -27,12 +27,18 @@ class HomeActivity : BaseActivity() {
             try {
                 val res = Api.checkLicense(deviceId(), deviceCode(), android.os.Build.MODEL ?: "Android TV", "1.0")
                 if (res.ok && res.active) {
+                    LicenseGuard.rememberOk(this@HomeActivity, res.expiration)
                     Session.playlists = res.playlists
                     Session.expiration = res.expiration
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                         Session.current = Session.playlists.firstOrNull()
                     }
                     expTv.text = Session.expiration?.let { "Expiration : $it" } ?: "Licence illimitée"
+                } else if (LicenseGuard.wasRecentlyActive(this@HomeActivity)) {
+                    // Fenetre de grace : on ne montre pas "Licence inactive" a tort quand le
+                    // backend a juste hoquete. La derniere expiration connue reste affichee.
+                    val exp = LicenseGuard.lastExpiration(this@HomeActivity) ?: Session.expiration
+                    expTv.text = exp?.let { "Expiration : $it" } ?: "Licence active"
                 } else {
                     expTv.text = res.message.ifBlank { "Licence inactive" }
                 }

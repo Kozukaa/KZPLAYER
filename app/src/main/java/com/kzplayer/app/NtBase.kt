@@ -20,6 +20,7 @@ abstract class NtBase : BaseActivity() {
                     Build.MODEL ?: "Android TV", "1.0"
                 )
                 if (res.ok && res.active) {
+                    LicenseGuard.rememberOk(this@NtBase, res.expiration)
                     Session.playlists = res.playlists
                     Session.expiration = res.expiration
                     Session.current = res.playlists.firstOrNull()

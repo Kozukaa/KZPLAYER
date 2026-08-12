@@ -48,11 +48,17 @@ class MainActivity : BaseActivity() {
                     appVersion = "1.0"
                 )
                 if (res.ok && res.active) {
+                    LicenseGuard.rememberOk(this@MainActivity, res.expiration)
                     Session.playlists = res.playlists
                     Session.expiration = res.expiration
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                         Session.current = Session.playlists.firstOrNull()
                     }
+                    startActivity(Intent(this@MainActivity, ThemePref.homeClass(this@MainActivity)))
+                } else if (LicenseGuard.wasRecentlyActive(this@MainActivity)) {
+                    // Fenetre de grace : licence vue active il y a moins de 24h.
+                    // On ne bloque pas l'utilisateur sur un hoquet backend / cold start.
+                    Session.expiration = LicenseGuard.lastExpiration(this@MainActivity) ?: res.expiration
                     startActivity(Intent(this@MainActivity, ThemePref.homeClass(this@MainActivity)))
                 } else {
                     codeTv.text = res.deviceCode.ifBlank { deviceCode() }

@@ -313,7 +313,28 @@ object Api {
     private fun httpObject(url: String): JSONObject =
         try { JSONObject(httpText(url)) } catch (e: Exception) { JSONObject() }
 
-    suspend fun checkLicense(deviceId: String, deviceCode: String, deviceName: String, appVersion: String): LicenseResult =
+    // Verification de licence avec re-essais internes : Apps Script renvoie parfois
+    // une reponse vide/HTML au cold start ou en cas de pic (-> ok=false a tort). On
+    // fait donc jusqu'a 3 tentatives (0 / 700 ms / 1500 ms) avant de rendre le
+    // resultat. Cela supprime la plupart des faux "licence en attente d'activation" /
+    // "licence inactive" quand la licence est bel et bien activee cote panel.
+    suspend fun checkLicense(deviceId: String, deviceCode: String, deviceName: String, appVersion: String): LicenseResult {
+        var last: LicenseResult? = null
+        val delays = longArrayOf(0L, 700L, 1500L)
+        for (i in delays.indices) {
+            if (delays[i] > 0L) kotlinx.coroutines.delay(delays[i])
+            val r = try { checkLicenseOnce(deviceId, deviceCode, deviceName, appVersion) } catch (e: Exception) {
+                LicenseResult(ok = false, active = false, message = e.message ?: "",
+                    deviceCode = deviceCode, playlists = emptyList(), expiration = null)
+            }
+            last = r
+            if (r.ok && r.active) return r
+        }
+        return last ?: LicenseResult(ok = false, active = false, message = "",
+            deviceCode = deviceCode, playlists = emptyList(), expiration = null)
+    }
+
+    private suspend fun checkLicenseOnce(deviceId: String, deviceCode: String, deviceName: String, appVersion: String): LicenseResult =
         withContext(Dispatchers.IO) {
             val payload = FormBody.Builder()
                 .add("action", "checkLicense")
@@ -340,6 +361,52 @@ object Api {
                 expiration = obj.optString("expiration").ifBlank { null }
             )
         }
+
+    // ---------------- MISE A JOUR (panel admin) ----------------
+    // Interroge le backend pour recuperer la derniere version publiee via le panel.
+    // Best-effort : on essaie plusieurs noms d'action et plusieurs noms de champs
+    // pour rester compatible avec l'evolution du backend, sans casser l'app si le
+    // backend ne repond pas ou ne connait pas cette action.
+    suspend fun checkForUpdate(license: String, currentVersion: String): UpdateInfo = withContext(Dispatchers.IO) {
+        val actions = listOf("getUpdate", "checkUpdate", "latestVersion")
+        for (action in actions) {
+            val info = try { queryUpdate(action, license, currentVersion) } catch (e: Exception) { null }
+            if (info != null && (info.hasUpdate || info.latestVersion.isNotBlank() || info.downloadUrl.isNotBlank())) {
+                return@withContext info
+            }
+        }
+        UpdateInfo(ok = true, hasUpdate = false, latestVersion = "", currentVersion = currentVersion,
+            downloadUrl = "", notes = "", message = "")
+    }
+
+    private suspend fun queryUpdate(action: String, license: String, currentVersion: String): UpdateInfo {
+        val payload = FormBody.Builder()
+            .add("action", action)
+            .add("license", license)
+            .add("current_version", currentVersion)
+            .add("app_version", currentVersion)
+            .build()
+        val req = Request.Builder().url(Config.LOGIN_URL).post(payload).build()
+        val (_, txt) = callText(req)
+        val obj = try { JSONObject(txt) } catch (e: Exception) { JSONObject() }
+        val ok = obj.optBoolean("ok", true)
+        val latest = obj.optString("latest_version")
+            .ifBlank { obj.optString("version") }
+            .ifBlank { obj.optString("latestVersion") }
+        val url = obj.optString("apk_url")
+            .ifBlank { obj.optString("url") }
+            .ifBlank { obj.optString("download_url") }
+            .ifBlank { obj.optString("apkUrl") }
+        val notes = obj.optString("notes")
+            .ifBlank { obj.optString("changelog") }
+            .ifBlank { obj.optString("release_notes") }
+        val hasFlag = obj.optBoolean("update_available", false) || obj.optBoolean("has_update", false)
+        val has = hasFlag || (url.isNotBlank() && latest.isNotBlank() && latest != currentVersion)
+        return UpdateInfo(
+            ok = ok, hasUpdate = has, latestVersion = latest, currentVersion = currentVersion,
+            downloadUrl = url, notes = notes, message = obj.optString("message")
+        )
+    }
 
     // Envoie au backend la liste des categories d'un serveur (l'app sait les recuperer pour tous
     // les types, y compris Stalker). Le panel les affiche ensuite en cases a cocher. Best-effort.

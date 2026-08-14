@@ -5,6 +5,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -33,6 +35,8 @@ class SettingsActivity : BaseActivity() {
         // depuis le panel admin.
         findViewById<View>(R.id.updateMenu).setOnClickListener { checkUpdate() }
         findViewById<TextView>(R.id.updateStateTv).text = "Version installee : ${currentVersion()}"
+        findViewById<View>(R.id.panelCfMenu).setOnClickListener { editCfProxyUrl() }
+        refreshCfProxyLabel()
         findViewById<View>(R.id.themeMenu).requestFocus()
     }
 
@@ -129,6 +133,46 @@ class SettingsActivity : BaseActivity() {
         }
     }
 
+    // Ouvre une boite de dialogue pour saisir l'URL du proxy Cloudflare (fallback DNS).
+    // Ex : https://kzplayer.pages.dev  (ne pas mettre /api/kz a la fin, c'est ajoute).
+    private fun editCfProxyUrl() {
+        val current = Config.currentCfProxyUrl(this)
+        val input = EditText(this).apply {
+            setText(current)
+            hint = "https://kzplayer.pages.dev"
+            setSingleLine(true)
+        }
+        val pad = (resources.displayMetrics.density * 20).toInt()
+        val wrap = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, pad / 2, pad, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Panel Cloudflare (fallback DNS)")
+            .setMessage("URL du panel Cloudflare (sans /api/kz). Utilise en secours quand la box du client bloque script.google.com.")
+            .setView(wrap)
+            .setPositiveButton("Enregistrer") { _, _ ->
+                val v = input.text?.toString()?.trim().orEmpty()
+                Config.saveCfProxyUrl(this, v)
+                refreshCfProxyLabel()
+                Toast.makeText(this, if (v.isBlank()) "Fallback désactivé" else "URL enregistrée", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Annuler", null)
+            .setNeutralButton("Effacer") { _, _ ->
+                Config.saveCfProxyUrl(this, "")
+                refreshCfProxyLabel()
+                Toast.makeText(this, "Fallback désactivé", Toast.LENGTH_SHORT).show()
+            }
+            .show()
+    }
+
+    private fun refreshCfProxyLabel() {
+        val cur = Config.currentCfProxyUrl(this)
+        findViewById<TextView>(R.id.panelCfStateTv).text =
+            if (cur.isBlank()) "URL de secours si le DNS est bloqué" else cur
+    }
+
     override fun onResume() {
         super.onResume()
         // Met a jour les libelles avec les valeurs actuelles (theme + liste active).
@@ -140,5 +184,6 @@ class SettingsActivity : BaseActivity() {
             if (!plName.isNullOrBlank()) "Active : $plName" else "Choisir le serveur / la liste active"
         // Toujours re-afficher la version installee (jamais de carte vide).
         findViewById<TextView>(R.id.updateStateTv).text = "Version installee : ${currentVersion()}"
+        refreshCfProxyLabel()
     }
 }

@@ -1,8 +1,10 @@
 package com.kzplayer.app
 
+import android.content.Context
+
 object Config {
-    // URL backend reconstruite par morceaux pour éviter une chaîne trop évidente dans l'APK.
-    // Ce n'est pas une sécurité parfaite, mais ça complique l'extraction basique.
+    // URL backend reconstruite par morceaux pour eviter une chaine trop evidente dans l'APK.
+    // Ce n'est pas une securite parfaite, mais ca complique l'extraction basique.
     private const val P1 = "https://script.google.com"
     private const val P2 = "/macros/s/"
     private const val P3 = "AKfycbx31seeUfUfgHkBj8Zjxjl9QizKfWNbLFTVGl-iKMSxzqoHhCSvxPyUtni5w9NE71az"
@@ -11,6 +13,33 @@ object Config {
 
     val API_BASE: String get() = P1 + P2 + P3
     val LOGIN_URL: String get() = API_BASE.trimEnd('/') + LOGIN_PATH
+
+    // ---------------- Fallback proxy Cloudflare (v144) ----------------
+    // Quand la box du client bloque le DNS de script.google.com ("Unable to resolve
+    // host"), l'app bascule automatiquement sur ce proxy Cloudflare Pages qui
+    // relaye vers Apps Script en form-urlencoded.
+    //
+    // Mets ici l'URL de TON panel Cloudflare (sans /api/kz a la fin), par ex :
+    //   "https://kzplayer.pages.dev"
+    // Laisse vide si tu n'as pas de panel Cloudflare deploye.
+    // L'utilisateur peut aussi la definir depuis Parametres > Panel Cloudflare.
+    const val CF_PROXY_URL_DEFAULT = ""
+
+    private const val PREFS = "kz_config"
+    private const val KEY_CF = "cf_proxy_url"
+
+    fun currentCfProxyUrl(ctx: Context): String {
+        val saved = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_CF, null)?.trim().orEmpty()
+        val url = if (saved.isNotBlank()) saved else CF_PROXY_URL_DEFAULT
+        return url.trim().trimEnd('/')
+    }
+
+    fun saveCfProxyUrl(ctx: Context, url: String) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY_CF, url.trim().trimEnd('/')).apply()
+        Api.cfProxyBase = currentCfProxyUrl(ctx)
+    }
 
     // Anti-modification : mets ici le SHA-256 de TA signature release, sans les deux-points.
     // Tant que c'est vide, l'app ne bloque pas sur la signature.

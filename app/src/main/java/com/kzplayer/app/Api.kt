@@ -20,8 +20,10 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.IOException
 import java.net.URLDecoder
 import java.net.URLEncoder
+import java.net.UnknownHostException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.ConcurrentHashMap
@@ -35,6 +37,11 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 object Api {
+
+    // Fallback proxy Cloudflare (v144). Charge par KzApp au demarrage depuis
+    // les SharedPreferences ("kz_config.cf_proxy_url"), avec Config.CF_PROXY_URL_DEFAULT
+    // comme secours. Utilise par callText quand script.google.com est bloque cote DNS.
+    @Volatile var cfProxyBase: String = Config.CF_PROXY_URL_DEFAULT
 
     // Cookies en memoire : indispensables pour passer la protection anti-bot du free host.
     private val cookieStore = ConcurrentHashMap<String, MutableList<Cookie>>()
@@ -283,6 +290,9 @@ object Api {
     }
 
     // Execute la requete ; si le free host renvoie le defi JS, le resout puis reessaie.
+    // v144 : si l'host est script.google.com et qu'il y a un UnknownHostException
+    // (DNS bloque par la box du client) ou un IOException reseau, on bascule
+    // automatiquement sur le proxy Cloudflare (cfProxyBase) en POST JSON /api/kz.
     private fun callText(req0: Request): Pair<Int, String> {
         val host = req0.url.host
         val req = req0.newBuilder()
@@ -291,15 +301,52 @@ object Api {
             .header("Accept-Language", "fr-FR,fr;q=0.9,en;q=0.8")
             .header("Referer", "https://$host/")
             .build()
-        client.newCall(req).execute().use { resp ->
-            val body = resp.body?.string() ?: ""
-            if (isChallenge(body) && solveChallenge(req.url, body)) {
-                client.newCall(req.newBuilder().build()).execute().use { r2 ->
-                    return Pair(r2.code, r2.body?.string() ?: "")
+        return try {
+            client.newCall(req).execute().use { resp ->
+                val body = resp.body?.string() ?: ""
+                if (isChallenge(body) && solveChallenge(req.url, body)) {
+                    client.newCall(req.newBuilder().build()).execute().use { r2 ->
+                        return Pair(r2.code, r2.body?.string() ?: "")
+                    }
                 }
+                Pair(resp.code, body)
             }
-            return Pair(resp.code, body)
+        } catch (e: UnknownHostException) {
+            callViaCfProxy(req0) ?: throw e
+        } catch (e: IOException) {
+            // Autres erreurs reseau bas niveau (connexion refusee, timeout DNS...).
+            // On tente le fallback SEULEMENT pour l'host Apps Script.
+            if (host.endsWith("script.google.com", ignoreCase = true)) {
+                callViaCfProxy(req0) ?: throw e
+            } else throw e
         }
+    }
+
+    // Rejoue la requete Apps Script en POST JSON sur le proxy Cloudflare (fallback DNS).
+    // Retourne null si le proxy n'est pas configure ou n'a pas une base URL exploitable.
+    private fun callViaCfProxy(req0: Request): Pair<Int, String>? {
+        val base = cfProxyBase.trim().trimEnd('/')
+        if (base.isBlank()) return null
+        if (!base.startsWith("http://", true) && !base.startsWith("https://", true)) return null
+        val fb = req0.body as? FormBody ?: return null
+        val jo = JSONObject()
+        for (i in 0 until fb.size) {
+            try { jo.put(fb.name(i), fb.value(i)) } catch (_: Exception) {}
+        }
+        val proxyUrl = "$base/api/kz"
+        val body = jo.toString().toRequestBody(JSON)
+        val proxyReq = Request.Builder()
+            .url(proxyUrl)
+            .post(body)
+            .header("Content-Type", "application/json; charset=utf-8")
+            .header("Accept", "application/json")
+            .header("User-Agent", Config.USER_AGENT)
+            .build()
+        return try {
+            client.newCall(proxyReq).execute().use { resp ->
+                Pair(resp.code, resp.body?.string() ?: "")
+            }
+        } catch (e: Exception) { null }
     }
 
     private fun httpText(url: String): String {

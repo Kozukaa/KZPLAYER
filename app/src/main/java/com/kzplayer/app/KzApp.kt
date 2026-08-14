@@ -5,7 +5,6 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
-import okhttp3.OkHttpClient
 
 // Fournit a Coil un chargeur d'images base sur notre client OkHttp permissif,
 // afin que les logos/affiches servis en HTTP ou avec un certificat SSL incomplet
@@ -16,7 +15,15 @@ import okhttp3.OkHttpClient
 // rarement des headers Cache-Control corrects). Impact tres visible avec plusieurs
 // serveurs et beaucoup de logos/affiches : plus fluide, moins de re-telechargements,
 // moins de GC.
+//
+// v144 : au demarrage, charge l'URL du proxy Cloudflare (fallback DNS pour
+// script.google.com) depuis les SharedPreferences vers Api.cfProxyBase.
 class KzApp : Application(), ImageLoaderFactory {
+    override fun onCreate() {
+        super.onCreate()
+        try { Api.cfProxyBase = Config.currentCfProxyUrl(this) } catch (_: Exception) {}
+    }
+
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
             .okHttpClient { Api.imageClient() }

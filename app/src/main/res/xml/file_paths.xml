@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- v145 : chemin ou l'APK telecharge est stocke pour l'installation directe.
+         cache-path expose <cacheDir>/updates au FileProvider. -->
+    <cache-path
+        name="updates"
+        path="updates/" />
+    <files-path
+        name="updates_files"
+        path="updates/" />
+    <external-cache-path
+        name="ext_updates"
+        path="updates/" />
+</paths>

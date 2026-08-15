@@ -110,11 +110,9 @@ class SettingsActivity : BaseActivity() {
                         .setTitle("Mise \u00e0 jour disponible")
                         .setMessage(msg)
                         .setPositiveButton("T\u00e9l\u00e9charger") { _, _ ->
-                            try {
-                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl)))
-                            } catch (e: Exception) {
-                                Toast.makeText(this@SettingsActivity, "Impossible d'ouvrir le lien", Toast.LENGTH_LONG).show()
-                            }
+                            // v145 : telechargement + installation en direct via ApkUpdater
+                            // (marche sur les Android TV / boitiers sans navigateur).
+                            ApkUpdater.install(this@SettingsActivity, info.downloadUrl, info.latestVersion)
                         }
                         .setNegativeButton("Plus tard", null)
                         .show()

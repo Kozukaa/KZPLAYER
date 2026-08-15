@@ -140,8 +140,9 @@ class LivePreviewActivity : BaseActivity() {
                     androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
             )
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
-        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
-            .setEnableDecoderFallback(true)
+        // v148 : meme fix que le plein ecran (decodeur video logiciel prioritaire
+        // pour ne pas rester fige sur la premiere frame sur les box TV cassees).
+        val renderersFactory = KzRenderersFactory(this)
             .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(1500, 8000, 500, 1000)

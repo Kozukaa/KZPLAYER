@@ -350,7 +350,9 @@ open class NewGuideActivity : NtBase() {
             androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
                 androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS)
         val msf = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
-        val rf = androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)
+        // v148 : meme fix que le plein ecran (decodeur video logiciel prioritaire
+        // pour reparer le hero preview qui restait bloque sur la premiere frame).
+        val rf = KzRenderersFactory(this)
             .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
         val p = ExoPlayer.Builder(this, rf).setMediaSourceFactory(msf).build()
         inlinePlayer = p

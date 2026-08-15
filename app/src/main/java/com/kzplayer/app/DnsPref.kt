@@ -25,14 +25,13 @@ object DnsPref {
     const val GOOGLE = "google"
     const val QUAD9 = "quad9"
     const val ADGUARD = "adguard"
-    const val ADGUARD_FAMILY = "adguard_family"
     const val CUSTOM = "custom"
 
     fun current(ctx: Context): String {
         val v = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_PROVIDER, SYSTEM).orEmpty()
         return when (v) {
-            CLOUDFLARE, GOOGLE, QUAD9, ADGUARD, ADGUARD_FAMILY, CUSTOM -> v
+            CLOUDFLARE, GOOGLE, QUAD9, ADGUARD, CUSTOM -> v
             else -> SYSTEM
         }
     }
@@ -40,8 +39,10 @@ object DnsPref {
     fun set(ctx: Context, value: String) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_PROVIDER, value).apply()
-        // v149 : on flush le cache DoH pour que le prochain lookup utilise le nouveau resolveur
+        // v151 : purge cache DoH + pool OkHttp -> effet IMMEDIAT sur le prochain appel reseau.
+        // Pas besoin de redemarrer l'app ni de cliquer sur "Recharger".
         DohDns.clearCache()
+        try { Api.evictConnections() } catch (_: Exception) {}
     }
 
     fun customUrl(ctx: Context): String =
@@ -51,6 +52,7 @@ object DnsPref {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_CUSTOM, url.trim()).apply()
         DohDns.clearCache()
+        try { Api.evictConnections() } catch (_: Exception) {}
     }
 
     // URL DoH RFC 8484 (format binaire wire, POST /dns-query).
@@ -58,8 +60,7 @@ object DnsPref {
         CLOUDFLARE -> "https://cloudflare-dns.com/dns-query"
         GOOGLE -> "https://dns.google/dns-query"
         QUAD9 -> "https://dns.quad9.net/dns-query"
-        ADGUARD -> "https://dns.adguard-dns.com/dns-query"
-        ADGUARD_FAMILY -> "https://family.adguard-dns.com/dns-query"
+        ADGUARD -> "https://unfiltered.adguard-dns.com/dns-query"
         CUSTOM -> customUrl(ctx)
         else -> ""
     }
@@ -68,8 +69,7 @@ object DnsPref {
         CLOUDFLARE -> "Cloudflare (1.1.1.1)"
         GOOGLE -> "Google (8.8.8.8)"
         QUAD9 -> "Quad9 (9.9.9.9)"
-        ADGUARD -> "AdGuard (bloque pubs et trackers)"
-        ADGUARD_FAMILY -> "AdGuard Famille (bloque adulte)"
+        ADGUARD -> "AdGuard Non-Filtrant (94.140.14.140)"
         CUSTOM -> "Personnalis\u00e9 (URL DoH)"
         else -> "Syst\u00e8me (par d\u00e9faut)"
     }

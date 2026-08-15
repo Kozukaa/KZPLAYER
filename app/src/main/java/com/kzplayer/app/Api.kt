@@ -59,6 +59,14 @@ object Api {
     /** Client OkHttp permissif reutilise par Coil pour charger logos/affiches. */
     fun imageClient(): OkHttpClient = client
 
+    // v151 : purge le pool de connexions OkHttp pour que le prochain appel force une
+    // nouvelle resolution DNS. Appele par DnsPref.set() quand l'utilisateur change de DNS,
+    // ainsi le changement est immediat sans redemarrer l'app ni cliquer sur Recharger.
+    fun evictConnections() {
+        try { client.connectionPool.evictAll() } catch (_: Exception) {}
+        try { DohDns.clearCache() } catch (_: Exception) {}
+    }
+
     // Stalker renvoie souvent un logo RELATIF ("123.png" ou "/misc/logos/123.png") que
     // Coil ne peut pas charger -> icone par defaut. On reconstruit une URL absolue a partir
     // du portail. Les URL deja completes (Xtream/M3U) sont laissees telles quelles.

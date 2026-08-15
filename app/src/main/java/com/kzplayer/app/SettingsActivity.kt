@@ -213,7 +213,7 @@ class SettingsActivity : BaseActivity() {
     private fun pickDns() {
         val values = arrayOf(
             DnsPref.SYSTEM, DnsPref.CLOUDFLARE, DnsPref.GOOGLE, DnsPref.QUAD9,
-            DnsPref.ADGUARD, DnsPref.ADGUARD_FAMILY, DnsPref.CUSTOM
+            DnsPref.ADGUARD, DnsPref.CUSTOM
         )
         val labels = values.map { DnsPref.label(it) }.toTypedArray()
         val current = DnsPref.current(this)
@@ -232,12 +232,15 @@ class SettingsActivity : BaseActivity() {
     private fun applyDns(provider: String) {
         DnsPref.set(this, provider)
         refreshDnsLabel()
+        // v151 : le pool OkHttp est purge par DnsPref.set() -> effet immediat sur les
+        // prochains appels reseau (portails, panel, updates). Pour un flux VIDEO deja en
+        // train de jouer, il faut rouvrir la chaine (le lecteur garde son propre socket ouvert).
         val msg = if (provider == DnsPref.SYSTEM) {
-            "DNS systeme retabli"
+            "DNS système rétabli - actif immédiatement"
         } else {
-            "DNS applique : " + DnsPref.label(provider)
+            DnsPref.label(provider) + " - actif immédiatement (rouvre la chaîne pour les flux en cours)"
         }
-        Toast.makeText(this, msg + " - relance le lecteur pour l'appliquer aux flux", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
     }
 
     private fun askCustomDns() {

@@ -90,7 +90,7 @@ class PlayerActivity : AppCompatActivity() {
         // Plein ecran paysage
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        setContentView(SurfacePref.layoutFor(this)) // v146 : texture_view par defaut (fix image figee)
+        setContentView(R.layout.activity_player)
         hideSystemBars()
 
         playerView = findViewById(R.id.playerView)
@@ -190,10 +190,10 @@ class PlayerActivity : AppCompatActivity() {
                 )
             androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
         }
-        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(this)
-            // Garde ExoPlayer, mais active tous les decodeurs disponibles + extensions FFmpeg si presentes.
-            // Aide sur AC3/EAC3/DTS et vieux codecs audio Stalker, sans passer sur VLC.
-            .setEnableDecoderFallback(true)
+        // v147 : usine de renderers KZ qui donne la priorite au decodeur video LOGICIEL
+        // (fixe l'image figee sur les box dont le decodeur materiel plante silencieusement).
+        // setEnableDecoderFallback(true) est deja active dans KzRenderersFactory.
+        val renderersFactory = KzRenderersFactory(this)
             // CORRECTION SYNC SON/IMAGE (v86) :
             // - VOD/series : EXTENSION_RENDERER_MODE_ON => on prefere le decodeur AUDIO MATERIEL
             //   (AAC/H264 parfaitement synchronises). Avant, le mode PREFER forcait FFmpeg logiciel

@@ -355,10 +355,11 @@
                 android:contentDescription="@null" />
         </LinearLayout>
 
-        <!-- v146 : mode de rendu video (Texture / Surface). Corrige les box TV
-             ou l'image reste bloquee sur la premiere frame avec le son OK. -->
+        <!-- v147 : mode de decodeur video (Auto / Logiciel / Materiel).
+             Corrige les box TV ou l'image reste bloquee sur la premiere frame
+             alors que le son fonctionne (decodeur materiel casse cote firmware). -->
         <LinearLayout
-            android:id="@+id/videoSurfaceMenu"
+            android:id="@+id/videoDecoderMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -389,17 +390,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Mode de rendu vidéo"
+                    android:text="Décodage vidéo"
                     android:textColor="@color/text"
                     android:textSize="17sp"
                     android:textStyle="bold" />
                 <TextView
-                    android:id="@+id/videoSurfaceStateTv"
+                    android:id="@+id/videoDecoderStateTv"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/muted"
                     android:textSize="13sp"
-                    android:text="Choisir Texture (compat.) ou Surface"
+                    android:text="Auto (logiciel prioritaire)"
                     android:layout_marginTop="3dp" />
             </LinearLayout>
             <ImageView

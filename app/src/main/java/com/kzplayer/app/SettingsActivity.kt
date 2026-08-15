@@ -37,8 +37,8 @@ class SettingsActivity : BaseActivity() {
         findViewById<TextView>(R.id.updateStateTv).text = "Version installee : ${currentVersion()}"
         findViewById<View>(R.id.panelCfMenu).setOnClickListener { editCfProxyUrl() }
         refreshCfProxyLabel()
-        findViewById<View>(R.id.videoSurfaceMenu).setOnClickListener { pickVideoSurface() }
-        refreshVideoSurfaceLabel()
+        findViewById<View>(R.id.videoDecoderMenu).setOnClickListener { pickVideoDecoder() }
+        refreshVideoDecoderLabel()
         findViewById<View>(R.id.themeMenu).requestFocus()
     }
 
@@ -173,20 +173,24 @@ class SettingsActivity : BaseActivity() {
             if (cur.isBlank()) "URL de secours si le DNS est bloqué" else cur
     }
 
-    // v146 : bascule TextureView / SurfaceView pour reparer les box ou l'image reste figee.
-    private fun pickVideoSurface() {
-        val current = SurfacePref.current(this)
-        val values = arrayOf(SurfacePref.TEXTURE, SurfacePref.SURFACE)
+    // v147 : selection du decodeur video (Auto / Logiciel / Materiel).
+    // Repare les box TV ou l'image reste figee (son OK, image bloquee) en donnant
+    // la priorite au decodeur logiciel systeme, sans casser les box qui fonctionnent
+    // bien avec le materiel (elles peuvent basculer sur "Materiel").
+    private fun pickVideoDecoder() {
+        val current = VideoDecoderPref.current(this)
+        val values = arrayOf(VideoDecoderPref.AUTO, VideoDecoderPref.SOFTWARE, VideoDecoderPref.HARDWARE)
         val labels = arrayOf(
-            SurfacePref.label(SurfacePref.TEXTURE) + "  —  recommandé",
-            SurfacePref.label(SurfacePref.SURFACE)
+            VideoDecoderPref.label(VideoDecoderPref.AUTO) + "  —  recommandé",
+            VideoDecoderPref.label(VideoDecoderPref.SOFTWARE),
+            VideoDecoderPref.label(VideoDecoderPref.HARDWARE)
         )
-        val checked = if (current == SurfacePref.SURFACE) 1 else 0
+        val checked = values.indexOf(current).coerceAtLeast(0)
         AlertDialog.Builder(this)
-            .setTitle("Mode de rendu vidéo")
+            .setTitle("Décodage vidéo")
             .setSingleChoiceItems(labels, checked) { d, which ->
-                SurfacePref.set(this, values[which])
-                refreshVideoSurfaceLabel()
+                VideoDecoderPref.set(this, values[which])
+                refreshVideoDecoderLabel()
                 Toast.makeText(this, "Appliqué au prochain lancement du lecteur", Toast.LENGTH_SHORT).show()
                 d.dismiss()
             }
@@ -194,9 +198,9 @@ class SettingsActivity : BaseActivity() {
             .show()
     }
 
-    private fun refreshVideoSurfaceLabel() {
-        val cur = SurfacePref.current(this)
-        findViewById<TextView>(R.id.videoSurfaceStateTv).text = "Actuel : " + SurfacePref.label(cur)
+    private fun refreshVideoDecoderLabel() {
+        val cur = VideoDecoderPref.current(this)
+        findViewById<TextView>(R.id.videoDecoderStateTv).text = VideoDecoderPref.label(cur)
     }
 
     override fun onResume() {
@@ -211,6 +215,6 @@ class SettingsActivity : BaseActivity() {
         // Toujours re-afficher la version installee (jamais de carte vide).
         findViewById<TextView>(R.id.updateStateTv).text = "Version installee : ${currentVersion()}"
         refreshCfProxyLabel()
-        refreshVideoSurfaceLabel()
+        refreshVideoDecoderLabel()
     }
 }

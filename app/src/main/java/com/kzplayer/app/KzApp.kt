@@ -21,6 +21,9 @@ import coil.memory.MemoryCache
 class KzApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
+        // v149 : initialise le resolveur DNS-over-HTTPS avec le contexte app avant
+        // qu'Api.kt (ou toute autre partie de l'app) ne construise ses OkHttpClient.
+        try { DohDns.init(this) } catch (_: Exception) {}
         try { Api.cfProxyBase = Config.currentCfProxyUrl(this) } catch (_: Exception) {}
     }
 

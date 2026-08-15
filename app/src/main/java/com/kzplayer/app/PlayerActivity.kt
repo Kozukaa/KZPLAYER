@@ -159,24 +159,20 @@ class PlayerActivity : AppCompatActivity() {
             finish(); return
         }
 
-        val httpFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true)
-        // Pour un portail Stalker/MAG, le flux n'est accessible qu'avec les memes en-tetes que le
-        // boitier (User-Agent MAG, Cookie mac=..., Referer, token Bearer). Sinon nginx coupe -> HTTP 444.
+        // v149 : httpFactory delegue a KzHttpDataSource qui applique le DNS choisi.
+        // Mode DnsPref.SYSTEM (defaut) -> DefaultHttpDataSource inchange (aucun risque de regression).
+        // Mode DoH -> OkHttpDataSource + resolveur DNS-over-HTTPS.
         val plCur = Session.current
-        if (plCur != null && plCur.type == "stalker") {
-            // IMPORTANT (verifie sur le trafic d'un vrai boitier) : le lien renvoye par create_link
-            // (ex: http://0connect.top:8080/.../1332) repond en 302 et redirige vers le vrai serveur
-            // de streaming avec un token dans l'URL (ex: http://89.x:1935/...?token=...).
-            // Pour le FLUX on n'envoie QUE le User-Agent MAG : renvoyer Cookie/Authorization/Referer
-            // du portail fait repondre 404/444 (anti-bot) ou casse la redirection.
-            val ua = Api.stalkerHeaders(plCur)["User-Agent"]
-            if (!ua.isNullOrBlank()) httpFactory.setUserAgent(ua)
+        val streamUa = if (plCur != null && plCur.type == "stalker") {
+            // Pour Stalker : User-Agent MAG uniquement (voir historique - envoyer Cookie/Referer casse
+            // la redirection 302 vers le vrai serveur de streaming avec token dans l'URL).
+            Api.stalkerHeaders(plCur)["User-Agent"]?.takeIf { it.isNotBlank() }
+                ?: "VLC/3.0.20 LibVLC/3.0.20"
         } else {
-            // Beaucoup de serveurs Xtream renvoient 401/403 a un User-Agent navigateur.
-            // On se presente comme VLC, accepte par la quasi-totalite des panels IPTV.
-            httpFactory.setUserAgent("VLC/3.0.20 LibVLC/3.0.20")
+            // Xtream / M3U : UA VLC (accepte par la quasi-totalite des panels IPTV).
+            "VLC/3.0.20 LibVLC/3.0.20"
         }
+        val httpFactory = KzHttpDataSource.factory(this, userAgent = streamUa, allowCrossProtocolRedirects = true)
         val mediaSourceFactory = if (isVod) {
             // Films / episodes : lecteur VOD standard. Pas de flags TS live, sinon certains VOD
             // chargent la duree mais restent figes sans son.

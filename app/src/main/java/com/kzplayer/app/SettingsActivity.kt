@@ -39,6 +39,9 @@ class SettingsActivity : BaseActivity() {
         refreshCfProxyLabel()
         findViewById<View>(R.id.videoDecoderMenu).setOnClickListener { pickVideoDecoder() }
         refreshVideoDecoderLabel()
+        // v149 : selection du DNS-over-HTTPS applique a toute l'app (portails + flux).
+        findViewById<View>(R.id.dnsMenu).setOnClickListener { pickDns() }
+        refreshDnsLabel()
         findViewById<View>(R.id.themeMenu).requestFocus()
     }
 
@@ -203,6 +206,68 @@ class SettingsActivity : BaseActivity() {
         findViewById<TextView>(R.id.videoDecoderStateTv).text = VideoDecoderPref.label(cur)
     }
 
+    // v149 : selection du DNS-over-HTTPS integre (Cloudflare, Google, Quad9, AdGuard, personnalise).
+    // S'applique a TOUT le trafic de l'app (portails IPTV + flux video ExoPlayer + panel + mises a jour).
+    // Ne change PAS le DNS des autres apps du boitier : c'est un DNS applicatif, pas systeme.
+    // Aucun VPN ni root necessaire.
+    private fun pickDns() {
+        val values = arrayOf(
+            DnsPref.SYSTEM, DnsPref.CLOUDFLARE, DnsPref.GOOGLE, DnsPref.QUAD9,
+            DnsPref.ADGUARD, DnsPref.ADGUARD_FAMILY, DnsPref.CUSTOM
+        )
+        val labels = values.map { DnsPref.label(it) }.toTypedArray()
+        val current = DnsPref.current(this)
+        val checked = values.indexOf(current).coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle("DNS de l'application")
+            .setSingleChoiceItems(labels, checked) { d, which ->
+                val picked = values[which]
+                d.dismiss()
+                if (picked == DnsPref.CUSTOM) askCustomDns() else applyDns(picked)
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun applyDns(provider: String) {
+        DnsPref.set(this, provider)
+        refreshDnsLabel()
+        val msg = if (provider == DnsPref.SYSTEM) {
+            "DNS systeme retabli"
+        } else {
+            "DNS applique : " + DnsPref.label(provider)
+        }
+        Toast.makeText(this, msg + " - relance le lecteur pour l'appliquer aux flux", Toast.LENGTH_LONG).show()
+    }
+
+    private fun askCustomDns() {
+        val input = EditText(this).apply {
+            hint = "https://exemple.com/dns-query"
+            setText(DnsPref.customUrl(this@SettingsActivity))
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("URL DoH personnalisee")
+            .setMessage("Colle l'URL DNS-over-HTTPS complete (RFC 8484, format wire).\nEx NextDNS : https://dns.nextdns.io/xxxxxx/dns-query")
+            .setView(input)
+            .setPositiveButton("OK") { _, _ ->
+                val url = input.text.toString().trim()
+                if (!url.startsWith("https://")) {
+                    Toast.makeText(this, "URL invalide (doit commencer par https://)", Toast.LENGTH_LONG).show()
+                } else {
+                    DnsPref.setCustomUrl(this, url)
+                    applyDns(DnsPref.CUSTOM)
+                }
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun refreshDnsLabel() {
+        val cur = DnsPref.current(this)
+        findViewById<TextView>(R.id.dnsStateTv).text = DnsPref.label(cur)
+    }
+
     override fun onResume() {
         super.onResume()
         // Met a jour les libelles avec les valeurs actuelles (theme + liste active).
@@ -216,5 +281,6 @@ class SettingsActivity : BaseActivity() {
         findViewById<TextView>(R.id.updateStateTv).text = "Version installee : ${currentVersion()}"
         refreshCfProxyLabel()
         refreshVideoDecoderLabel()
+        refreshDnsLabel()
     }
 }

@@ -125,15 +125,15 @@ class LivePreviewActivity : BaseActivity() {
     private fun startMiniPlayer() {
         player?.release(); player = null
         if (url.isBlank()) return
-        val httpFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true)
+        // v149 : idem PlayerActivity (DNS-over-HTTPS applique au lecteur reduit).
         val plCur = Session.current
-        if (plCur != null && plCur.type == "stalker") {
-            val ua = Api.stalkerHeaders(plCur)["User-Agent"]
-            if (!ua.isNullOrBlank()) httpFactory.setUserAgent(ua)
+        val streamUa = if (plCur != null && plCur.type == "stalker") {
+            Api.stalkerHeaders(plCur)["User-Agent"]?.takeIf { it.isNotBlank() }
+                ?: "VLC/3.0.20 LibVLC/3.0.20"
         } else {
-            httpFactory.setUserAgent("VLC/3.0.20 LibVLC/3.0.20")
+            "VLC/3.0.20 LibVLC/3.0.20"
         }
+        val httpFactory = KzHttpDataSource.factory(this, userAgent = streamUa, allowCrossProtocolRedirects = true)
         val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
             .setTsExtractorFlags(
                 androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or

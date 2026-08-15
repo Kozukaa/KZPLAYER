@@ -127,6 +127,8 @@ object Api {
                 .hostnameVerifier(HostnameVerifier { _, _ -> true })
                 .dispatcher(Dispatcher().apply { maxRequestsPerHost = 10; maxRequests = 64 })
                 .cookieJar(cookieJar)
+                // v149 : DNS-over-HTTPS (mode SYSTEM par defaut -> DNS Android natif inchange).
+                .dns(DohDns)
                 .followRedirects(true)
                 .protocols(listOf(Protocol.HTTP_1_1))
                 .connectTimeout(20, TimeUnit.SECONDS)
@@ -135,6 +137,7 @@ object Api {
         } catch (e: Exception) {
             OkHttpClient.Builder()
                 .cookieJar(cookieJar)
+                .dns(DohDns)
                 .protocols(listOf(Protocol.HTTP_1_1))
                 .connectTimeout(20, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)

@@ -37,6 +37,8 @@ class SettingsActivity : BaseActivity() {
         findViewById<TextView>(R.id.updateStateTv).text = "Version installee : ${currentVersion()}"
         findViewById<View>(R.id.panelCfMenu).setOnClickListener { editCfProxyUrl() }
         refreshCfProxyLabel()
+        findViewById<View>(R.id.videoSurfaceMenu).setOnClickListener { pickVideoSurface() }
+        refreshVideoSurfaceLabel()
         findViewById<View>(R.id.themeMenu).requestFocus()
     }
 
@@ -171,6 +173,32 @@ class SettingsActivity : BaseActivity() {
             if (cur.isBlank()) "URL de secours si le DNS est bloqué" else cur
     }
 
+    // v146 : bascule TextureView / SurfaceView pour reparer les box ou l'image reste figee.
+    private fun pickVideoSurface() {
+        val current = SurfacePref.current(this)
+        val values = arrayOf(SurfacePref.TEXTURE, SurfacePref.SURFACE)
+        val labels = arrayOf(
+            SurfacePref.label(SurfacePref.TEXTURE) + "  —  recommandé",
+            SurfacePref.label(SurfacePref.SURFACE)
+        )
+        val checked = if (current == SurfacePref.SURFACE) 1 else 0
+        AlertDialog.Builder(this)
+            .setTitle("Mode de rendu vidéo")
+            .setSingleChoiceItems(labels, checked) { d, which ->
+                SurfacePref.set(this, values[which])
+                refreshVideoSurfaceLabel()
+                Toast.makeText(this, "Appliqué au prochain lancement du lecteur", Toast.LENGTH_SHORT).show()
+                d.dismiss()
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
+
+    private fun refreshVideoSurfaceLabel() {
+        val cur = SurfacePref.current(this)
+        findViewById<TextView>(R.id.videoSurfaceStateTv).text = "Actuel : " + SurfacePref.label(cur)
+    }
+
     override fun onResume() {
         super.onResume()
         // Met a jour les libelles avec les valeurs actuelles (theme + liste active).
@@ -183,5 +211,6 @@ class SettingsActivity : BaseActivity() {
         // Toujours re-afficher la version installee (jamais de carte vide).
         findViewById<TextView>(R.id.updateStateTv).text = "Version installee : ${currentVersion()}"
         refreshCfProxyLabel()
+        refreshVideoSurfaceLabel()
     }
 }

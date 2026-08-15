@@ -90,7 +90,7 @@ class PlayerActivity : AppCompatActivity() {
         // Plein ecran paysage
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        setContentView(R.layout.activity_player)
+        setContentView(SurfacePref.layoutFor(this)) // v146 : texture_view par defaut (fix image figee)
         hideSystemBars()
 
         playerView = findViewById(R.id.playerView)

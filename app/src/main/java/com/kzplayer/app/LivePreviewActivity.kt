@@ -49,7 +49,15 @@ class LivePreviewActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        // v154 : sur telephone (sw<600dp) on laisse l'orientation naturelle du device.
+        // Auparavant on forcait landscape pour tout le monde -> sur telephone en portrait
+        // l'ecran pivotait de force et le player reduit n'apparaissait pas correctement,
+        // d'ou le "mode reduit ne fonctionne pas" en Classique sur telephone.
+        // TV/tablette : landscape force pour conserver le split horizontal 1.5/1.
+        val isPhone = resources.configuration.smallestScreenWidthDp < 600
+        if (!isPhone) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_live_preview)
 

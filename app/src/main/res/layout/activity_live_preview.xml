@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- v153 : Preview chaine NewTivi - variante TELEPHONE. Layout empile verticalement
-     (player en haut format 16:9, info dessous, guide TV en bas) au lieu du split
-     horizontal 1.5/1 qui devient illisible en portrait. Padding 14dp au lieu de 20dp.
-     TV/tablette : layout-sw600dp/activity_live_preview.xml (split horizontal preserve). -->
+<!-- v154 : Preview chaine (mode reduit) - variante TELEPHONE. Layout empile verticalement
+     (player 16:9 en haut, info dessous, guide TV en bas) au lieu du split horizontal
+     1.5/1 illisible en portrait. Padding 14dp au lieu de 20dp.
+     Fix v153->v154 : PlayerView avait layout_height=0dp + layout_constraintDimensionRatio
+     mais son parent est un FrameLayout, donc le ratio etait ignore et le player
+     restait invisible en Classique sur telephone. Corrige avec une hauteur 16:9 fixe. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -64,7 +66,8 @@
             android:paddingBottom="3dp" />
     </LinearLayout>
 
-    <!-- Player 16:9 en haut, largeur maxi. -->
+    <!-- Player 16:9 : hauteur fixe adaptable (200dp ~ 356dp large -> 16:9). Sans ratio
+         constraint, on donne une hauteur en dur qui rend le player visible sur telephone. -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -72,20 +75,17 @@
         <androidx.media3.ui.PlayerView
             android:id="@+id/playerView"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:layout_height="210dp"
             android:background="#000000"
             app:surface_type="texture_view"
             android:focusable="true"
             android:focusableInTouchMode="true"
             app:resize_mode="fit"
             app:use_controller="false"
-            app:show_buffering="when_playing"
-            android:minHeight="180dp"
-            app:layout_constraintDimensionRatio="16:9"
-            android:layout_gravity="center" />
+            app:show_buffering="when_playing" />
     </FrameLayout>
 
-    <!-- Bloc info "MAINTENANT" en dessous, hauteur contenu. -->
+    <!-- Bloc info "MAINTENANT" en dessous. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -130,7 +130,7 @@
             android:textColor="@color/muted"
             android:textSize="11sp"
             android:lineSpacingExtra="1dp"
-            android:maxLines="4"
+            android:maxLines="3"
             android:ellipsize="end"
             android:layout_marginTop="6dp" />
     </LinearLayout>

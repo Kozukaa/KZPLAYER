@@ -7,9 +7,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // Accueil du theme Netflix : grande banniere + raccourcis + rangees "Continuer a regarder" / "Ma liste".
 // 100% autonome et 100% local (historique + favoris) : aucun appel reseau ici, donc aucun risque
@@ -24,6 +28,11 @@ class NetflixHomeActivity : NtBase() {
     private var header: HeaderVH? = null
     private var heroItem: Item? = null
     private var firstFocusDone = false
+    // v157 : indique si on a deja tente de charger le "dernier film du catalogue" en vedette.
+    // Une seule tentative par vie d'activity (evite les appels reseau a chaque onResume).
+    private var featuredMovieAttempted = false
+    // Cache local du film mis en vedette (dernier film du catalogue trie par date d'ajout).
+    private var featuredMovie: Item? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,9 +68,52 @@ class NetflixHomeActivity : NtBase() {
 
         rows.clear()
         rows.addAll(newRows)
-        heroItem = continueAll.firstOrNull() ?: myList.firstOrNull()
+        // v157 : priorite au DERNIER FILM du catalogue du serveur actif (Films recents).
+        // Fallbacks : reprise de lecture -> Ma liste -> chaines favorites -> chaines live chargees.
+        heroItem = featuredMovie
+            ?: continueAll.firstOrNull()
+            ?: myList.firstOrNull()
+            ?: favLive.firstOrNull()
+            ?: Session.liveChannels.firstOrNull { it.logo.isNotBlank() }
+        // Declenche le chargement du dernier film (une seule fois).
+        if (!featuredMovieAttempted) {
+            featuredMovieAttempted = true
+            loadFeaturedMovie()
+        }
         adapter?.notifyDataSetChanged()
         header?.bind()
+    }
+
+    // v157 : charge en tache de fond le dernier film ajoute au catalogue du serveur actif
+    // (Films recents), le trie par date d'ajout decroissante et prend le premier. Le resultat
+    // remplace le contenu du hero "En vedette" via un rebind.
+    // - N'appelle rien si aucun serveur actif.
+    // - Utilise l'API existante (m3uItems / xtreamItems / stalkerItems) sur la categorie "__all__",
+    //   deja mise en cache par Api.catalogFor -> pas de sur-cout reseau si deja precharge.
+    // - Aucune modification du lecteur, de la licence, ni des flux : purement lecture liste films.
+    private fun loadFeaturedMovie() {
+        val pl = Session.current ?: return
+        lifecycleScope.launch {
+            val latest: Item? = try {
+                val items: List<Item> = withContext(Dispatchers.IO) {
+                    when (pl.type) {
+                        "m3u" -> Api.m3uItems(pl, "movie", "__all__")
+                        "stalker" -> Api.stalkerItems(pl, "movie", "__all__")
+                        else -> Api.xtreamItems(pl, "movie", "__all__")
+                    }
+                }
+                // Si aucun "added" fiable (tous a 0), on garde l'ordre naturel = derniers ajoutes
+                // en premier chez la plupart des serveurs Xtream/M3U.
+                val anyAdded = items.any { it.added > 0L }
+                val sorted = if (anyAdded) items.sortedByDescending { it.added } else items
+                sorted.firstOrNull { it.logo.isNotBlank() } ?: sorted.firstOrNull()
+            } catch (e: Exception) { null }
+            if (latest != null) {
+                featuredMovie = latest
+                heroItem = latest
+                header?.bind()
+            }
+        }
     }
 
     private fun <T> safe(block: () -> List<T>): List<T> =
@@ -109,6 +161,9 @@ class NetflixHomeActivity : NtBase() {
         private val img: ImageView = v.findViewById(R.id.heroImg)
         private val title: TextView = v.findViewById(R.id.heroTitle)
         private val meta: TextView = v.findViewById(R.id.heroMeta)
+        // v156 : refs optionnelles (peuvent etre null sur d'anciens layouts).
+        private val posterCard: View? = v.findViewById(R.id.heroPosterCard)
+        private val badges: View? = v.findViewById(R.id.heroBadges)
         private var lastLogo: String = ""
 
         fun bind() {
@@ -125,19 +180,31 @@ class NetflixHomeActivity : NtBase() {
 
             val h = heroItem
             if (h != null) {
+                // v156 : on a un item en vedette -> on affiche tout (badges + poster + titre).
                 title.visibility = View.VISIBLE
                 title.text = h.name
-                meta.text = if (h.duration.isNotBlank()) "Reprendre • ${h.duration}" else "Reprendre la lecture"
+                badges?.visibility = View.VISIBLE
+                posterCard?.visibility = View.VISIBLE
+                img.visibility = View.VISIBLE
+                meta.text = when {
+                    h.kind == "live" || h.kind == "channel" -> "En direct • ${h.name}"
+                    h.duration.isNotBlank() -> "Reprendre • ${h.duration}"
+                    else -> "Reprendre la lecture"
+                }
                 if (h.logo.isNotBlank() && h.logo != lastLogo) {
                     lastLogo = h.logo
                     img.load(h.logo) { crossfade(true) }
                 }
             } else {
-                // v155 : le user a demande de retirer "Ton univers TV, Films et Series".
-                // On garde une accroche neutre (le hero est vide tant qu'il n'y a pas d'historique).
+                // v156 : aucun item en vedette -> on masque TOUT le visuel "vitrine"
+                // (badges + poster + titre) pour ne plus afficher le rectangle gris vide.
+                // Seul le message "Choisis une section pour commencer" reste.
                 title.text = ""
-                meta.text = "Choisis une section pour commencer"
                 title.visibility = View.GONE
+                badges?.visibility = View.GONE
+                posterCard?.visibility = View.GONE
+                meta.text = "Choisis une section pour commencer"
+                lastLogo = ""
             }
 
             if (!firstFocusDone) {

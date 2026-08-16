@@ -22,6 +22,7 @@
 
         <!-- Poster : petit, coin haut-droit -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/heroPosterCard"
             android:layout_width="104dp"
             android:layout_height="148dp"
             android:layout_gravity="end|top"
@@ -104,6 +105,7 @@
 
             <!-- Chips meta -->
             <LinearLayout
+                android:id="@+id/heroBadges"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"

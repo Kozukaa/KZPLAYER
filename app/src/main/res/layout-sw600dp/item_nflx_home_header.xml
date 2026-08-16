@@ -20,6 +20,7 @@
 
         <!-- Poster flottant : occupe le tiers droit. On garde l'ID heroImg attendu par le Kotlin. -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/heroPosterCard"
             android:layout_width="260dp"
             android:layout_height="330dp"
             android:layout_gravity="end|center_vertical"
@@ -103,6 +104,7 @@
 
             <!-- Chips meta : HD / DIRECT / DUREE / etc. -->
             <LinearLayout
+                android:id="@+id/heroBadges"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"

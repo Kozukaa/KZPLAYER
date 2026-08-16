@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- v153 : Netflix card poster - variante TELEPHONE. Largeur 128dp (au lieu de 152dp),
-     hauteur poster 172dp (au lieu de 206dp). TV/tablette : layout-sw600dp/item_nflx_card.xml. -->
+<!-- Carte landscape Netflix (Continuer / Chaines fav) : format 16:9 avec scrim + titre overlay. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="128dp"
+    android:layout_width="236dp"
     android:layout_height="wrap_content"
-    android:layout_marginEnd="10dp"
+    android:layout_marginEnd="14dp"
     android:background="@drawable/bg_nflx_card"
     android:clickable="true"
     android:focusable="true">
@@ -13,11 +12,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="4dp">
+        android:padding="5dp">
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="172dp">
+            android:layout_height="134dp">
 
             <ImageView
                 android:id="@+id/posterIv"
@@ -25,41 +24,44 @@
                 android:layout_height="match_parent"
                 android:background="@drawable/bg_tile"
                 android:contentDescription="@null"
-                android:scaleType="centerCrop" />
+                android:padding="8dp"
+                android:scaleType="fitCenter" />
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="76dp"
+                android:layout_height="70dp"
                 android:layout_gravity="bottom"
                 android:background="@drawable/bg_nflx_poster_scrim" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|end"
-                android:layout_margin="5dp"
-                android:background="@drawable/bg_nflx_pill"
-                android:paddingStart="6dp"
-                android:paddingEnd="6dp"
-                android:paddingTop="1dp"
-                android:paddingBottom="1dp"
-                android:text="HD"
-                android:textColor="#FFFFFFFF"
-                android:textSize="8sp"
-                android:textStyle="bold" />
+            <!-- Barre de progression "reprendre" (visuel decoratif, discrete) -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:layout_gravity="bottom"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="6dp"
+                android:background="#44FFFFFF" />
+            <View
+                android:layout_width="90dp"
+                android:layout_height="3dp"
+                android:layout_gravity="bottom|start"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="6dp"
+                android:background="?attr/kzAccent" />
 
             <TextView
                 android:id="@+id/nameTv"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
-                android:layout_marginStart="6dp"
-                android:layout_marginEnd="6dp"
-                android:layout_marginBottom="6dp"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:layout_marginBottom="14dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#FFFFFFFF"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:shadowColor="#CC000000"
                 android:shadowDx="0"
@@ -73,11 +75,11 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="3dp"
             android:layout_marginEnd="3dp"
-            android:layout_marginTop="3dp"
+            android:layout_marginTop="4dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/muted"
-            android:textSize="10sp"
+            android:textSize="11sp"
             android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

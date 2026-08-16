@@ -1,37 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- v153 : Ecran d'activation - variante TELEPHONE. Root vertical (au lieu horizontal),
-     logo en pleine largeur (max 240dp), padding 20dp au lieu de 42dp.
-     TV/tablette : layout-sw600dp/activity_main.xml. -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
+    android:orientation="horizontal"
     android:background="@drawable/bg_home">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
         android:orientation="vertical"
-        android:padding="20dp"
-        android:gravity="center_horizontal">
+        android:gravity="center"
+        android:padding="28dp">
 
         <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:maxWidth="240dp"
+            android:layout_width="430dp"
+            android:layout_height="130dp"
             android:src="@drawable/logo_kz_wide"
             android:adjustViewBounds="true"
             android:scaleType="fitCenter"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="18dp"
             android:contentDescription="KZ Player" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:padding="42dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Activation appareil"
             android:textColor="@color/text"
-            android:textSize="20sp"
+            android:textSize="24sp"
             android:textStyle="bold" />
 
         <TextView
@@ -39,18 +44,17 @@
             android:layout_height="wrap_content"
             android:text="Cet appareil doit être activé depuis le panel admin. Il apparaîtra automatiquement dans les appareils en attente."
             android:textColor="@color/muted"
-            android:textSize="13sp"
-            android:lineSpacingExtra="2dp"
-            android:layout_marginTop="8dp" />
+            android:textSize="14sp"
+            android:lineSpacingExtra="3dp"
+            android:layout_marginTop="12dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Code appareil"
             android:textColor="@color/muted"
-            android:textSize="11sp"
-            android:layout_marginTop="20dp"
-            android:layout_gravity="start" />
+            android:textSize="12sp"
+            android:layout_marginTop="28dp" />
 
         <TextView
             android:id="@+id/codeTv"
@@ -58,22 +62,22 @@
             android:layout_height="wrap_content"
             android:text="KZ-0000-0000"
             android:textColor="@color/text"
-            android:textSize="26sp"
+            android:textSize="34sp"
             android:textStyle="bold"
             android:gravity="center"
             android:background="@drawable/bg_card"
-            android:padding="14dp"
-            android:layout_marginTop="6dp" />
+            android:padding="18dp"
+            android:layout_marginTop="8dp" />
 
         <TextView
             android:id="@+id/statusTv"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/muted"
-            android:textSize="13sp"
+            android:textSize="15sp"
             android:gravity="center"
-            android:lineSpacingExtra="2dp"
-            android:layout_marginTop="14dp" />
+            android:lineSpacingExtra="3dp"
+            android:layout_marginTop="18dp" />
 
         <Button
             android:id="@+id/reloadBtn"
@@ -83,14 +87,14 @@
             android:textColor="@color/text"
             android:textStyle="bold"
             android:background="@drawable/bg_button_focus"
-            android:layout_marginTop="14dp" />
+            android:layout_marginTop="18dp" />
 
         <ProgressBar
             android:id="@+id/progress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="14dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="18dp"
             android:visibility="gone" />
     </LinearLayout>
-</ScrollView>
+</LinearLayout>

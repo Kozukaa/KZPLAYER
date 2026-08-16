@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- v153 : Preview chaine NewTivi - variante TELEPHONE. Layout empile verticalement
+     (player en haut format 16:9, info dessous, guide TV en bas) au lieu du split
+     horizontal 1.5/1 qui devient illisible en portrait. Padding 14dp au lieu de 20dp.
+     TV/tablette : layout-sw600dp/activity_live_preview.xml (split horizontal preserve). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="?attr/kzBg"
-    android:padding="20dp"
+    android:padding="14dp"
     android:clipChildren="false"
     android:clipToPadding="false">
 
@@ -14,25 +18,25 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="14dp">
+        android:layout_marginBottom="10dp">
 
         <TextView
             android:id="@+id/backBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="\u2190 Retour"
+            android:text="\u2190"
             android:textColor="@color/muted"
-            android:textSize="14sp"
-            android:padding="8dp"
+            android:textSize="18sp"
+            android:padding="6dp"
             android:clickable="true"
             android:focusable="true" />
 
         <View
             android:layout_width="3dp"
-            android:layout_height="22dp"
+            android:layout_height="18dp"
             android:background="?attr/kzAccent"
-            android:layout_marginStart="2dp"
-            android:layout_marginEnd="12dp" />
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="8dp" />
 
         <TextView
             android:id="@+id/titleTv"
@@ -41,102 +45,94 @@
             android:layout_weight="1"
             android:textColor="@color/text"
             android:textStyle="bold"
-            android:textSize="22sp"
+            android:textSize="16sp"
             android:maxLines="1"
             android:ellipsize="end" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="EN DIRECT"
+            android:text="LIVE"
             android:textColor="@color/text"
             android:textStyle="bold"
-            android:textSize="10sp"
+            android:textSize="9sp"
             android:letterSpacing="0.08"
             android:background="@drawable/bg_now_badge"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp" />
     </LinearLayout>
 
+    <!-- Player 16:9 en haut, largeur maxi. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card">
+        <androidx.media3.ui.PlayerView
+            android:id="@+id/playerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:background="#000000"
+            app:surface_type="texture_view"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            app:resize_mode="fit"
+            app:use_controller="false"
+            app:show_buffering="when_playing"
+            android:minHeight="180dp"
+            app:layout_constraintDimensionRatio="16:9"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
+    <!-- Bloc info "MAINTENANT" en dessous, hauteur contenu. -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="0.9"
-        android:orientation="horizontal">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_card"
+        android:padding="12dp">
 
-        <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1.5"
-            android:background="@drawable/bg_card">
-            <androidx.media3.ui.PlayerView
-                android:id="@+id/playerView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="#000000"
-                app:surface_type="texture_view"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
-                app:resize_mode="fit"
-                app:use_controller="false"
-                app:show_buffering="when_playing" />
-        </FrameLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MAINTENANT"
+            android:textColor="@color/muted"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="5dp" />
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginStart="18dp"
-            android:background="@drawable/bg_card"
-            android:padding="18dp">
+        <TextView
+            android:id="@+id/nowTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:maxLines="2"
+            android:ellipsize="end" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="MAINTENANT"
-                android:textColor="@color/muted"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.1"
-                android:layout_marginBottom="8dp" />
+        <TextView
+            android:id="@+id/nowTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/kzAccent"
+            android:textStyle="bold"
+            android:textSize="11sp"
+            android:layout_marginTop="3dp" />
 
-            <TextView
-                android:id="@+id/nowTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/text"
-                android:textStyle="bold"
-                android:textSize="17sp"
-                android:maxLines="2"
-                android:ellipsize="end" />
-
-            <TextView
-                android:id="@+id/nowTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="?attr/kzAccent"
-                android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginTop="6dp" />
-
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_marginTop="10dp">
-
-                <TextView
-                    android:id="@+id/nowDesc"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/muted"
-                    android:textSize="13sp"
-                    android:lineSpacingExtra="2dp" />
-            </ScrollView>
-        </LinearLayout>
+        <TextView
+            android:id="@+id/nowDesc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/muted"
+            android:textSize="11sp"
+            android:lineSpacingExtra="1dp"
+            android:maxLines="4"
+            android:ellipsize="end"
+            android:layout_marginTop="6dp" />
     </LinearLayout>
 
     <TextView
@@ -144,11 +140,11 @@
         android:layout_height="wrap_content"
         android:text="GUIDE TV"
         android:textColor="@color/text"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:textStyle="bold"
         android:letterSpacing="0.08"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="5dp" />
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -168,6 +164,6 @@
             android:layout_gravity="center"
             android:textColor="@color/muted"
             android:gravity="center"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
     </FrameLayout>
 </LinearLayout>

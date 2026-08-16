@@ -1,34 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- v152 : HOME NETFLIX - variante TELEPHONE (<600dp smallest width).
-     La version TV/tablette d'origine (bloc 620dp + poster 260x330 flottant a droite)
-     debordait sur telephone en landscape/portrait. Ici on empile : poster petit en
-     haut a droite, texte pleine largeur en-dessous, boutons en weight partages,
-     tuiles "Parcourir" plus petites.
-     Tous les IDs sont identiques a la version TV/tablette (layout-sw600dp/) pour
-     ne pas casser NetflixHomeActivity.kt. -->
+<!-- HOME NETFLIX - Header ultra premium :
+     - Hero cinematique degrade sombre (bg_nflx_hero) avec vignette radiale
+     - Poster flottant a droite (heroImg) : rendu net, arrondis 18dp, ombre
+     - Bloc titre a gauche : brand + BIG title + chips meta + description + boutons pill
+     - Rangee "Parcourir" refaite : tuiles avec icone dans rond degrade + focus glow
+     Tous les IDs existants sont conserves pour ne pas casser NetflixHomeActivity.kt. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:clipChildren="false">
 
-    <!-- ============================ HERO PHONE ============================ -->
+    <!-- ============================ HERO ============================ -->
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="380dp"
         android:background="@drawable/bg_nflx_hero"
         android:clipChildren="false">
 
-        <!-- Poster : petit, coin haut-droit -->
+        <!-- Poster flottant : occupe le tiers droit. On garde l'ID heroImg attendu par le Kotlin. -->
         <androidx.cardview.widget.CardView
-            android:layout_width="104dp"
-            android:layout_height="148dp"
-            android:layout_gravity="end|top"
-            android:layout_marginEnd="14dp"
-            android:layout_marginTop="56dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="8dp">
+            android:layout_width="260dp"
+            android:layout_height="330dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="48dp"
+            android:layout_marginTop="20dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="14dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
 
             <ImageView
                 android:id="@+id/heroImg"
@@ -36,64 +35,64 @@
                 android:layout_height="match_parent"
                 android:background="@drawable/bg_nflx_hero"
                 android:contentDescription="@null"
-                android:padding="6dp"
+                android:padding="12dp"
                 android:scaleType="fitCenter" />
         </androidx.cardview.widget.CardView>
 
-        <!-- Scrims comme la version TV, pour la lisibilite du texte. -->
+        <!-- Scrim gauche->droite pour la lisibilite du texte. -->
         <View
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/bg_nflx_hero_scrim_left" />
 
+        <!-- Scrim bas pour fondre le hero avec la rangee "Parcourir". -->
         <View
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/bg_scrim_bottom" />
 
-        <!-- Logo KZ en haut a gauche, plus petit. -->
+        <!-- Logo KZ en haut a gauche. -->
         <ImageView
-            android:layout_width="120dp"
-            android:layout_height="36dp"
+            android:layout_width="170dp"
+            android:layout_height="50dp"
             android:layout_gravity="top|start"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="14dp"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="22dp"
             android:adjustViewBounds="true"
             android:contentDescription="@null"
             android:scaleType="fitStart"
             android:src="@drawable/kz_logo_wide" />
 
-        <!-- Bloc gauche : pleine largeur, sous le poster. -->
+        <!-- Bloc gauche : brand + titre + meta chips + description + boutons -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="620dp"
             android:layout_height="wrap_content"
             android:layout_gravity="start|bottom"
             android:orientation="vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="220dp"
-            android:paddingBottom="22dp">
+            android:paddingStart="40dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="34dp">
 
             <TextView
                 android:id="@+id/heroBrand"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:letterSpacing="0.18"
+                android:letterSpacing="0.22"
                 android:text="KZ PLAYER  \u2022  TON UNIVERS"
                 android:textColor="?attr/kzAccent"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/heroTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="10dp"
                 android:ellipsize="end"
                 android:maxLines="2"
                 android:text="Ton univers TV, Films et S\u00e9ries"
                 android:textColor="@color/text"
-                android:textSize="24sp"
+                android:textSize="36sp"
                 android:textStyle="bold"
                 android:shadowColor="#CC000000"
                 android:shadowDx="0"
@@ -101,50 +100,67 @@
                 android:shadowRadius="6"
                 android:lineSpacingExtra="-2dp" />
 
-            <!-- Chips meta -->
+            <!-- Chips meta : HD / DIRECT / DUREE / etc. -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="12dp"
                 android:orientation="horizontal">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_nflx_pill_accent"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingBottom="3dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
                     android:text="EN VEDETTE"
                     android:textColor="#FFFFFFFF"
-                    android:textSize="10sp"
+                    android:textSize="11sp"
                     android:textStyle="bold"
-                    android:letterSpacing="0.12" />
+                    android:letterSpacing="0.14" />
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
+                    android:layout_marginStart="8dp"
                     android:background="@drawable/bg_nflx_pill"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingBottom="3dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
                     android:text="HD"
                     android:textColor="#FFFFFFFF"
-                    android:textSize="10sp"
+                    android:textSize="11sp"
                     android:textStyle="bold" />
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
+                    android:layout_marginStart="8dp"
                     android:background="@drawable/bg_nflx_pill"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingBottom="3dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
                     android:text="\u2605 4.8"
                     android:textColor="#FFFFFFFF"
-                    android:textSize="10sp"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_nflx_pill"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:text="CINEMA \u2022 TV \u2022 S\u00c9RIES"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="11sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -152,71 +168,73 @@
                 android:id="@+id/heroMeta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="10dp"
                 android:ellipsize="end"
                 android:maxLines="2"
                 android:text="Choisis une section pour commencer, ou reprends ta derniere lecture en un clic."
                 android:textColor="#EEFFFFFF"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:lineSpacingExtra="2dp" />
 
-            <!-- Boutons hero : Play + Films + Series en weight sur pleine largeur. -->
+            <!-- Boutons hero : Play + Films + Series -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="20dp"
                 android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/heroPlayTv"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="2"
                     android:background="@drawable/bg_nflx_play"
                     android:clickable="true"
                     android:focusable="true"
-                    android:gravity="center"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp"
-                    android:text="\u25B6  REGARDER LA TV"
+                    android:paddingStart="28dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="28dp"
+                    android:paddingBottom="14dp"
+                    android:text="\u25B6   REGARDER LA TV"
                     android:textColor="#FF000000"
-                    android:textSize="13sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
-                    android:letterSpacing="0.04" />
+                    android:letterSpacing="0.06" />
 
                 <TextView
                     android:id="@+id/heroMovies"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
                     android:background="@drawable/bg_nflx_ghost"
                     android:clickable="true"
                     android:focusable="true"
-                    android:gravity="center"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp"
+                    android:paddingStart="22dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="22dp"
+                    android:paddingBottom="14dp"
                     android:text="\uD83C\uDFAC  FILMS"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.06" />
 
                 <TextView
                     android:id="@+id/heroSeries"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
                     android:background="@drawable/bg_nflx_ghost"
                     android:clickable="true"
                     android:focusable="true"
-                    android:gravity="center"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp"
+                    android:paddingStart="22dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="22dp"
+                    android:paddingBottom="14dp"
                     android:text="\uD83D\uDCFA  S\u00c9RIES"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.06" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
@@ -227,20 +245,20 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="18dp"
-        android:layout_marginBottom="10dp">
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="22dp"
+        android:layout_marginBottom="12dp">
         <View
-            android:layout_width="3dp"
-            android:layout_height="18dp"
+            android:layout_width="4dp"
+            android:layout_height="22dp"
             android:background="?attr/kzAccent" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="10dp"
             android:text="Parcourir"
             android:textColor="@color/text"
-            android:textSize="17sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -249,8 +267,8 @@
         android:layout_height="wrap_content"
         android:clipChildren="false"
         android:clipToPadding="false"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="40dp"
+        android:paddingEnd="40dp"
         android:paddingBottom="14dp"
         android:scrollbars="none">
 
@@ -263,21 +281,21 @@
             <!-- TILE : TV en direct -->
             <LinearLayout
                 android:id="@+id/tileTv"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
-                android:layout_marginEnd="10dp"
+                android:layout_width="156dp"
+                android:layout_height="120dp"
+                android:layout_marginEnd="14dp"
                 android:background="@drawable/bg_nflx_tile"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="vertical">
                 <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:background="@drawable/bg_nflx_tile_icon">
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_gravity="center"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_live_tv"
@@ -286,31 +304,31 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:text="TV en direct"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <!-- TILE : Films -->
             <LinearLayout
                 android:id="@+id/tileMovies"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
-                android:layout_marginEnd="10dp"
+                android:layout_width="156dp"
+                android:layout_height="120dp"
+                android:layout_marginEnd="14dp"
                 android:background="@drawable/bg_nflx_tile"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="vertical">
                 <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:background="@drawable/bg_nflx_tile_icon">
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_gravity="center"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_movie"
@@ -319,31 +337,31 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:text="Films"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <!-- TILE : Series -->
             <LinearLayout
                 android:id="@+id/tileSeries"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
-                android:layout_marginEnd="10dp"
+                android:layout_width="156dp"
+                android:layout_height="120dp"
+                android:layout_marginEnd="14dp"
                 android:background="@drawable/bg_nflx_tile"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="vertical">
                 <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:background="@drawable/bg_nflx_tile_icon">
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_gravity="center"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_series"
@@ -352,31 +370,31 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:text="S\u00e9ries"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <!-- TILE : Guide TV -->
             <LinearLayout
                 android:id="@+id/tileGuide"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
-                android:layout_marginEnd="10dp"
+                android:layout_width="156dp"
+                android:layout_height="120dp"
+                android:layout_marginEnd="14dp"
                 android:background="@drawable/bg_nflx_tile"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="vertical">
                 <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:background="@drawable/bg_nflx_tile_icon">
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_gravity="center"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_epg"
@@ -385,31 +403,31 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:text="Guide TV"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <!-- TILE : Recherche vocale -->
             <LinearLayout
                 android:id="@+id/tileVoice"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
-                android:layout_marginEnd="10dp"
+                android:layout_width="156dp"
+                android:layout_height="120dp"
+                android:layout_marginEnd="14dp"
                 android:background="@drawable/bg_nflx_tile"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="vertical">
                 <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:background="@drawable/bg_nflx_tile_icon">
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_gravity="center"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_mic"
@@ -418,31 +436,31 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:text="Recherche vocale"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <!-- TILE : Parametres -->
             <LinearLayout
                 android:id="@+id/tileSettings"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
-                android:layout_marginEnd="10dp"
+                android:layout_width="156dp"
+                android:layout_height="120dp"
+                android:layout_marginEnd="14dp"
                 android:background="@drawable/bg_nflx_tile"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="vertical">
                 <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:background="@drawable/bg_nflx_tile_icon">
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_gravity="center"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_settings"
@@ -451,30 +469,30 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:text="Param\u00e8tres"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
             <!-- TILE : Theme -->
             <LinearLayout
                 android:id="@+id/tileTheme"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
+                android:layout_width="156dp"
+                android:layout_height="120dp"
                 android:background="@drawable/bg_nflx_tile"
                 android:clickable="true"
                 android:focusable="true"
                 android:gravity="center"
                 android:orientation="vertical">
                 <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:background="@drawable/bg_nflx_tile_icon">
                     <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:layout_gravity="center"
                         android:contentDescription="@null"
                         android:src="@drawable/ic_star"
@@ -483,10 +501,10 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:text="Th\u00e8me"
                     android:textColor="@color/text"
-                    android:textSize="12sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
             </LinearLayout>
         </LinearLayout>

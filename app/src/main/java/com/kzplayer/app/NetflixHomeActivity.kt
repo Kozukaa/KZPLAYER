@@ -125,6 +125,7 @@ class NetflixHomeActivity : NtBase() {
 
             val h = heroItem
             if (h != null) {
+                title.visibility = View.VISIBLE
                 title.text = h.name
                 meta.text = if (h.duration.isNotBlank()) "Reprendre • ${h.duration}" else "Reprendre la lecture"
                 if (h.logo.isNotBlank() && h.logo != lastLogo) {
@@ -132,8 +133,11 @@ class NetflixHomeActivity : NtBase() {
                     img.load(h.logo) { crossfade(true) }
                 }
             } else {
-                title.text = "Ton univers TV, Films et Séries"
+                // v155 : le user a demande de retirer "Ton univers TV, Films et Series".
+                // On garde une accroche neutre (le hero est vide tant qu'il n'y a pas d'historique).
+                title.text = ""
                 meta.text = "Choisis une section pour commencer"
+                title.visibility = View.GONE
             }
 
             if (!firstFocusDone) {

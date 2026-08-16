@@ -1,45 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- v155 : Ecran "Liste de lecture" - variante TELEPHONE. Padding 16dp au lieu de 40dp,
-     titre 20sp au lieu de 28sp, code licence 16sp au lieu de 22sp, marges compactees.
-     TV/tablette : layout-sw600dp/activity_playlist_settings.xml (inchange). Tous les IDs
-     preserves (backBtn, licenseTv, playlistContainer). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="?attr/kzBg"
-    android:padding="16dp">
+    android:padding="40dp">
     <TextView
         android:id="@+id/backBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="\u2190 Retour"
         android:textColor="@color/muted"
-        android:textSize="13sp"
+        android:textSize="14sp"
         android:clickable="true"
         android:focusable="true"
-        android:paddingBottom="10dp" />
+        android:paddingBottom="14dp" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Liste de lecture"
         android:textColor="@color/text"
-        android:textSize="20sp"
+        android:textSize="28sp"
         android:textStyle="bold" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Choisis le serveur / la liste active"
         android:textColor="@color/muted"
-        android:textSize="12sp"
-        android:layout_marginTop="3dp"
-        android:layout_marginBottom="12dp" />
+        android:textSize="14sp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="N\u00b0 DE LICENCE"
         android:textColor="@color/muted"
-        android:textSize="10sp"
+        android:textSize="11sp"
         android:textStyle="bold"
         android:letterSpacing="0.08"
         android:layout_marginBottom="2dp" />
@@ -48,10 +44,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="?attr/kzAccent"
-        android:textSize="16sp"
+        android:textSize="22sp"
         android:textStyle="bold"
         android:letterSpacing="0.05"
-        android:layout_marginBottom="14dp" />
+        android:layout_marginBottom="20dp" />
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"

@@ -1,26 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- v154 : Preview chaine (mode reduit) - variante TELEPHONE. Layout empile verticalement
-     (player 16:9 en haut, info dessous, guide TV en bas) au lieu du split horizontal
-     1.5/1 illisible en portrait. Padding 14dp au lieu de 20dp.
-     Fix v153->v154 : PlayerView avait layout_height=0dp + layout_constraintDimensionRatio
-     mais son parent est un FrameLayout, donc le ratio etait ignore et le player
-     restait invisible en Classique sur telephone. Corrige avec une hauteur 16:9 fixe. -->
+<!-- v155 : Preview chaine (mode reduit) - variante TELEPHONE robuste.
+     Fix definitif du "son mais pas d'image" : le PlayerView reste TOUJOURS visible
+     en tete a hauteur fixe 220dp (16:9 pour ~390dp de large phone), avec un fond noir.
+     Le contenu qui suit (info MAINTENANT + guide TV) est place dans un NestedScrollView
+     pour ne jamais ecraser le player, meme en landscape court ou avec petit ecran.
+     TV/tablette : layout-sw600dp/activity_live_preview.xml (split horizontal 1.5/1 inchange). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="?attr/kzBg"
-    android:padding="14dp"
+    android:padding="12dp"
     android:clipChildren="false"
     android:clipToPadding="false">
 
+    <!-- Header : retour + titre + badge LIVE. Hauteur wrap. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="10dp">
+        android:layout_marginBottom="8dp">
 
         <TextView
             android:id="@+id/backBtn"
@@ -66,16 +67,15 @@
             android:paddingBottom="3dp" />
     </LinearLayout>
 
-    <!-- Player 16:9 : hauteur fixe adaptable (200dp ~ 356dp large -> 16:9). Sans ratio
-         constraint, on donne une hauteur en dur qui rend le player visible sur telephone. -->
+    <!-- PLAYER : hauteur fixe 220dp, toujours visible, jamais ecrase. Fond noir. -->
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_card">
+        android:layout_height="220dp"
+        android:background="#000000">
         <androidx.media3.ui.PlayerView
             android:id="@+id/playerView"
             android:layout_width="match_parent"
-            android:layout_height="210dp"
+            android:layout_height="match_parent"
             android:background="#000000"
             app:surface_type="texture_view"
             android:focusable="true"
@@ -85,85 +85,101 @@
             app:show_buffering="when_playing" />
     </FrameLayout>
 
-    <!-- Bloc info "MAINTENANT" en dessous. -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="10dp"
-        android:background="@drawable/bg_card"
-        android:padding="12dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="MAINTENANT"
-            android:textColor="@color/muted"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.1"
-            android:layout_marginBottom="5dp" />
-
-        <TextView
-            android:id="@+id/nowTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:maxLines="2"
-            android:ellipsize="end" />
-
-        <TextView
-            android:id="@+id/nowTime"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="?attr/kzAccent"
-            android:textStyle="bold"
-            android:textSize="11sp"
-            android:layout_marginTop="3dp" />
-
-        <TextView
-            android:id="@+id/nowDesc"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/muted"
-            android:textSize="11sp"
-            android:lineSpacingExtra="1dp"
-            android:maxLines="3"
-            android:ellipsize="end"
-            android:layout_marginTop="6dp" />
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="GUIDE TV"
-        android:textColor="@color/text"
-        android:textSize="11sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.08"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="5dp" />
-
-    <FrameLayout
+    <!-- Info + guide TV : dans un ScrollView pour que rien n'ecrase le player en cas
+         de petit ecran (ex. landscape phone). L'utilisateur peut scroller si necessaire. -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/epgRv"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false" />
-
-        <TextView
-            android:id="@+id/epgMsg"
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:textColor="@color/muted"
-            android:gravity="center"
-            android:textSize="13sp" />
-    </FrameLayout>
+            android:orientation="vertical">
+
+            <!-- Bloc info "MAINTENANT" -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_card"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MAINTENANT"
+                    android:textColor="@color/muted"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"
+                    android:layout_marginBottom="5dp" />
+
+                <TextView
+                    android:id="@+id/nowTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/nowTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/kzAccent"
+                    android:textStyle="bold"
+                    android:textSize="11sp"
+                    android:layout_marginTop="3dp" />
+
+                <TextView
+                    android:id="@+id/nowDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/muted"
+                    android:textSize="11sp"
+                    android:lineSpacingExtra="1dp"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GUIDE TV"
+                android:textColor="@color/text"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="5dp" />
+
+            <!-- RecyclerView imbriquee : nestedScrollingEnabled=false pour cohabiter
+                 avec le NestedScrollView parent sans conflit de scroll. -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/epgRv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:clipToPadding="false" />
+
+                <TextView
+                    android:id="@+id/epgMsg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:textColor="@color/muted"
+                    android:gravity="center"
+                    android:textSize="13sp"
+                    android:padding="12dp" />
+            </FrameLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

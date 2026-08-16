@@ -82,7 +82,8 @@
                 android:text="KZ PLAYER  \u2022  TON UNIVERS"
                 android:textColor="?attr/kzAccent"
                 android:textSize="11sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/heroTitle"

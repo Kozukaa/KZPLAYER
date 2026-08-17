@@ -1029,33 +1029,47 @@ object Api {
     }
 
     private fun stalkerHandshake(pl: Playlist): Boolean {
-        if (!hasCustomStalkerProfile(pl)) currentStbProfile = STB_PROFILES[0]
+        // v159 : si pas de profil custom force, on essaie SUCCESSIVEMENT MAG250 -> MAG254 -> MAG322
+        // (au lieu de MAG250 seulement). Certains portails - ex. 301702.xyz - acceptent
+        // uniquement un modele precis. Cela reproduit le comportement de SFVip PC qui
+        // fait varier son User-Agent selon la config du serveur.
         val tried = StringBuilder()
         val candidates = stalkerPortalCandidates(pl.serverUrl)
-        for (portal in candidates) {
-            val txt = stbCall(pl, portal, "type=stb&action=handshake&token=&JsHttpRequest=1-xml")
-            val tok = try { JSONObject(txt).optJSONObject("js")?.optString("token") } catch (e: Exception) { null }
-            tried.append("\n- ").append(portal).append(" -> ").append(if (!tok.isNullOrBlank()) "TOKEN OK" else txt.take(120))
-            if (!tok.isNullOrBlank()) {
-                stalkerToken = tok
-                stalkerBase = portal
-                stalkerGetProfile(pl, portal)
-                if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, portal)
-                lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${currentStbProfile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}"
-                return true
+        val profilesToTry = if (hasCustomStalkerProfile(pl)) listOf(currentStbProfile) else STB_PROFILES
+        for (profile in profilesToTry) {
+            currentStbProfile = profile
+            for (portal in candidates) {
+                val txt = stbCall(pl, portal, "type=stb&action=handshake&token=&JsHttpRequest=1-xml")
+                val tok = try { JSONObject(txt).optJSONObject("js")?.optString("token") } catch (e: Exception) { null }
+                tried.append("\n- [").append(profile.model).append("] ").append(portal).append(" -> ").append(if (!tok.isNullOrBlank()) "TOKEN OK" else txt.take(80))
+                if (!tok.isNullOrBlank()) {
+                    stalkerToken = tok
+                    stalkerBase = portal
+                    stalkerGetProfile(pl, portal)
+                    if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, portal)
+                    lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${profile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}"
+                    return true
+                }
             }
         }
-        lastStalkerLog = "Handshake Stalker impossible\nServeur: ${pl.serverUrl}\nProfil: ${currentStbProfile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nEssais:$tried"
+        lastStalkerLog = "Handshake Stalker impossible\nServeur: ${pl.serverUrl}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nEssais:$tried"
         return false
     }
 
     private fun stalkerPortalCandidates(serverUrl: String): List<String> {
         val bases = LinkedHashSet<String>()
         val base = serverUrl.trim().trimEnd('/')
-        if (base.isNotBlank()) bases.add(base)
-        // Certains portails refusent ou routent mal quand :80 est present dans l'URL,
-        // alors que le meme domaine sans port marche.
-        if (base.endsWith(":80", true)) bases.add(base.removeSuffix(":80"))
+        // v159 : quand l'URL contient explicitement :80, essayer d'abord SANS le port
+        // (certains portails - ex. 301702.xyz - refusent le :80 en clair alors qu'ils
+        // acceptent la meme URL sans le port).
+        if (base.isNotBlank()) {
+            if (base.endsWith(":80", true)) {
+                bases.add(base.removeSuffix(":80"))
+                bases.add(base)
+            } else {
+                bases.add(base)
+            }
+        }
 
         val out = LinkedHashSet<String>()
         for (b in bases) {

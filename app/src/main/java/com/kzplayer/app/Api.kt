@@ -1119,12 +1119,17 @@ object Api {
             val sig = sha256Hex((pl.mac + sn).uppercase()).uppercase()
             val ver = enc(currentStbProfile.ver)
             val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}")
-            val q = "type=stb&action=get_profile&hd=1&ver=$ver" +
+            val qBase = "type=stb&action=get_profile&hd=1&ver=$ver" +
                 "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
                 "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
-                "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics" +
-                "&JsHttpRequest=1-xml"
-            stbCall(pl, portal, q)
+                "&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics"
+            // v160 : DOUBLE get_profile (protocole Stalker MAG "second step auth").
+            // Etape 1 : auth_second_step=1 -> le serveur renvoie une graine et met le token en attente.
+            // Etape 2 : auth_second_step=0 -> le serveur valide definitivement le token.
+            // Sans l'etape 2, itv/get_genres, vod/get_categories, series/get_categories renvoient vide
+            // sur les portails modernes (5.6+) tels que 301702.xyz. Titan Player et SFVip font ces 2 appels.
+            stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
+            stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml")
             return
         }
 
@@ -1146,18 +1151,19 @@ object Api {
             "{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}"
         }
 
-        var q = "type=stb&action=get_profile&hd=1&ver=${qv(verRaw)}" +
+        var qBase = "type=stb&action=get_profile&hd=1&ver=${qv(verRaw)}" +
             "&num_banks=2&sn=${qv(sn)}&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${qv(imageVersion)}" +
             "&video_out=hdmi&device_id=${qv(did)}&device_id2=${qv(did2)}&signature=${qv(sig)}" +
-            "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=${qv(metricsRaw)}"
+            "&hw_version=1.7-BD-00&not_valid_token=0&metrics=${qv(metricsRaw)}"
 
-        if (pl.stalkerHwVersion2.isNotBlank()) q += "&hw_version_2=${qv(pl.stalkerHwVersion2)}"
-        if (pl.stalkerTimestamp.isNotBlank()) q += "&timestamp=${qv(pl.stalkerTimestamp)}"
-        q += "&api_signature=${qv(pl.stalkerApiSignature.ifBlank { "262" })}"
-        if (pl.stalkerPrehash.isNotBlank()) q += "&prehash=${qv(pl.stalkerPrehash)}"
-        q += "&JsHttpRequest=1-xml"
+        if (pl.stalkerHwVersion2.isNotBlank()) qBase += "&hw_version_2=${qv(pl.stalkerHwVersion2)}"
+        if (pl.stalkerTimestamp.isNotBlank()) qBase += "&timestamp=${qv(pl.stalkerTimestamp)}"
+        qBase += "&api_signature=${qv(pl.stalkerApiSignature.ifBlank { "262" })}"
+        if (pl.stalkerPrehash.isNotBlank()) qBase += "&prehash=${qv(pl.stalkerPrehash)}"
 
-        stbCall(pl, portal, q)
+        // v160 : DOUBLE get_profile (voir explication ci-dessus).
+        stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
+        stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml")
     }
 
     private fun ensureStalker(pl: Playlist): String? {

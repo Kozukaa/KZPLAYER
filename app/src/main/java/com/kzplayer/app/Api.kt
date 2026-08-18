@@ -951,6 +951,13 @@ object Api {
 
     private var stalkerToken: String? = null
     private var stalkerBase: String? = null
+    // v163 : URL saisie par le user qui a produit ce stalkerBase (pour verifier validite
+    // meme apres rebase automatique sur le host renvoye par get_profile).
+    private var stalkerBaseForServerUrl: String? = null
+    // v163 : valeurs recuperees par le dernier stalkerGetProfile (host de streaming, token_temp).
+    // Le handshake les consomme immediatement apres l'appel pour rebaser stalkerBase/stalkerToken.
+    private var profileHost: String = ""
+    private var profileTokenTemp: String = ""
     // Dernier diagnostic de resolution de flux (affiche dans le lecteur en cas d'echec).
     var lastStreamLog: String = ""
     var lastStalkerLog: String = ""
@@ -1071,9 +1078,28 @@ object Api {
                 }
                 stalkerToken = finalTok
                 stalkerBase = portal
+                stalkerBaseForServerUrl = pl.serverUrl
+                // v163 : reset scratch avant get_profile.
+                profileHost = ""
+                profileTokenTemp = ""
                 stalkerGetProfile(pl, portal)
-                if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, portal)
-                lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${profile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nDouble handshake: ${if (notValid == 1 || random.isNotBlank()) "OUI" else "non"}"
+                // v163 : si le profil renvoie un host de streaming different (ex. 2.900900.me -> 900900.eu),
+                // rebase portal + token sur ce host pour les appels suivants (get_genres, get_categories,
+                // all_channels, create_link). Sans ca, les listes reviennent vides sur les serveurs qui
+                // separent portail d'auth et host de contenu.
+                var rebased = false
+                if (profileHost.isNotBlank()) {
+                    val newPortal = rebasePortalOnHost(portal, profileHost)
+                    if (newPortal != null && newPortal != portal) {
+                        stalkerBase = newPortal
+                        rebased = true
+                    }
+                }
+                if (profileTokenTemp.isNotBlank() && profileTokenTemp != stalkerToken) {
+                    stalkerToken = profileTokenTemp
+                }
+                if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, stalkerBase ?: portal)
+                lastStalkerLog = "Stalker OK\nPortail: ${stalkerBase ?: portal}${if (rebased) " (rebase depuis $portal)" else ""}\nProfil: ${profile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nDouble handshake: ${if (notValid == 1 || random.isNotBlank()) "OUI" else "non"}\ntoken_temp: ${if (profileTokenTemp.isNotBlank()) "utilise" else "non"}"
                 return true
             }
         }
@@ -1119,6 +1145,24 @@ object Api {
         stbCall(pl, portal, "type=account_info&action=get_main_info&JsHttpRequest=1-xml")
     }
 
+    // v163 : reconstruit une URL de portail en gardant le path/query original mais en remplacant
+    // le host par celui renvoye par get_profile. Ex. http://2.900900.me:80/portal.php + 900900.eu
+    // -> http://900900.eu:80/portal.php. Le host peut aussi contenir un port (ex. "srv:8080").
+    private fun rebasePortalOnHost(portal: String, newHost: String): String? {
+        return try {
+            val u = java.net.URI(portal)
+            val scheme = u.scheme ?: "http"
+            val path = u.rawPath ?: ""
+            val query = u.rawQuery
+            val host = newHost.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
+            val hasPort = host.contains(':')
+            val port = u.port
+            val hostPart = if (hasPort) host else if (port > 0) "$host:$port" else host
+            val q = if (query.isNullOrBlank()) "" else "?$query"
+            "$scheme://$hostPart$path$q"
+        } catch (e: Exception) { null }
+    }
+
     private fun hasCustomStalkerProfile(pl: Playlist): Boolean =
         pl.stalkerSn.isNotBlank() ||
         pl.stalkerDeviceId.isNotBlank() ||
@@ -1155,13 +1199,15 @@ object Api {
             // auth_second_step=0. On regarde la reponse du 1er : si elle contient deja un
             // profil complet (js.id ou js.stb_type), on skip le 2eme appel.
             val r1 = stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
-            val hasFullProfile1 = try {
-                val js = JSONObject(r1).optJSONObject("js")
-                js != null && (js.optString("id", "").isNotBlank() || js.optString("stb_type", "").isNotBlank())
-            } catch (e: Exception) { false }
-            if (!hasFullProfile1) {
-                stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml")
-            }
+            val js1 = try { JSONObject(r1).optJSONObject("js") } catch (e: Exception) { null }
+            val hasFullProfile1 = js1 != null && (js1.optString("id", "").isNotBlank() || js1.optString("stb_type", "").isNotBlank())
+            val r2 = if (!hasFullProfile1) stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml") else ""
+            val js2 = if (r2.isNotBlank()) try { JSONObject(r2).optJSONObject("js") } catch (e: Exception) { null } else null
+            // v163 : recupere host et token_temp du profil pour permettre au caller de rebaser
+            // le portail et le token sur le vrai host de streaming (ex. 2.900900.me -> 900900.eu).
+            val jsFinal = js2 ?: js1
+            profileHost = jsFinal?.optString("host", "")?.takeIf { it.isNotBlank() } ?: ""
+            profileTokenTemp = jsFinal?.optString("token_temp", "")?.takeIf { it.isNotBlank() } ?: ""
             return
         }
 
@@ -1195,19 +1241,22 @@ object Api {
 
         // v162 : DOUBLE get_profile CONDITIONNEL (voir explication cas historique).
         val r1c = stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
-        val hasFullProfile1c = try {
-            val js = JSONObject(r1c).optJSONObject("js")
-            js != null && (js.optString("id", "").isNotBlank() || js.optString("stb_type", "").isNotBlank())
-        } catch (e: Exception) { false }
-        if (!hasFullProfile1c) {
-            stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml")
-        }
+        val js1c = try { JSONObject(r1c).optJSONObject("js") } catch (e: Exception) { null }
+        val hasFullProfile1c = js1c != null && (js1c.optString("id", "").isNotBlank() || js1c.optString("stb_type", "").isNotBlank())
+        val r2c = if (!hasFullProfile1c) stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml") else ""
+        val js2c = if (r2c.isNotBlank()) try { JSONObject(r2c).optJSONObject("js") } catch (e: Exception) { null } else null
+        val jsFinalC = js2c ?: js1c
+        profileHost = jsFinalC?.optString("host", "")?.takeIf { it.isNotBlank() } ?: ""
+        profileTokenTemp = jsFinalC?.optString("token_temp", "")?.takeIf { it.isNotBlank() } ?: ""
     }
 
     private fun ensureStalker(pl: Playlist): String? {
         val base = stalkerBase
-        if (stalkerToken.isNullOrBlank() || base == null || !base.startsWith(pl.serverUrl)) {
-            stalkerToken = null; stalkerBase = null
+        // v163 : validite basee sur pl.serverUrl memorise (permet rebase get_profile sans re-handshake
+        // en boucle infinie quand le host de streaming differe du portail d'auth).
+        val boundTo = stalkerBaseForServerUrl
+        if (stalkerToken.isNullOrBlank() || base == null || boundTo == null || boundTo != pl.serverUrl) {
+            stalkerToken = null; stalkerBase = null; stalkerBaseForServerUrl = null
             if (!stalkerHandshake(pl)) return null
         }
         return stalkerBase
@@ -1397,6 +1446,7 @@ object Api {
                 if (profile == currentStbProfile) continue
                 stalkerToken = null
                 stalkerBase = null
+                stalkerBaseForServerUrl = null
                 currentStbProfile = profile
                 val p2 = ensureStalker(pl) ?: continue
                 val attempt = fetchStalkerPage(pl, p2, type, param, sel, 1)

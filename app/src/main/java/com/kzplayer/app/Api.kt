@@ -963,6 +963,11 @@ object Api {
         java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray())
             .joinToString("") { "%02x".format(it) }
 
+    // v161 : SHA-1 utilise par le prehash Ministra 5.6+ (Stalker moderne).
+    private fun sha1Hex(s: String): String =
+        java.security.MessageDigest.getInstance("SHA-1").digest(s.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+
     // Identite "boitier MAG" derivee du MAC (stable). Beaucoup de portails refusent
     // l'acces au flux (et coupent -> HTTP 444) si sn / device_id / signature sont absents.
     private fun stbSerial(pl: Playlist): String = md5Hex(pl.mac).uppercase().substring(0, 13)
@@ -1029,27 +1034,47 @@ object Api {
     }
 
     private fun stalkerHandshake(pl: Playlist): Boolean {
-        // v159 : si pas de profil custom force, on essaie SUCCESSIVEMENT MAG250 -> MAG254 -> MAG322
-        // (au lieu de MAG250 seulement). Certains portails - ex. 301702.xyz - acceptent
-        // uniquement un modele precis. Cela reproduit le comportement de SFVip PC qui
-        // fait varier son User-Agent selon la config du serveur.
+        // v161 : DOUBLE HANDSHAKE Ministra 5.6+ (Stalker moderne, ex. 301702.xyz)
+        // Etape 1 : handshake?token=&prehash=0 -> { token, random, not_valid:1 }
+        // Etape 2 : handshake?token=T1&prehash=SHA1(T1+RANDOM+MAC).upper() + Authorization: Bearer T1
+        //           -> { token:T2, not_valid:0 }
+        // Le TOKEN FINAL utilise ensuite pour get_profile / get_genres / get_categories est T2.
+        // Sans cette 2eme etape, T1 reste "pending" -> toutes les listes reviennent vides.
         val tried = StringBuilder()
         val candidates = stalkerPortalCandidates(pl.serverUrl)
         val profilesToTry = if (hasCustomStalkerProfile(pl)) listOf(currentStbProfile) else STB_PROFILES
         for (profile in profilesToTry) {
             currentStbProfile = profile
             for (portal in candidates) {
-                val txt = stbCall(pl, portal, "type=stb&action=handshake&token=&JsHttpRequest=1-xml")
-                val tok = try { JSONObject(txt).optJSONObject("js")?.optString("token") } catch (e: Exception) { null }
-                tried.append("\n- [").append(profile.model).append("] ").append(portal).append(" -> ").append(if (!tok.isNullOrBlank()) "TOKEN OK" else txt.take(80))
-                if (!tok.isNullOrBlank()) {
-                    stalkerToken = tok
-                    stalkerBase = portal
-                    stalkerGetProfile(pl, portal)
-                    if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, portal)
-                    lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${profile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}"
-                    return true
+                stalkerToken = null  // s'assurer qu'aucun Authorization: Bearer parasite du profil precedent ne pollue
+                val step1 = stbCall(pl, portal, "type=stb&action=handshake&token=&prehash=0&JsHttpRequest=1-xml")
+                val js1 = try { JSONObject(step1).optJSONObject("js") } catch (e: Exception) { null }
+                val tok1 = js1?.optString("token", "") ?: ""
+                val random = js1?.optString("random", "") ?: ""
+                val notValid = js1?.optInt("not_valid", 0) ?: 0
+                if (tok1.isBlank()) {
+                    tried.append("\n- [").append(profile.model).append("] ").append(portal).append(" step1 -> ").append(step1.take(160))
+                    continue
                 }
+                var finalTok = tok1
+                if (notValid == 1 || random.isNotBlank()) {
+                    // Ministra 5.6+ : prehash = SHA1(token1 + random + mac).uppercase()
+                    val prehash = sha1Hex(tok1 + random + pl.mac).uppercase()
+                    stalkerToken = tok1  // met Authorization: Bearer T1 sur la 2eme requete
+                    val step2 = stbCall(pl, portal, "type=stb&action=handshake&token=" + enc(tok1) + "&prehash=" + prehash + "&JsHttpRequest=1-xml")
+                    val js2 = try { JSONObject(step2).optJSONObject("js") } catch (e: Exception) { null }
+                    val tok2 = js2?.optString("token", "") ?: ""
+                    if (tok2.isNotBlank()) finalTok = tok2
+                    tried.append("\n- [").append(profile.model).append("] ").append(portal).append(" step2 -> ").append(if (tok2.isNotBlank()) "OK" else step2.take(160))
+                } else {
+                    tried.append("\n- [").append(profile.model).append("] ").append(portal).append(" step1 -> OK (simple)")
+                }
+                stalkerToken = finalTok
+                stalkerBase = portal
+                stalkerGetProfile(pl, portal)
+                if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, portal)
+                lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${profile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nDouble handshake: ${if (notValid == 1 || random.isNotBlank()) "OUI" else "non"}"
+                return true
             }
         }
         lastStalkerLog = "Handshake Stalker impossible\nServeur: ${pl.serverUrl}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nEssais:$tried"
@@ -1123,13 +1148,20 @@ object Api {
                 "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
                 "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
                 "&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics"
-            // v160 : DOUBLE get_profile (protocole Stalker MAG "second step auth").
-            // Etape 1 : auth_second_step=1 -> le serveur renvoie une graine et met le token en attente.
-            // Etape 2 : auth_second_step=0 -> le serveur valide definitivement le token.
-            // Sans l'etape 2, itv/get_genres, vod/get_categories, series/get_categories renvoient vide
-            // sur les portails modernes (5.6+) tels que 301702.xyz. Titan Player et SFVip font ces 2 appels.
-            stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
-            stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml")
+            // v162 : DOUBLE get_profile CONDITIONNEL. Certains serveurs (ex. 900900.eu)
+            // renvoient le profil complet des le 1er appel avec auth_second_step=1 et ne
+            // veulent PAS de 2eme appel (sinon le token devient invalide -> boucle vide).
+            // D'autres (Ministra 5.6+, ex. 301702.xyz) veulent le 2eme appel avec
+            // auth_second_step=0. On regarde la reponse du 1er : si elle contient deja un
+            // profil complet (js.id ou js.stb_type), on skip le 2eme appel.
+            val r1 = stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
+            val hasFullProfile1 = try {
+                val js = JSONObject(r1).optJSONObject("js")
+                js != null && (js.optString("id", "").isNotBlank() || js.optString("stb_type", "").isNotBlank())
+            } catch (e: Exception) { false }
+            if (!hasFullProfile1) {
+                stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml")
+            }
             return
         }
 
@@ -1161,9 +1193,15 @@ object Api {
         qBase += "&api_signature=${qv(pl.stalkerApiSignature.ifBlank { "262" })}"
         if (pl.stalkerPrehash.isNotBlank()) qBase += "&prehash=${qv(pl.stalkerPrehash)}"
 
-        // v160 : DOUBLE get_profile (voir explication ci-dessus).
-        stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
-        stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml")
+        // v162 : DOUBLE get_profile CONDITIONNEL (voir explication cas historique).
+        val r1c = stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
+        val hasFullProfile1c = try {
+            val js = JSONObject(r1c).optJSONObject("js")
+            js != null && (js.optString("id", "").isNotBlank() || js.optString("stb_type", "").isNotBlank())
+        } catch (e: Exception) { false }
+        if (!hasFullProfile1c) {
+            stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml")
+        }
     }
 
     private fun ensureStalker(pl: Playlist): String? {

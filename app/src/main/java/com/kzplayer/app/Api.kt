@@ -951,13 +951,6 @@ object Api {
 
     private var stalkerToken: String? = null
     private var stalkerBase: String? = null
-    // v163 : URL saisie par le user qui a produit ce stalkerBase (pour verifier validite
-    // meme apres rebase automatique sur le host renvoye par get_profile).
-    private var stalkerBaseForServerUrl: String? = null
-    // v163 : valeurs recuperees par le dernier stalkerGetProfile (host de streaming, token_temp).
-    // Le handshake les consomme immediatement apres l'appel pour rebaser stalkerBase/stalkerToken.
-    private var profileHost: String = ""
-    private var profileTokenTemp: String = ""
     // Dernier diagnostic de resolution de flux (affiche dans le lecteur en cas d'echec).
     var lastStreamLog: String = ""
     var lastStalkerLog: String = ""
@@ -968,11 +961,6 @@ object Api {
 
     private fun sha256Hex(s: String): String =
         java.security.MessageDigest.getInstance("SHA-256").digest(s.toByteArray())
-            .joinToString("") { "%02x".format(it) }
-
-    // v161 : SHA-1 utilise par le prehash Ministra 5.6+ (Stalker moderne).
-    private fun sha1Hex(s: String): String =
-        java.security.MessageDigest.getInstance("SHA-1").digest(s.toByteArray())
             .joinToString("") { "%02x".format(it) }
 
     // Identite "boitier MAG" derivee du MAC (stable). Beaucoup de portails refusent
@@ -1041,86 +1029,33 @@ object Api {
     }
 
     private fun stalkerHandshake(pl: Playlist): Boolean {
-        // v161 : DOUBLE HANDSHAKE Ministra 5.6+ (Stalker moderne, ex. 301702.xyz)
-        // Etape 1 : handshake?token=&prehash=0 -> { token, random, not_valid:1 }
-        // Etape 2 : handshake?token=T1&prehash=SHA1(T1+RANDOM+MAC).upper() + Authorization: Bearer T1
-        //           -> { token:T2, not_valid:0 }
-        // Le TOKEN FINAL utilise ensuite pour get_profile / get_genres / get_categories est T2.
-        // Sans cette 2eme etape, T1 reste "pending" -> toutes les listes reviennent vides.
+        if (!hasCustomStalkerProfile(pl)) currentStbProfile = STB_PROFILES[0]
         val tried = StringBuilder()
         val candidates = stalkerPortalCandidates(pl.serverUrl)
-        val profilesToTry = if (hasCustomStalkerProfile(pl)) listOf(currentStbProfile) else STB_PROFILES
-        for (profile in profilesToTry) {
-            currentStbProfile = profile
-            for (portal in candidates) {
-                stalkerToken = null  // s'assurer qu'aucun Authorization: Bearer parasite du profil precedent ne pollue
-                val step1 = stbCall(pl, portal, "type=stb&action=handshake&token=&prehash=0&JsHttpRequest=1-xml")
-                val js1 = try { JSONObject(step1).optJSONObject("js") } catch (e: Exception) { null }
-                val tok1 = js1?.optString("token", "") ?: ""
-                val random = js1?.optString("random", "") ?: ""
-                val notValid = js1?.optInt("not_valid", 0) ?: 0
-                if (tok1.isBlank()) {
-                    tried.append("\n- [").append(profile.model).append("] ").append(portal).append(" step1 -> ").append(step1.take(160))
-                    continue
-                }
-                var finalTok = tok1
-                if (notValid == 1 || random.isNotBlank()) {
-                    // Ministra 5.6+ : prehash = SHA1(token1 + random + mac).uppercase()
-                    val prehash = sha1Hex(tok1 + random + pl.mac).uppercase()
-                    stalkerToken = tok1  // met Authorization: Bearer T1 sur la 2eme requete
-                    val step2 = stbCall(pl, portal, "type=stb&action=handshake&token=" + enc(tok1) + "&prehash=" + prehash + "&JsHttpRequest=1-xml")
-                    val js2 = try { JSONObject(step2).optJSONObject("js") } catch (e: Exception) { null }
-                    val tok2 = js2?.optString("token", "") ?: ""
-                    if (tok2.isNotBlank()) finalTok = tok2
-                    tried.append("\n- [").append(profile.model).append("] ").append(portal).append(" step2 -> ").append(if (tok2.isNotBlank()) "OK" else step2.take(160))
-                } else {
-                    tried.append("\n- [").append(profile.model).append("] ").append(portal).append(" step1 -> OK (simple)")
-                }
-                stalkerToken = finalTok
+        for (portal in candidates) {
+            val txt = stbCall(pl, portal, "type=stb&action=handshake&token=&JsHttpRequest=1-xml")
+            val tok = try { JSONObject(txt).optJSONObject("js")?.optString("token") } catch (e: Exception) { null }
+            tried.append("\n- ").append(portal).append(" -> ").append(if (!tok.isNullOrBlank()) "TOKEN OK" else txt.take(120))
+            if (!tok.isNullOrBlank()) {
+                stalkerToken = tok
                 stalkerBase = portal
-                stalkerBaseForServerUrl = pl.serverUrl
-                // v163 : reset scratch avant get_profile.
-                profileHost = ""
-                profileTokenTemp = ""
                 stalkerGetProfile(pl, portal)
-                // v163 : si le profil renvoie un host de streaming different (ex. 2.900900.me -> 900900.eu),
-                // rebase portal + token sur ce host pour les appels suivants (get_genres, get_categories,
-                // all_channels, create_link). Sans ca, les listes reviennent vides sur les serveurs qui
-                // separent portail d'auth et host de contenu.
-                var rebased = false
-                if (profileHost.isNotBlank()) {
-                    val newPortal = rebasePortalOnHost(portal, profileHost)
-                    if (newPortal != null && newPortal != portal) {
-                        stalkerBase = newPortal
-                        rebased = true
-                    }
-                }
-                if (profileTokenTemp.isNotBlank() && profileTokenTemp != stalkerToken) {
-                    stalkerToken = profileTokenTemp
-                }
-                if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, stalkerBase ?: portal)
-                lastStalkerLog = "Stalker OK\nPortail: ${stalkerBase ?: portal}${if (rebased) " (rebase depuis $portal)" else ""}\nProfil: ${profile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nDouble handshake: ${if (notValid == 1 || random.isNotBlank()) "OUI" else "non"}\ntoken_temp: ${if (profileTokenTemp.isNotBlank()) "utilise" else "non"}"
+                if (hasCustomStalkerProfile(pl)) stalkerAccountInfo(pl, portal)
+                lastStalkerLog = "Stalker OK\nPortail: $portal\nProfil: ${currentStbProfile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}"
                 return true
             }
         }
-        lastStalkerLog = "Handshake Stalker impossible\nServeur: ${pl.serverUrl}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nEssais:$tried"
+        lastStalkerLog = "Handshake Stalker impossible\nServeur: ${pl.serverUrl}\nProfil: ${currentStbProfile.model}\nMAC: ${pl.mac}\nSN: ${pl.stalkerSn.ifBlank { "auto" }}\nEssais:$tried"
         return false
     }
 
     private fun stalkerPortalCandidates(serverUrl: String): List<String> {
         val bases = LinkedHashSet<String>()
         val base = serverUrl.trim().trimEnd('/')
-        // v159 : quand l'URL contient explicitement :80, essayer d'abord SANS le port
-        // (certains portails - ex. 301702.xyz - refusent le :80 en clair alors qu'ils
-        // acceptent la meme URL sans le port).
-        if (base.isNotBlank()) {
-            if (base.endsWith(":80", true)) {
-                bases.add(base.removeSuffix(":80"))
-                bases.add(base)
-            } else {
-                bases.add(base)
-            }
-        }
+        if (base.isNotBlank()) bases.add(base)
+        // Certains portails refusent ou routent mal quand :80 est present dans l'URL,
+        // alors que le meme domaine sans port marche.
+        if (base.endsWith(":80", true)) bases.add(base.removeSuffix(":80"))
 
         val out = LinkedHashSet<String>()
         for (b in bases) {
@@ -1143,24 +1078,6 @@ object Api {
 
     private fun stalkerAccountInfo(pl: Playlist, portal: String) {
         stbCall(pl, portal, "type=account_info&action=get_main_info&JsHttpRequest=1-xml")
-    }
-
-    // v163 : reconstruit une URL de portail en gardant le path/query original mais en remplacant
-    // le host par celui renvoye par get_profile. Ex. http://2.900900.me:80/portal.php + 900900.eu
-    // -> http://900900.eu:80/portal.php. Le host peut aussi contenir un port (ex. "srv:8080").
-    private fun rebasePortalOnHost(portal: String, newHost: String): String? {
-        return try {
-            val u = java.net.URI(portal)
-            val scheme = u.scheme ?: "http"
-            val path = u.rawPath ?: ""
-            val query = u.rawQuery
-            val host = newHost.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
-            val hasPort = host.contains(':')
-            val port = u.port
-            val hostPart = if (hasPort) host else if (port > 0) "$host:$port" else host
-            val q = if (query.isNullOrBlank()) "" else "?$query"
-            "$scheme://$hostPart$path$q"
-        } catch (e: Exception) { null }
     }
 
     private fun hasCustomStalkerProfile(pl: Playlist): Boolean =
@@ -1188,26 +1105,12 @@ object Api {
             val sig = sha256Hex((pl.mac + sn).uppercase()).uppercase()
             val ver = enc(currentStbProfile.ver)
             val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}")
-            val qBase = "type=stb&action=get_profile&hd=1&ver=$ver" +
+            val q = "type=stb&action=get_profile&hd=1&ver=$ver" +
                 "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
                 "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
-                "&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics"
-            // v162 : DOUBLE get_profile CONDITIONNEL. Certains serveurs (ex. 900900.eu)
-            // renvoient le profil complet des le 1er appel avec auth_second_step=1 et ne
-            // veulent PAS de 2eme appel (sinon le token devient invalide -> boucle vide).
-            // D'autres (Ministra 5.6+, ex. 301702.xyz) veulent le 2eme appel avec
-            // auth_second_step=0. On regarde la reponse du 1er : si elle contient deja un
-            // profil complet (js.id ou js.stb_type), on skip le 2eme appel.
-            val r1 = stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
-            val js1 = try { JSONObject(r1).optJSONObject("js") } catch (e: Exception) { null }
-            val hasFullProfile1 = js1 != null && (js1.optString("id", "").isNotBlank() || js1.optString("stb_type", "").isNotBlank())
-            val r2 = if (!hasFullProfile1) stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml") else ""
-            val js2 = if (r2.isNotBlank()) try { JSONObject(r2).optJSONObject("js") } catch (e: Exception) { null } else null
-            // v163 : recupere host et token_temp du profil pour permettre au caller de rebaser
-            // le portail et le token sur le vrai host de streaming (ex. 2.900900.me -> 900900.eu).
-            val jsFinal = js2 ?: js1
-            profileHost = jsFinal?.optString("host", "")?.takeIf { it.isNotBlank() } ?: ""
-            profileTokenTemp = jsFinal?.optString("token_temp", "")?.takeIf { it.isNotBlank() } ?: ""
+                "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics" +
+                "&JsHttpRequest=1-xml"
+            stbCall(pl, portal, q)
             return
         }
 
@@ -1229,34 +1132,24 @@ object Api {
             "{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}"
         }
 
-        var qBase = "type=stb&action=get_profile&hd=1&ver=${qv(verRaw)}" +
+        var q = "type=stb&action=get_profile&hd=1&ver=${qv(verRaw)}" +
             "&num_banks=2&sn=${qv(sn)}&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${qv(imageVersion)}" +
             "&video_out=hdmi&device_id=${qv(did)}&device_id2=${qv(did2)}&signature=${qv(sig)}" +
-            "&hw_version=1.7-BD-00&not_valid_token=0&metrics=${qv(metricsRaw)}"
+            "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=${qv(metricsRaw)}"
 
-        if (pl.stalkerHwVersion2.isNotBlank()) qBase += "&hw_version_2=${qv(pl.stalkerHwVersion2)}"
-        if (pl.stalkerTimestamp.isNotBlank()) qBase += "&timestamp=${qv(pl.stalkerTimestamp)}"
-        qBase += "&api_signature=${qv(pl.stalkerApiSignature.ifBlank { "262" })}"
-        if (pl.stalkerPrehash.isNotBlank()) qBase += "&prehash=${qv(pl.stalkerPrehash)}"
+        if (pl.stalkerHwVersion2.isNotBlank()) q += "&hw_version_2=${qv(pl.stalkerHwVersion2)}"
+        if (pl.stalkerTimestamp.isNotBlank()) q += "&timestamp=${qv(pl.stalkerTimestamp)}"
+        q += "&api_signature=${qv(pl.stalkerApiSignature.ifBlank { "262" })}"
+        if (pl.stalkerPrehash.isNotBlank()) q += "&prehash=${qv(pl.stalkerPrehash)}"
+        q += "&JsHttpRequest=1-xml"
 
-        // v162 : DOUBLE get_profile CONDITIONNEL (voir explication cas historique).
-        val r1c = stbCall(pl, portal, "$qBase&auth_second_step=1&JsHttpRequest=1-xml")
-        val js1c = try { JSONObject(r1c).optJSONObject("js") } catch (e: Exception) { null }
-        val hasFullProfile1c = js1c != null && (js1c.optString("id", "").isNotBlank() || js1c.optString("stb_type", "").isNotBlank())
-        val r2c = if (!hasFullProfile1c) stbCall(pl, portal, "$qBase&auth_second_step=0&JsHttpRequest=1-xml") else ""
-        val js2c = if (r2c.isNotBlank()) try { JSONObject(r2c).optJSONObject("js") } catch (e: Exception) { null } else null
-        val jsFinalC = js2c ?: js1c
-        profileHost = jsFinalC?.optString("host", "")?.takeIf { it.isNotBlank() } ?: ""
-        profileTokenTemp = jsFinalC?.optString("token_temp", "")?.takeIf { it.isNotBlank() } ?: ""
+        stbCall(pl, portal, q)
     }
 
     private fun ensureStalker(pl: Playlist): String? {
         val base = stalkerBase
-        // v163 : validite basee sur pl.serverUrl memorise (permet rebase get_profile sans re-handshake
-        // en boucle infinie quand le host de streaming differe du portail d'auth).
-        val boundTo = stalkerBaseForServerUrl
-        if (stalkerToken.isNullOrBlank() || base == null || boundTo == null || boundTo != pl.serverUrl) {
-            stalkerToken = null; stalkerBase = null; stalkerBaseForServerUrl = null
+        if (stalkerToken.isNullOrBlank() || base == null || !base.startsWith(pl.serverUrl)) {
+            stalkerToken = null; stalkerBase = null
             if (!stalkerHandshake(pl)) return null
         }
         return stalkerBase
@@ -1446,7 +1339,6 @@ object Api {
                 if (profile == currentStbProfile) continue
                 stalkerToken = null
                 stalkerBase = null
-                stalkerBaseForServerUrl = null
                 currentStbProfile = profile
                 val p2 = ensureStalker(pl) ?: continue
                 val attempt = fetchStalkerPage(pl, p2, type, param, sel, 1)

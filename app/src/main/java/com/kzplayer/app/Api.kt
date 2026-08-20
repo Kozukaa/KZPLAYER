@@ -237,6 +237,13 @@ object Api {
     // Un lien M3U de type Xtream (get.php?...&type=m3u_plus) est en realite un serveur Xtream complet.
     // On le convertit pour utiliser l'API Xtream (vraies categories, films, series, metadonnees).
     private fun normalizePlaylist(pl: Playlist): Playlist {
+        // v165 : pour un serveur Stalker, si le user a renseigne URL + MAC mais pas de SN,
+        // on genere automatiquement le SN cut (md5(MAC)[:13].upper) - le meme que SFVip / Titan.
+        // Ca active le profil MAG complet (avec api_signature=262) sans que l'user ait a le taper.
+        if (pl.type == "stalker" && pl.mac.isNotBlank() && pl.stalkerSn.isBlank()) {
+            val autoSn = md5Hex(pl.mac).uppercase().substring(0, 13)
+            return pl.copy(stalkerSn = autoSn)
+        }
         if (pl.type != "m3u") return pl
         val link = pl.m3uUrl
         if (!link.contains("get.php", true) && !link.contains("player_api", true)) return pl

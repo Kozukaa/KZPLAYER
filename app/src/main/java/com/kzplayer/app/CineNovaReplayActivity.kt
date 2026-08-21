@@ -1,12 +1,16 @@
 package com.kzplayer.app
 
+import android.content.Intent
 import android.os.Bundle
-import android.widget.TextView
 
-class CineNovaReplayActivity : BrowseActivity() {
+class CineNovaReplayActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        intent.putExtra("kind", "replay")
-        Session.browseTitle = "Replay"
         super.onCreate(savedInstanceState)
+        Session.browseTitle = "Replay"
+        startActivity(
+            Intent(this, BrowseActivity::class.java)
+                .putExtra("kind", "replay")
+        )
+        finish()
     }
 }

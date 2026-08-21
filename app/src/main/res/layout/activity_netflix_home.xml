@@ -10,6 +10,79 @@
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:clipChildren="false"
+        android:paddingTop="52dp"
         android:paddingBottom="24dp" />
+
+    <HorizontalScrollView
+        android:id="@+id/navBarScroll"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_gravity="top"
+        android:background="#CC000000"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="96dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="14dp"
+                android:adjustViewBounds="true"
+                android:contentDescription="@null"
+                android:scaleType="fitStart"
+                android:src="@drawable/kz_logo_wide" />
+
+            <TextView
+                android:id="@+id/navHome"
+                style="@style/KzNavItem"
+                android:text="Accueil" />
+
+            <TextView
+                android:id="@+id/navChannels"
+                style="@style/KzNavItem"
+                android:text="Cha\u00eenes" />
+
+            <TextView
+                android:id="@+id/navMovies"
+                style="@style/KzNavItem"
+                android:text="Films" />
+
+            <TextView
+                android:id="@+id/navSeries"
+                style="@style/KzNavItem"
+                android:text="S\u00e9ries" />
+
+            <TextView
+                android:id="@+id/navReplay"
+                style="@style/KzNavItem"
+                android:text="Replay" />
+
+            <TextView
+                android:id="@+id/navGuide"
+                style="@style/KzNavItem"
+                android:text="Guide TV" />
+
+            <TextView
+                android:id="@+id/navMyList"
+                style="@style/KzNavItem"
+                android:text="Ma liste" />
+
+            <TextView
+                android:id="@+id/navPlaylist"
+                style="@style/KzNavItem"
+                android:text="Liste de lecture" />
+
+            <TextView
+                android:id="@+id/navSettings"
+                style="@style/KzNavItem"
+                android:text="Param\u00e8tres" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
 </FrameLayout>

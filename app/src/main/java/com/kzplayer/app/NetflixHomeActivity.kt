@@ -209,14 +209,7 @@ open class NetflixHomeActivity : NtBase() {
             wire(R.id.heroPlayTv) { open(NflxLiveActivity::class.java) }
             wire(R.id.heroMovies) { open(NflxMoviesActivity::class.java) }
             wire(R.id.heroSeries) { open(NflxSeriesActivity::class.java) }
-            wire(R.id.tileTv) { open(NflxLiveActivity::class.java) }
-            wire(R.id.tileMovies) { open(NflxMoviesActivity::class.java) }
-            wire(R.id.tileSeries) { open(NflxSeriesActivity::class.java) }
-            wire(R.id.tileGuide) { open(NewGuideActivity::class.java) }
-            wire(R.id.tilePlaylist) { open(PlaylistSettingsActivity::class.java) }
-            wire(R.id.tileVoice) { open(VoiceActivity::class.java) }
-            wire(R.id.tileSettings) { open(SettingsActivity::class.java) }
-            wire(R.id.tileTheme) { open(ThemeActivity::class.java) }
+            // v341 : la rangee "Parcourir" a ete supprimee -> plus de tuiles a brancher.
 
             val h = heroItem
             if (h != null) {

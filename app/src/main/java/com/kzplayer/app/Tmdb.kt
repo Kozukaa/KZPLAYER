@@ -255,4 +255,68 @@ object Tmdb {
         }
         out
     }
+
+    // ============================ v338 : CASTING + TITRES SIMILAIRES ============================
+    // 100% additif. Renvoie une liste vide si la cle TMDB est absente ou si le titre est introuvable.
+    data class CastMember(val name: String, val role: String, val photo: String)
+
+    private const val IMGFACE = "https://image.tmdb.org/t/p/w185"
+    private val castCache = ConcurrentHashMap<String, List<CastMember>>()
+    private val similarCache = ConcurrentHashMap<String, List<String>>()
+
+    suspend fun castFor(name: String, series: Boolean): List<CastMember> = withContext(Dispatchers.IO) {
+        if (!enabled() || name.isBlank()) return@withContext emptyList<CastMember>()
+        val key = (if (series) "tv:" else "mv:") + normalize(name).lowercase()
+        castCache[key]?.let { return@withContext it }
+        val found = try { findTitle(name, series) ?: findTitle(name, !series) } catch (_: Exception) { null }
+        if (found == null) { castCache[key] = emptyList(); return@withContext emptyList<CastMember>() }
+        val out = ArrayList<CastMember>()
+        try {
+            val o = get("$API/${found.mediaType}/${found.id}/credits?api_key=${Config.TMDB_API_KEY}&language=fr-FR")
+            val arr = o.optJSONArray("cast")
+            if (arr != null) {
+                val max = if (arr.length() < 15) arr.length() else 15
+                for (i in 0 until max) {
+                    val c = arr.optJSONObject(i) ?: continue
+                    val n = c.optString("name")
+                    if (n.isBlank()) continue
+                    val pp = c.optString("profile_path")
+                    val photo = if (pp.isNotBlank() && pp != "null") IMGFACE + pp else ""
+                    out.add(CastMember(n, c.optString("character"), photo))
+                }
+            }
+        } catch (_: Exception) {}
+        castCache[key] = out
+        out
+    }
+
+    // Titres similaires (noms TMDB). Le filtrage "present dans la liste de lecture" est fait cote UI.
+    suspend fun similarTitles(name: String, series: Boolean): List<String> = withContext(Dispatchers.IO) {
+        if (!enabled() || name.isBlank()) return@withContext emptyList<String>()
+        val key = (if (series) "tv:" else "mv:") + normalize(name).lowercase()
+        similarCache[key]?.let { return@withContext it }
+        val found = try { findTitle(name, series) ?: findTitle(name, !series) } catch (_: Exception) { null }
+        if (found == null) { similarCache[key] = emptyList(); return@withContext emptyList<String>() }
+        val out = ArrayList<String>()
+        for (path in listOf("similar", "recommendations")) {
+            try {
+                val o = get("$API/${found.mediaType}/${found.id}/$path?api_key=${Config.TMDB_API_KEY}&language=fr-FR&page=1")
+                val arr = o.optJSONArray("results") ?: continue
+                for (i in 0 until arr.length()) {
+                    val r = arr.optJSONObject(i) ?: continue
+                    val t = r.optString("title").ifBlank { r.optString("name") }
+                    val orig = r.optString("original_title").ifBlank { r.optString("original_name") }
+                    if (t.isNotBlank()) out.add(t)
+                    if (orig.isNotBlank()) out.add(orig)
+                }
+            } catch (_: Exception) {}
+        }
+        val uniq = out.distinct()
+        similarCache[key] = uniq
+        uniq
+    }
+
+    // Cle de comparaison souple pour rapprocher un titre TMDB d'un titre de liste de lecture.
+    fun matchKey(raw: String): String =
+        normalize(raw).lowercase().replace(Regex("[^a-z0-9]"), "")
 }

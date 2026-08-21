@@ -2,12 +2,16 @@ package com.kzplayer.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -65,6 +69,8 @@ class DetailActivity : BaseActivity() {
             }
         }
 
+        loadCastAndSimilar(item, pl)
+
         trailerBtn.setOnClickListener {
             trailerBtn.isEnabled = false
             lifecycleScope.launch {
@@ -117,6 +123,98 @@ class DetailActivity : BaseActivity() {
                 } else {
                     desc.text = "Impossible d'obtenir le flux pour ce titre."
                 }
+            }
+        }
+    }
+
+    // ============================ v338 : CASTING + TITRES SIMILAIRES ============================
+    // - Casting : TMDB (photo + nom + role).
+    // - Titres similaires : suggestions TMDB filtrees pour ne garder QUE les titres reellement
+    //   presents dans la liste de lecture active (donc lisibles en un clic).
+    // 100% additif : si TMDB est indisponible, les deux sections restent simplement masquees.
+    private fun loadCastAndSimilar(item: Item, pl: Playlist) {
+        val castTitle = findViewById<TextView>(R.id.castTitle)
+        val castRv = findViewById<RecyclerView>(R.id.castRv)
+        val simTitle = findViewById<TextView>(R.id.similarTitle)
+        val simRv = findViewById<RecyclerView>(R.id.similarRv)
+
+        lifecycleScope.launch {
+            val cast = try { Tmdb.castFor(item.name, false) } catch (e: Exception) { emptyList<Tmdb.CastMember>() }
+            if (cast.isNotEmpty()) {
+                castTitle.visibility = View.VISIBLE
+                castRv.visibility = View.VISIBLE
+                castRv.layoutManager = LinearLayoutManager(this@DetailActivity, RecyclerView.HORIZONTAL, false)
+                castRv.adapter = CastAdapter(cast)
+            }
+        }
+
+        lifecycleScope.launch {
+            val names = try { Tmdb.similarTitles(item.name, false) } catch (e: Exception) { emptyList<String>() }
+            if (names.isEmpty()) return@launch
+            val wanted = names.map { Tmdb.matchKey(it) }.filter { it.length >= 4 }.toHashSet()
+            val catalog = try {
+                when (pl.type) {
+                    "m3u" -> Api.m3uItems(pl, "movie", "__all__")
+                    "stalker" -> Api.stalkerItems(pl, "movie", "__all__")
+                    else -> Api.xtreamItems(pl, "movie", "__all__")
+                }
+            } catch (e: Exception) { emptyList<Item>() }
+            val mine = Tmdb.matchKey(item.name)
+            val found = catalog.filter { c ->
+                val k = Tmdb.matchKey(c.name)
+                k.isNotBlank() && k != mine && wanted.contains(k)
+            }.distinctBy { Tmdb.matchKey(it.name) }.take(20)
+            if (found.isNotEmpty()) {
+                simTitle.visibility = View.VISIBLE
+                simRv.visibility = View.VISIBLE
+                simRv.layoutManager = LinearLayoutManager(this@DetailActivity, RecyclerView.HORIZONTAL, false)
+                simRv.adapter = SimilarAdapter(found)
+            }
+        }
+    }
+
+    private inner class CastAdapter(val data: List<Tmdb.CastMember>) :
+        RecyclerView.Adapter<CastAdapter.VH>() {
+        inner class VH(v: View) : RecyclerView.ViewHolder(v) {
+            val img: ImageView = v.findViewById(R.id.castIv)
+            val name: TextView = v.findViewById(R.id.castName)
+            val role: TextView = v.findViewById(R.id.castRole)
+        }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
+            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_kz_cast, parent, false))
+        override fun getItemCount(): Int = data.size
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            val c = data[position]
+            holder.name.text = c.name
+            holder.role.text = c.role
+            if (c.photo.isBlank()) holder.img.setImageResource(R.drawable.ic_person)
+            else holder.img.load(c.photo) { crossfade(true); error(R.drawable.ic_person) }
+        }
+    }
+
+    private inner class SimilarAdapter(val data: List<Item>) :
+        RecyclerView.Adapter<SimilarAdapter.VH>() {
+        inner class VH(v: View) : RecyclerView.ViewHolder(v) {
+            val poster: ImageView = v.findViewById(R.id.posterIv)
+            val name: TextView = v.findViewById(R.id.nameTv)
+            val sub: TextView = v.findViewById(R.id.subTv)
+        }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
+            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_nflx_card, parent, false))
+        override fun getItemCount(): Int = data.size
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            val it2 = data[position]
+            holder.name.text = it2.name
+            holder.sub.visibility = View.GONE
+            if (it2.logo.isBlank()) holder.poster.setImageResource(R.drawable.ic_movie)
+            else holder.poster.load(it2.logo) { crossfade(false); error(R.drawable.ic_movie) }
+            holder.itemView.setOnFocusChangeListener { v, has ->
+                val sc = if (has) 1.08f else 1f
+                v.animate().scaleX(sc).scaleY(sc).setDuration(110).start()
+            }
+            holder.itemView.setOnClickListener {
+                Session.detailItem = it2
+                startActivity(Intent(this@DetailActivity, DetailActivity::class.java))
             }
         }
     }

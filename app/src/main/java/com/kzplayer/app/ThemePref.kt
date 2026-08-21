@@ -10,18 +10,15 @@ object ThemePref {
     const val CLASSIC = "classic"
     const val NEWTIVI = "newtivi"
     const val NETFLIX = "netflix"
-    const val CINENOVA = "cinenova"
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
     fun get(ctx: Context): String = prefs(ctx).getString(KEY, CLASSIC) ?: CLASSIC
     fun set(ctx: Context, v: String) { prefs(ctx).edit().putString(KEY, v).apply() }
     fun isNew(ctx: Context): Boolean = get(ctx) == NEWTIVI
     fun isNetflix(ctx: Context): Boolean = get(ctx) == NETFLIX
-    fun isCineNova(ctx: Context): Boolean = get(ctx) == CINENOVA
 
     // Ecran d'accueil correspondant au theme choisi.
     fun homeClass(ctx: Context): Class<*> = when (get(ctx)) {
-        CINENOVA -> CineNovaHomeActivity::class.java
         NETFLIX -> NetflixHomeActivity::class.java
         NEWTIVI -> NewLiveActivity::class.java
         else -> HomeActivity::class.java

@@ -41,6 +41,7 @@ open class NetflixHomeActivity : NtBase() {
         homeRv.layoutManager = LinearLayoutManager(this)
         adapter = HomeAdapter()
         homeRv.adapter = adapter
+        wireNavBar()
         ensureSession { }
     }
 
@@ -116,6 +117,33 @@ open class NetflixHomeActivity : NtBase() {
         }
     }
 
+
+    // v338 : barre de navigation haute facon Netflix (Accueil / Chaines / Films / Series /
+    // Replay / Guide TV / Ma liste / Liste de lecture / Parametres).
+    private fun wireNavBar() {
+        fun nav(id: Int, action: () -> Unit) {
+            val v = findViewById<View>(id) ?: return
+            v.setOnClickListener { action() }
+            focusEffect(v, 1.05f)
+        }
+        nav(R.id.navHome) { homeRv.scrollToPosition(0) }
+        nav(R.id.navChannels) { open(NflxLiveActivity::class.java) }
+        nav(R.id.navMovies) { open(NflxMoviesActivity::class.java) }
+        nav(R.id.navSeries) { open(NflxSeriesActivity::class.java) }
+        nav(R.id.navReplay) { openBrowse("replay", "Replay") }
+        nav(R.id.navGuide) { open(NewGuideActivity::class.java) }
+        nav(R.id.navMyList) { openBrowse("favorites", "Ma liste") }
+        nav(R.id.navPlaylist) { open(PlaylistSettingsActivity::class.java) }
+        nav(R.id.navSettings) { open(SettingsActivity::class.java) }
+    }
+
+    private fun openBrowse(kind: String, title: String) {
+        try {
+            Session.browseTitle = title
+            startActivity(Intent(this, BrowseActivity::class.java).putExtra("kind", kind))
+        } catch (e: Exception) {}
+    }
+
     private fun <T> safe(block: () -> List<T>): List<T> =
         try { block() } catch (e: Exception) { emptyList() }
 
@@ -167,12 +195,12 @@ open class NetflixHomeActivity : NtBase() {
         private var lastLogo: String = ""
 
         fun bind() {
-            wire(R.id.heroPlayTv) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaLiveActivity::class.java else NflxLiveActivity::class.java) }
-            wire(R.id.heroMovies) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaMoviesActivity::class.java else NflxMoviesActivity::class.java) }
-            wire(R.id.heroSeries) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaSeriesActivity::class.java else NflxSeriesActivity::class.java) }
-            wire(R.id.tileTv) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaLiveActivity::class.java else NflxLiveActivity::class.java) }
-            wire(R.id.tileMovies) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaMoviesActivity::class.java else NflxMoviesActivity::class.java) }
-            wire(R.id.tileSeries) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaSeriesActivity::class.java else NflxSeriesActivity::class.java) }
+            wire(R.id.heroPlayTv) { open(NflxLiveActivity::class.java) }
+            wire(R.id.heroMovies) { open(NflxMoviesActivity::class.java) }
+            wire(R.id.heroSeries) { open(NflxSeriesActivity::class.java) }
+            wire(R.id.tileTv) { open(NflxLiveActivity::class.java) }
+            wire(R.id.tileMovies) { open(NflxMoviesActivity::class.java) }
+            wire(R.id.tileSeries) { open(NflxSeriesActivity::class.java) }
             wire(R.id.tileGuide) { open(NewGuideActivity::class.java) }
             wire(R.id.tilePlaylist) { open(PlaylistSettingsActivity::class.java) }
             wire(R.id.tileVoice) { open(VoiceActivity::class.java) }

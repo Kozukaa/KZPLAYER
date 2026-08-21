@@ -8,8 +8,8 @@
         android:id="@+id/homeRv"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
         android:clipChildren="false"
+        android:clipToPadding="false"
         android:paddingTop="52dp"
         android:paddingBottom="24dp" />
 
@@ -39,6 +39,11 @@
                 android:src="@drawable/kz_logo_wide" />
 
             <TextView
+                android:id="@+id/navPlaylist"
+                style="@style/KzNavItem"
+                android:text="Liste" />
+
+            <TextView
                 android:id="@+id/navHome"
                 style="@style/KzNavItem"
                 android:text="Accueil" />
@@ -46,7 +51,7 @@
             <TextView
                 android:id="@+id/navChannels"
                 style="@style/KzNavItem"
-                android:text="Cha\u00eenes" />
+                android:text="Chaînes" />
 
             <TextView
                 android:id="@+id/navMovies"
@@ -56,7 +61,7 @@
             <TextView
                 android:id="@+id/navSeries"
                 style="@style/KzNavItem"
-                android:text="S\u00e9ries" />
+                android:text="Séries" />
 
             <TextView
                 android:id="@+id/navReplay"
@@ -74,14 +79,10 @@
                 android:text="Ma liste" />
 
             <TextView
-                android:id="@+id/navPlaylist"
-                style="@style/KzNavItem"
-                android:text="Liste de lecture" />
-
-            <TextView
                 android:id="@+id/navSettings"
                 style="@style/KzNavItem"
-                android:text="Param\u00e8tres" />
+                android:text="Paramètres" />
+
         </LinearLayout>
     </HorizontalScrollView>
 

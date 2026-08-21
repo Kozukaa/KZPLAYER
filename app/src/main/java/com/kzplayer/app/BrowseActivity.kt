@@ -29,6 +29,8 @@ import java.text.Normalizer
 
 class BrowseActivity : BaseActivity() {
     private lateinit var kind: String
+    // v341 : passe a true quand aucune chaine Stalker n'est marquee catch-up en mode replay.
+    private var replayShowAll = false
     private var categories: List<Category> = emptyList()
     private var items: List<Item> = emptyList()
     private var filtered: List<Item> = emptyList()
@@ -464,14 +466,26 @@ class BrowseActivity : BaseActivity() {
         applyFilter()
         var firstShown = false
         val realKind = if (kind == "replay") "live" else kind
+        // v341 : les portails Stalker ne signalent presque jamais le catch-up dans la liste
+        // des chaines. On tente d'abord le filtre replay, puis on reaffiche tout si vide,
+        // pour que le replay soit utilisable aussi en Stalker.
+        val filterReplay = kind == "replay" && !replayShowAll
         Api.stalkerItemsPaged(pl, realKind, categoryId) { batch ->
             withContext(Dispatchers.Main) {
-                val newItems = if (kind == "replay") batch.filter { it.catchup } else batch
+                val newItems = if (filterReplay) batch.filter { it.catchup } else batch
                 items = items + newItems
                 applyFilter()
                 if (!firstShown) { setLoading(false); firstShown = true }
                 msgTv.text = ""
             }
+        }
+        if (filterReplay && items.isEmpty()) {
+            replayShowAll = true
+            withContext(Dispatchers.Main) {
+                msgTv.text = "Replay : toutes les chaines de la categorie sont affichees."
+            }
+            loadStalkerInto(categoryId)
+            return
         }
         withContext(Dispatchers.Main) {
             setLoading(false)
@@ -639,6 +653,18 @@ class BrowseActivity : BaseActivity() {
         // Resultat multi-serveurs : on bascule d'abord sur le serveur ou l'item se trouve.
         if (item.ownerPlaylistId.isNotBlank() && item.ownerPlaylistId != Session.current?.id) {
             Session.playlists.firstOrNull { it.id == item.ownerPlaylistId }?.let { Session.current = it }
+        }
+        // v340 : en mode REPLAY, un clic sur une chaine ouvre la liste des programmes
+        // deja diffuses (archive) au lieu de lancer le direct.
+        if (kind == "replay" && (item.kind == "live" || item.kind == "channel")) {
+            startActivity(
+                Intent(this, ReplayProgramsActivity::class.java)
+                    .putExtra("title", item.name)
+                    .putExtra("logo", item.logo)
+                    .putExtra("streamId", item.streamId ?: "")
+                    .putExtra("cmd", item.cmd ?: "")
+            )
+            return
         }
         if (item.kind == "series") {
             Session.seriesItem = item

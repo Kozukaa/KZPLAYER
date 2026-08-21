@@ -33,6 +33,9 @@ open class NetflixHomeActivity : NtBase() {
     private var featuredMovieAttempted = false
     // Cache local du film mis en vedette (dernier film du catalogue trie par date d'ajout).
     private var featuredMovie: Item? = null
+    // v340 : derniers films / dernieres series du catalogue actif (rangees du haut).
+    private var recentMovies: List<Item> = emptyList()
+    private var recentSeries: List<Item> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +56,9 @@ open class NetflixHomeActivity : NtBase() {
     // Rangees construites depuis l'historique et les favoris (instantane, hors ligne).
     private fun buildRows() {
         val newRows = ArrayList<Row>()
+        // v340 : en haut, les derniers ajouts du catalogue (Films recents puis Series recentes).
+        if (recentMovies.isNotEmpty()) newRows.add(Row("Films récents", recentMovies, false))
+        if (recentSeries.isNotEmpty()) newRows.add(Row("Séries récentes", recentSeries, false))
         val continueMovies = safe { WatchHistory.recentItems(this, "movie") }
         val continueSeries = safe { WatchHistory.recentItems(this, "series") }
         val continueAll = (continueMovies + continueSeries)
@@ -79,7 +85,7 @@ open class NetflixHomeActivity : NtBase() {
         // Declenche le chargement du dernier film (une seule fois).
         if (!featuredMovieAttempted) {
             featuredMovieAttempted = true
-            loadFeaturedMovie()
+            loadCatalogRows()
         }
         adapter?.notifyDataSetChanged()
         header?.bind()
@@ -92,30 +98,35 @@ open class NetflixHomeActivity : NtBase() {
     // - Utilise l'API existante (m3uItems / xtreamItems / stalkerItems) sur la categorie "__all__",
     //   deja mise en cache par Api.catalogFor -> pas de sur-cout reseau si deja precharge.
     // - Aucune modification du lecteur, de la licence, ni des flux : purement lecture liste films.
-    private fun loadFeaturedMovie() {
+    // v340 : charge le catalogue du serveur actif pour alimenter le hero "En vedette"
+    // ET les deux rangees du haut : Films recents / Series recentes (tri par date d'ajout).
+    private fun loadCatalogRows() {
         val pl = Session.current ?: return
         lifecycleScope.launch {
-            val latest: Item? = try {
-                val items: List<Item> = withContext(Dispatchers.IO) {
-                    when (pl.type) {
-                        "m3u" -> Api.m3uItems(pl, "movie", "__all__")
-                        "stalker" -> Api.stalkerItems(pl, "movie", "__all__")
-                        else -> Api.xtreamItems(pl, "movie", "__all__")
-                    }
-                }
-                // Si aucun "added" fiable (tous a 0), on garde l'ordre naturel = derniers ajoutes
-                // en premier chez la plupart des serveurs Xtream/M3U.
-                val anyAdded = items.any { it.added > 0L }
-                val sorted = if (anyAdded) items.sortedByDescending { it.added } else items
-                sorted.firstOrNull { it.logo.isNotBlank() } ?: sorted.firstOrNull()
-            } catch (e: Exception) { null }
+            val movies = fetchKind(pl, "movie")
+            val series = fetchKind(pl, "series")
+            recentMovies = movies.take(20)
+            recentSeries = series.take(20)
+            val latest = movies.firstOrNull { it.logo.isNotBlank() } ?: movies.firstOrNull()
             if (latest != null) {
                 featuredMovie = latest
                 heroItem = latest
-                header?.bind()
             }
+            buildRows()
         }
     }
+
+    private suspend fun fetchKind(pl: Playlist, wanted: String): List<Item> = try {
+        val items: List<Item> = withContext(Dispatchers.IO) {
+            when (pl.type) {
+                "m3u" -> Api.m3uItems(pl, wanted, "__all__")
+                "stalker" -> Api.stalkerItems(pl, wanted, "__all__")
+                else -> Api.xtreamItems(pl, wanted, "__all__")
+            }
+        }
+        val anyAdded = items.any { it.added > 0L }
+        if (anyAdded) items.sortedByDescending { it.added } else items
+    } catch (e: Exception) { emptyList() }
 
 
     // v338 : barre de navigation haute facon Netflix (Accueil / Chaines / Films / Series /

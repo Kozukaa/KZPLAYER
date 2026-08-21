@@ -174,6 +174,7 @@ class NetflixHomeActivity : NtBase() {
             wire(R.id.tileMovies) { open(NflxMoviesActivity::class.java) }
             wire(R.id.tileSeries) { open(NflxSeriesActivity::class.java) }
             wire(R.id.tileGuide) { open(NewGuideActivity::class.java) }
+            wire(R.id.tilePlaylist) { open(PlaylistSettingsActivity::class.java) }
             wire(R.id.tileVoice) { open(VoiceActivity::class.java) }
             wire(R.id.tileSettings) { open(SettingsActivity::class.java) }
             wire(R.id.tileTheme) { open(ThemeActivity::class.java) }

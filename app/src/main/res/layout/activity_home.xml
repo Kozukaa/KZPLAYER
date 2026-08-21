@@ -48,6 +48,23 @@
             android:layout_height="1dp"
             android:layout_weight="1" />
 
+        <FrameLayout
+            android:id="@+id/playlistBtn"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/circle_btn"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_person"
+                android:tint="?attr/kzAccent"
+                android:contentDescription="@null" />
+        </FrameLayout>
+
         <LinearLayout
             android:id="@+id/micBtn"
             android:layout_width="wrap_content"

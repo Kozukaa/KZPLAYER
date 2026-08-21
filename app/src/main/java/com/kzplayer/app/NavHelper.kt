@@ -27,6 +27,7 @@ object NavHelper {
         NavItem(R.id.navSeries, R.id.navSeriesImg, R.id.navSeriesLabel, "series"),
         NavItem(R.id.navSearch, R.id.navSearchImg, R.id.navSearchLabel, "search"),
         NavItem(R.id.navMic, R.id.navMicImg, R.id.navMicLabel, "mic"),
+        NavItem(R.id.navPlaylist, R.id.navPlaylistImg, R.id.navPlaylistLabel, "playlist"),
         NavItem(R.id.navSettings, R.id.navSettingsImg, R.id.navSettingsLabel, "settings")
     )
 
@@ -40,6 +41,9 @@ object NavHelper {
         }
         wire(act, R.id.navMic, R.id.navMicImg, false) {
             act.startActivity(Intent(act, VoiceActivity::class.java))
+        }
+        wire(act, R.id.navPlaylist, R.id.navPlaylistImg, false) {
+            act.startActivity(Intent(act, PlaylistSettingsActivity::class.java))
         }
         wire(act, R.id.navSettings, R.id.navSettingsImg, false) {
             act.startActivity(Intent(act, SettingsActivity::class.java))

@@ -45,4 +45,18 @@
             android:textSize="11sp"
             android:maxLines="1" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/favBtn"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/bg_fav_chip"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:text="☆"
+        android:textColor="?attr/kzAccent"
+        android:textSize="22sp"
+        android:textStyle="bold" />
 </LinearLayout>

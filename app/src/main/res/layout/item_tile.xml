@@ -50,6 +50,20 @@
                 android:layout_height="match_parent"
                 android:background="?attr/kzAccent" />
         </FrameLayout>
+            <TextView
+            android:id="@+id/favBtn"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="6dp"
+            android:background="@drawable/bg_fav_chip"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:text="☆"
+            android:textColor="?attr/kzAccent"
+            android:textSize="20sp"
+            android:textStyle="bold" />
     </FrameLayout>
 
     <TextView

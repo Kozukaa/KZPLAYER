@@ -834,6 +834,7 @@ class BrowseActivity : BaseActivity() {
             val progressWrap: View = v.findViewById(R.id.progressWrap)
             val progressFill: View = v.findViewById(R.id.progressFill)
             val serverChip: TextView = v.findViewById(R.id.serverChip)
+            val favBtn: TextView = v.findViewById(R.id.favBtn)
             // Nom de l'item actuellement affiche : garde anti-recyclage pour les affiches TMDB.
             var boundName: String = ""
         }
@@ -841,6 +842,7 @@ class BrowseActivity : BaseActivity() {
             val name: TextView = v.findViewById(R.id.nameTv)
             val sub: TextView = v.findViewById(R.id.subTv)
             val logo: ImageView = v.findViewById(R.id.logoIv)
+            val favBtn: TextView = v.findViewById(R.id.favBtn)
         }
         inner class HeaderVH(val v: View) : RecyclerView.ViewHolder(v) {
             val tv: TextView = v.findViewById(R.id.headerTv)
@@ -872,6 +874,12 @@ class BrowseActivity : BaseActivity() {
                     crossfade(false)
                     placeholder(R.drawable.bg_tile)
                     error(R.drawable.ic_live_tv)
+                }
+                holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "★" else "☆"
+                holder.favBtn.setOnClickListener {
+                    val added = Favorites.toggle(this@BrowseActivity, item)
+                    holder.favBtn.text = if (added) "★" else "☆"
+                    if (selectedCat == "__favorites__") selectCategory(Category("__favorites__", "Favoris"))
                 }
                 holder.v.setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus) lastItemFocusPos = holder.bindingAdapterPosition.coerceAtLeast(0)
@@ -927,6 +935,13 @@ class BrowseActivity : BaseActivity() {
                     // Image du code injoignable -> on bascule automatiquement sur TMDB.
                     listener(onError = { _, _ -> tmdbFallback() })
                 }
+            }
+            holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "★" else "☆"
+            holder.favBtn.visibility = if (item.kind == "live") View.VISIBLE else View.GONE
+            holder.favBtn.setOnClickListener {
+                val added = Favorites.toggle(this@BrowseActivity, item)
+                holder.favBtn.text = if (added) "★" else "☆"
+                if (selectedCat == "__favorites__") selectCategory(Category("__favorites__", "Favoris"))
             }
             // Petite case serveur (recherche multi-serveurs).
             if (item.serverLabel.isNotBlank()) {

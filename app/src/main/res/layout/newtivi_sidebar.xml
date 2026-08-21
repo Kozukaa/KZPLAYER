@@ -184,7 +184,7 @@
     <LinearLayout
         android:id="@+id/navMic"
         android:nextFocusUp="@id/navSearch"
-        android:nextFocusDown="@id/navSettings"
+        android:nextFocusDown="@id/navPlaylist"
         android:layout_width="match_parent"
         android:layout_height="@dimen/nt_nav_item_h"
         android:layout_marginBottom="@dimen/nt_nav_item_margin"
@@ -213,8 +213,39 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/navSettings"
+        android:id="@+id/navPlaylist"
         android:nextFocusUp="@id/navMic"
+        android:nextFocusDown="@id/navSettings"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/nt_nav_item_h"
+        android:layout_marginBottom="@dimen/nt_nav_item_margin"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="13dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_nav_item">
+        <ImageView
+            android:id="@+id/navPlaylistImg"
+            android:layout_width="@dimen/nt_nav_icon"
+            android:layout_height="@dimen/nt_nav_icon"
+            android:src="@drawable/ic_person"
+            android:contentDescription="@null" />
+        <TextView
+            android:id="@+id/navPlaylistLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Listes"
+            android:textColor="@color/muted"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navSettings"
+        android:nextFocusUp="@id/navPlaylist"
         android:layout_width="match_parent"
         android:layout_height="@dimen/nt_nav_item_h"
         android:layout_marginBottom="14dp"

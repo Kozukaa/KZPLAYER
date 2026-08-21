@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.ImageView
@@ -804,6 +805,14 @@ class BrowseActivity : BaseActivity() {
         }
     }
 
+    private fun toggleLiveFavorite(item: Item) {
+        if (item.kind != "live") return
+        val added = Favorites.toggle(this, item)
+        Toast.makeText(this, if (added) "Ajouté aux favoris" else "Retiré des favoris", Toast.LENGTH_SHORT).show()
+        if (selectedCat == "__favorites__") selectCategory(Category("__favorites__", "Favoris"))
+        else itemAdapter?.notifyDataSetChanged()
+    }
+
     inner class ItemAdapter(initialData: List<Item>, val onClick: (Item) -> Unit) :
         RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         private val data = ArrayList<Item>(initialData)
@@ -878,10 +887,7 @@ class BrowseActivity : BaseActivity() {
                 holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "★" else "☆"
                 holder.favBtn.setOnClickListener { v ->
                     v.parent?.requestDisallowInterceptTouchEvent(true)
-                    val added = Favorites.toggle(this@BrowseActivity, item)
-                    holder.favBtn.text = if (added) "★" else "☆"
-                    if (selectedCat == "__favorites__") selectCategory(Category("__favorites__", "Favoris"))
-                    else itemAdapter?.notifyItemChanged(holder.bindingAdapterPosition)
+                    toggleLiveFavorite(item)
                 }
                 holder.v.setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus) lastItemFocusPos = holder.bindingAdapterPosition.coerceAtLeast(0)
@@ -891,6 +897,11 @@ class BrowseActivity : BaseActivity() {
                         .start()
                     holder.v.translationZ = if (hasFocus) 12f else 0f
                     holder.name.setTextColor(if (hasFocus) KzColors.accent(holder.name.context) else ContextCompat.getColor(holder.name.context, R.color.text))
+                }
+                holder.v.setOnLongClickListener {
+                    lastItemFocusPos = holder.bindingAdapterPosition.coerceAtLeast(0)
+                    toggleLiveFavorite(item)
+                    true
                 }
                 holder.v.setOnClickListener {
                     lastItemFocusPos = holder.bindingAdapterPosition.coerceAtLeast(0)
@@ -942,10 +953,7 @@ class BrowseActivity : BaseActivity() {
             holder.favBtn.visibility = if (item.kind == "live") View.VISIBLE else View.GONE
             holder.favBtn.setOnClickListener { v ->
                 v.parent?.requestDisallowInterceptTouchEvent(true)
-                val added = Favorites.toggle(this@BrowseActivity, item)
-                holder.favBtn.text = if (added) "★" else "☆"
-                if (selectedCat == "__favorites__") selectCategory(Category("__favorites__", "Favoris"))
-                else itemAdapter?.notifyItemChanged(holder.bindingAdapterPosition)
+                toggleLiveFavorite(item)
             }
             // Petite case serveur (recherche multi-serveurs).
             if (item.serverLabel.isNotBlank()) {
@@ -980,6 +988,11 @@ class BrowseActivity : BaseActivity() {
                 holder.name.setTextColor(
                     if (hasFocus) KzColors.accent(holder.name.context) else ContextCompat.getColor(holder.name.context, R.color.text)
                 )
+            }
+            holder.v.setOnLongClickListener {
+                lastItemFocusPos = holder.bindingAdapterPosition.coerceAtLeast(0)
+                toggleLiveFavorite(item)
+                true
             }
             holder.v.setOnClickListener {
                 lastItemFocusPos = holder.bindingAdapterPosition.coerceAtLeast(0)

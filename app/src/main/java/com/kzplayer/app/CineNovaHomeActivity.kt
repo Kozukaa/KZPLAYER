@@ -59,8 +59,8 @@ class CineNovaHomeActivity : NtBase() {
         }
         nav("⌕", "Rechercher") { startActivity(Intent(this, VoiceActivity::class.java)) }
         nav("▣", "TV en direct") { openLive() }
-        nav("▤", "Guide TV") { startActivity(Intent(this, NewGuideActivity::class.java)) }
-        nav("↺", "Replay") { openBrowse("replay", "Replay") }
+        nav("▤", "Guide TV") { startActivity(Intent(this, CineNovaGuideActivity::class.java)) }
+        nav("↺", "Replay") { startActivity(Intent(this, CineNovaReplayActivity::class.java)) }
         nav("▥", "Films") { startActivity(Intent(this, CineNovaMoviesActivity::class.java)) }
         nav("▭", "Séries") { startActivity(Intent(this, CineNovaSeriesActivity::class.java)) }
         nav("▰", "Ma liste", true) { openBrowse("favorites", "Ma liste") }
@@ -71,13 +71,11 @@ class CineNovaHomeActivity : NtBase() {
         rows.clear()
         val favM = Favorites.forKind(this, "movie")
         val favS = Favorites.forKind(this, "series")
-        val favL = Favorites.forKind(this, "live")
         val rec = (WatchHistory.recentItems(this, "movie") + WatchHistory.recentItems(this, "series")).sortedByDescending { it.added }
         if (rec.isNotEmpty()) rows.add(Row("RECOMMENCER", rec.take(20)))
         if ((favM + favS).isNotEmpty()) rows.add(Row("MA LISTE", (favM + favS).take(20)))
-        if (favL.isNotEmpty()) rows.add(Row("CHAINES FAVORITES", favL.take(20)))
         rowsRv.adapter = RowAdapter(rows)
-        val first = rec.firstOrNull() ?: favM.firstOrNull() ?: favS.firstOrNull() ?: favL.firstOrNull()
+        val first = rec.firstOrNull() ?: favM.firstOrNull() ?: favS.firstOrNull()
         updateHero(first)
         loadLatestMovies()
     }
@@ -95,7 +93,7 @@ class CineNovaHomeActivity : NtBase() {
     private fun updateHero(item: Item?) {
         heroTitle.text = item?.name ?: "CinéNova"
         heroMeta.text = "2026  •  Drame / Crime  •  ★ 7.2"
-        heroDesc.text = item?.description?.ifBlank { item.summary } ?: "Choisis un film, une série ou une chaîne dans une interface sombre et fluide."
+        heroDesc.text = item?.description?.ifBlank { item.summary } ?: "Choisis un film ou une série. La TV en direct possède maintenant son propre écran."
         if (!item?.logo.isNullOrBlank()) heroBg.load(item!!.logo) { crossfade(true) }
     }
     private fun openLive() = startActivity(Intent(this, CineNovaLiveActivity::class.java))
@@ -111,7 +109,7 @@ class CineNovaHomeActivity : NtBase() {
         inner class VH(v:View):RecyclerView.ViewHolder(v){ val img:ImageView=v.findViewById(R.id.posterIv); val name:TextView=v.findViewById(R.id.nameTv) }
         override fun onCreateViewHolder(p:ViewGroup,t:Int)=VH(LayoutInflater.from(p.context).inflate(R.layout.item_cinenova_card,p,false))
         override fun getItemCount()=data.size
-        override fun onBindViewHolder(h:VH,pos:Int){ val it=data[pos]; h.name.text=it.name; h.img.load(it.logo){error(R.drawable.ic_movie)}; h.itemView.setOnFocusChangeListener{_,has-> if(has) updateHero(it); h.itemView.animate().scaleX(if(has)1.06f else 1f).scaleY(if(has)1.06f else 1f).setDuration(90).start()}; h.itemView.setOnClickListener{ openItem(data[pos]) } }
+        override fun onBindViewHolder(h:VH,pos:Int){ val item=data[pos]; h.name.text=item.name; h.img.load(item.logo){error(R.drawable.ic_movie)}; h.itemView.setOnFocusChangeListener{_,has-> if(has) updateHero(item); h.itemView.animate().scaleX(if(has)1.06f else 1f).scaleY(if(has)1.06f else 1f).setDuration(90).start()}; h.itemView.setOnClickListener{ openItem(item) } }
     }
     private fun openItem(item:Item){ when(item.kind){ "live" -> openLive(); "series" -> {Session.seriesItem=item; startActivity(Intent(this,NewSeriesDetailActivity::class.java))}; else -> {Session.detailItem=item; startActivity(Intent(this,DetailActivity::class.java))} } }
 }

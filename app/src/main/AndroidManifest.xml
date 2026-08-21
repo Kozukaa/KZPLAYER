@@ -134,6 +134,21 @@
             android:exported="false" />
 
 
+
+        <activity
+            android:name=".CineNovaGuideActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
+            android:name=".CineNovaReplayActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
         <activity
             android:name=".CineNovaHomeActivity"
             android:launchMode="singleTop"

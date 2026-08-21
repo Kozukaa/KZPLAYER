@@ -286,7 +286,7 @@ class VoiceActivity : Activity() {
     }
 
     private fun relaunchHome() {
-        val cls = if (ThemePref.isNew(this)) NewLiveActivity::class.java else HomeActivity::class.java
+        val cls = ThemePref.homeClass(this)
         startActivity(
             Intent(this, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         )

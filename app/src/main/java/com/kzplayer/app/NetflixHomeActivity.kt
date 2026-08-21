@@ -36,6 +36,9 @@ open class NetflixHomeActivity : NtBase() {
     // v340 : derniers films / dernieres series du catalogue actif (rangees du haut).
     private var recentMovies: List<Item> = emptyList()
     private var recentSeries: List<Item> = emptyList()
+    // v342 : identifiant de la liste de lecture ayant servi a charger les rangees,
+    // pour recharger automatiquement apres un changement de liste.
+    private var loadedPlaylistId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,11 +48,19 @@ open class NetflixHomeActivity : NtBase() {
         adapter = HomeAdapter()
         homeRv.adapter = adapter
         wireNavBar()
-        ensureSession { }
+        ensureSession { buildRows() }
     }
 
     override fun onResume() {
         super.onResume()
+        // v342 : liste de lecture changee -> on refait une passe de chargement du catalogue.
+        val curId = Session.current?.id
+        if (curId != null && curId != loadedPlaylistId) {
+            featuredMovieAttempted = false
+            featuredMovie = null
+            recentMovies = emptyList()
+            recentSeries = emptyList()
+        }
         buildRows()
     }
 
@@ -83,7 +94,7 @@ open class NetflixHomeActivity : NtBase() {
             ?: favLive.firstOrNull()
             ?: Session.liveChannels.firstOrNull { it.logo.isNotBlank() }
         // Declenche le chargement du dernier film (une seule fois).
-        if (!featuredMovieAttempted) {
+        if (!featuredMovieAttempted && Session.current != null) {
             featuredMovieAttempted = true
             loadCatalogRows()
         }
@@ -102,6 +113,7 @@ open class NetflixHomeActivity : NtBase() {
     // ET les deux rangees du haut : Films recents / Series recentes (tri par date d'ajout).
     private fun loadCatalogRows() {
         val pl = Session.current ?: return
+        loadedPlaylistId = pl.id
         lifecycleScope.launch {
             val movies = fetchKind(pl, "movie")
             val series = fetchKind(pl, "series")

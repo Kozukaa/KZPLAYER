@@ -74,7 +74,9 @@ class DetailActivity : BaseActivity() {
         trailerBtn.setOnClickListener {
             trailerBtn.isEnabled = false
             lifecycleScope.launch {
-                val url = try { Tmdb.trailerUrl(item.name, false) } catch (_: Exception) { "" }
+                // v342 : on tente en film puis en serie (les listes IPTV melangent les deux).
+                var url = try { Tmdb.trailerUrl(item.name, false) } catch (_: Exception) { "" }
+                if (url.isBlank()) url = try { Tmdb.trailerUrl(item.name, true) } catch (_: Exception) { "" }
                 trailerBtn.isEnabled = true
                 if (url.isBlank()) {
                     desc.text = "Aucune bande-annonce trouvée pour ce titre."

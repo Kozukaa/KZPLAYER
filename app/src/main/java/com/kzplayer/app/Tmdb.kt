@@ -103,7 +103,14 @@ object Tmdb {
         if (base.isBlank()) return@withContext ""
         val key = (if (series) "tv:" else "mv:") + base.lowercase()
         trailerCache[key]?.let { return@withContext it }
-        val found = try { findTitle(name, series) ?: findTitle(name, !series) } catch (_: Exception) { null }
+        // v342 : les noms des listes IPTV sont sales ("FR - Le Film 4K MULTI", "VF | Titre (2023)",
+        // suffixes de saison/episode...). On essaie donc plusieurs variantes du titre,
+        // en film ET en serie, avant d'abandonner.
+        var found: FoundTitle? = null
+        for (cand in titleCandidates(name)) {
+            found = try { findTitle(cand, series) ?: findTitle(cand, !series) } catch (_: Exception) { null }
+            if (found != null) break
+        }
         if (found == null) { trailerCache[key] = ""; return@withContext "" }
         val pick = fun(language: String): String {
             val o = get("$API/${found.mediaType}/${found.id}/videos?api_key=${Config.TMDB_API_KEY}&language=$language")
@@ -146,6 +153,36 @@ object Tmdb {
     }
 
     // Nettoie le titre pour la recherche : retire qualite, langue, annee, crochets, points.
+    /**
+     * v342 : variantes de titre a tester sur TMDB, de la plus complete a la plus courte.
+     * Exemples de nettoyage : "FR - Titre du film 4K MULTI" -> "Titre du film",
+     * "Titre - S01 E05" -> "Titre", "Titre : le retour" -> "Titre".
+     */
+    private fun titleCandidates(raw: String): List<String> {
+        val out = LinkedHashSet<String>()
+        val base = normalize(raw)
+        if (base.isNotBlank()) out.add(base)
+
+        // Retire les marqueurs de saison / episode et ce qui suit.
+        var noEp = Regex("(?i)\bS\s?\d{1,2}\s?[EX]\s?\d{1,3}\b.*$").replace(base, " ")
+        noEp = Regex("(?i)\b(saison|season|episode|ep)\s?\d{1,3}\b.*$").replace(noEp, " ")
+        noEp = noEp.replace(Regex("\s+"), " ").trim().trim('-', '\u2013', '|', ':').trim()
+        if (noEp.isNotBlank()) out.add(noEp)
+
+        // Garde la partie avant un separateur fort (tiret / deux-points / barre).
+        for (src in listOf(noEp, base)) {
+            val cut = src.split(Regex("\s[-\u2013:|]\s")).firstOrNull()?.trim().orEmpty()
+            if (cut.length >= 3) out.add(cut)
+        }
+
+        // Dernier recours : les 4 premiers mots, puis les 2 premiers.
+        val words = noEp.ifBlank { base }.split(" ").filter { it.isNotBlank() }
+        if (words.size > 4) out.add(words.take(4).joinToString(" "))
+        if (words.size > 2) out.add(words.take(2).joinToString(" "))
+
+        return out.filter { it.length >= 2 }.take(6)
+    }
+
     private fun normalize(raw: String): String {
         var s = raw
         s = Regex("\\(([^)]*)\\)").replace(s, " ")

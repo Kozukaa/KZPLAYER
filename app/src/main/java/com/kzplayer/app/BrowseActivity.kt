@@ -876,10 +876,12 @@ class BrowseActivity : BaseActivity() {
                     error(R.drawable.ic_live_tv)
                 }
                 holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "★" else "☆"
-                holder.favBtn.setOnClickListener {
+                holder.favBtn.setOnClickListener { v ->
+                    v.parent?.requestDisallowInterceptTouchEvent(true)
                     val added = Favorites.toggle(this@BrowseActivity, item)
                     holder.favBtn.text = if (added) "★" else "☆"
                     if (selectedCat == "__favorites__") selectCategory(Category("__favorites__", "Favoris"))
+                    else itemAdapter?.notifyItemChanged(holder.bindingAdapterPosition)
                 }
                 holder.v.setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus) lastItemFocusPos = holder.bindingAdapterPosition.coerceAtLeast(0)
@@ -938,10 +940,12 @@ class BrowseActivity : BaseActivity() {
             }
             holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "★" else "☆"
             holder.favBtn.visibility = if (item.kind == "live") View.VISIBLE else View.GONE
-            holder.favBtn.setOnClickListener {
+            holder.favBtn.setOnClickListener { v ->
+                v.parent?.requestDisallowInterceptTouchEvent(true)
                 val added = Favorites.toggle(this@BrowseActivity, item)
                 holder.favBtn.text = if (added) "★" else "☆"
                 if (selectedCat == "__favorites__") selectCategory(Category("__favorites__", "Favoris"))
+                else itemAdapter?.notifyItemChanged(holder.bindingAdapterPosition)
             }
             // Petite case serveur (recherche multi-serveurs).
             if (item.serverLabel.isNotBlank()) {

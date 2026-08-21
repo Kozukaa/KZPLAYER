@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="58dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="8dp" android:paddingEnd="12dp" android:clickable="true" android:focusable="true" android:background="@drawable/bg_cat">
- <ImageView android:id="logoIv" android:layout_width="42dp" android:layout_height="36dp" android:background="?attr/kzBg2" android:scaleType="fitCenter" android:contentDescription="@null" />
+ <ImageView android:id="@+id/logoIv" android:layout_width="42dp" android:layout_height="36dp" android:background="?attr/kzBg2" android:scaleType="fitCenter" android:contentDescription="@null" />
  <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="12dp">
-  <TextView android:id="nameTv" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/text" android:textStyle="bold" android:textSize="16sp" android:maxLines="1" android:ellipsize="end" />
-  <TextView android:id="subTv" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/muted" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
+  <TextView android:id="@+id/nameTv" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/text" android:textStyle="bold" android:textSize="16sp" android:maxLines="1" android:ellipsize="end" />
+  <TextView android:id="@+id/subTv" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/muted" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
  </LinearLayout>
- <TextView android:id="numTv" android:layout_width="38dp" android:layout_height="wrap_content" android:gravity="end" android:textColor="@color/muted" android:textSize="12sp" />
+ <TextView android:id="@+id/numTv" android:layout_width="38dp" android:layout_height="wrap_content" android:gravity="end" android:textColor="@color/muted" android:textSize="12sp" />
 </LinearLayout>

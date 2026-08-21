@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import kotlinx.coroutines.launch
 
-open class CineNovaTvBaseActivity : BaseActivity() {
+open class CineNovaTvBaseActivity : NtBase() {
     protected open val modeTitle = "Channels"
     protected open val replayMode = false
     private lateinit var catRv: RecyclerView

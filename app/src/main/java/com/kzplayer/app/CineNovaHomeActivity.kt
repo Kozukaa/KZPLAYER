@@ -111,7 +111,7 @@ class CineNovaHomeActivity : NtBase() {
         inner class VH(v:View):RecyclerView.ViewHolder(v){ val img:ImageView=v.findViewById(R.id.posterIv); val name:TextView=v.findViewById(R.id.nameTv) }
         override fun onCreateViewHolder(p:ViewGroup,t:Int)=VH(LayoutInflater.from(p.context).inflate(R.layout.item_cinenova_card,p,false))
         override fun getItemCount()=data.size
-        override fun onBindViewHolder(h:VH,pos:Int){ val it=data[pos]; h.name.text=it.name; h.img.load(it.logo){error(R.drawable.ic_movie)}; h.itemView.setOnFocusChangeListener{_,has-> if(has) updateHero(it); h.itemView.animate().scaleX(if(has)1.06f else 1f).scaleY(if(has)1.06f else 1f).setDuration(90).start()}; h.itemView.setOnClickListener{ openItem(it) } }
+        override fun onBindViewHolder(h:VH,pos:Int){ val it=data[pos]; h.name.text=it.name; h.img.load(it.logo){error(R.drawable.ic_movie)}; h.itemView.setOnFocusChangeListener{_,has-> if(has) updateHero(it); h.itemView.animate().scaleX(if(has)1.06f else 1f).scaleY(if(has)1.06f else 1f).setDuration(90).start()}; h.itemView.setOnClickListener{ openItem(data[pos]) } }
     }
     private fun openItem(item:Item){ when(item.kind){ "live" -> openLive(); "series" -> {Session.seriesItem=item; startActivity(Intent(this,NewSeriesDetailActivity::class.java))}; else -> {Session.detailItem=item; startActivity(Intent(this,DetailActivity::class.java))} } }
 }

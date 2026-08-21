@@ -164,14 +164,14 @@ object Tmdb {
         if (base.isNotBlank()) out.add(base)
 
         // Retire les marqueurs de saison / episode et ce qui suit.
-        var noEp = Regex("(?i)\bS\s?\d{1,2}\s?[EX]\s?\d{1,3}\b.*$").replace(base, " ")
-        noEp = Regex("(?i)\b(saison|season|episode|ep)\s?\d{1,3}\b.*$").replace(noEp, " ")
-        noEp = noEp.replace(Regex("\s+"), " ").trim().trim('-', '\u2013', '|', ':').trim()
+        var noEp = Regex("(?i)\\bS\\s?\\d{1,2}\\s?[EX]\\s?\\d{1,3}\\b.*$").replace(base, " ")
+        noEp = Regex("(?i)\\b(saison|season|episode|ep)\\s?\\d{1,3}\\b.*$").replace(noEp, " ")
+        noEp = noEp.replace(Regex("\\s+"), " ").trim().trim('-', '\u2013', '|', ':').trim()
         if (noEp.isNotBlank()) out.add(noEp)
 
         // Garde la partie avant un separateur fort (tiret / deux-points / barre).
         for (src in listOf(noEp, base)) {
-            val cut = src.split(Regex("\s[-\u2013:|]\s")).firstOrNull()?.trim().orEmpty()
+            val cut = src.split(Regex("\\s[-\u2013:|]\\s")).firstOrNull()?.trim().orEmpty()
             if (cut.length >= 3) out.add(cut)
         }
 

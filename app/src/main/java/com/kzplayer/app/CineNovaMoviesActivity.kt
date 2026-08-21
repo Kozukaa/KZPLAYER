@@ -1,3 +1,2 @@
 package com.kzplayer.app
-
-class CineNovaMoviesActivity : NflxMoviesActivity()
+class CineNovaMoviesActivity : CineNovaCatalogBaseActivity() { override val kind="movie"; override val screenTitle="Movies" }

@@ -2,7 +2,7 @@ package com.kzplayer.app
 
 import android.content.Intent
 
-class NflxSeriesActivity : NflxCatalogActivity() {
+open class NflxSeriesActivity : NflxCatalogActivity() {
     override val kind = "series"
     override val screenTitle = "Séries"
     override fun onCardClick(item: Item) {

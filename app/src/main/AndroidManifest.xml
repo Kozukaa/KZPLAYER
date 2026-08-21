@@ -133,6 +133,35 @@
             android:screenOrientation="sensorLandscape"
             android:exported="false" />
 
+
+        <activity
+            android:name=".CineNovaHomeActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
+            android:name=".CineNovaMoviesActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
+            android:name=".CineNovaSeriesActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
+        <activity
+            android:name=".CineNovaLiveActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:exported="false" />
+
         <activity
             android:name=".NetflixHomeActivity"
             android:launchMode="singleTop"
@@ -166,6 +195,13 @@
             android:theme="@style/Theme.KZ.Voice"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false" />
+
+        <activity
+            android:name=".TrailerPlayerActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/Theme.KZ.Fullscreen" />
 
         <activity
             android:name=".PlayerActivity"

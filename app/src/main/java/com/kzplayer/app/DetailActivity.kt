@@ -22,6 +22,7 @@ class DetailActivity : BaseActivity() {
         val title = findViewById<TextView>(R.id.detailTitle)
         val desc = findViewById<TextView>(R.id.detailDesc)
         val playBtn = findViewById<Button>(R.id.playBtn)
+        val trailerBtn = findViewById<Button>(R.id.trailerBtn)
         val favBtn = findViewById<TextView>(R.id.favBtn)
         val prog = findViewById<ProgressBar>(R.id.detailProgress)
         val back = findViewById<TextView>(R.id.backBtn)
@@ -61,6 +62,23 @@ class DetailActivity : BaseActivity() {
             } else {
                 val p = Api.cleanPlot(item.description)
                 desc.text = if (p.isBlank()) "Pas de resume disponible pour ce titre." else p
+            }
+        }
+
+        trailerBtn.setOnClickListener {
+            trailerBtn.isEnabled = false
+            lifecycleScope.launch {
+                val url = try { Tmdb.trailerUrl(item.name, false) } catch (_: Exception) { "" }
+                trailerBtn.isEnabled = true
+                if (url.isBlank()) {
+                    desc.text = "Aucune bande-annonce trouvée pour ce titre."
+                } else {
+                    startActivity(
+                        Intent(this@DetailActivity, TrailerPlayerActivity::class.java)
+                            .putExtra("url", url)
+                            .putExtra("title", "Bande-annonce - ${item.name}")
+                    )
+                }
             }
         }
 

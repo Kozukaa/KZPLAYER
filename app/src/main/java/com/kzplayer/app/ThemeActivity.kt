@@ -14,6 +14,7 @@ class ThemeActivity : BaseActivity() {
         val classicState = findViewById<TextView>(R.id.classicState)
         val newState = findViewById<TextView>(R.id.newState)
         val netflixState = findViewById<TextView>(R.id.netflixState)
+        val cineNovaState = findViewById<TextView>(R.id.cineNovaState)
         val cur = ThemePref.get(this)
         // Le badge "Actuel" a un fond blanc (bg_theme_badge_current) ; on l'affiche
         // uniquement pour le theme actif, sinon on le cache pour ne pas laisser un
@@ -21,9 +22,11 @@ class ThemeActivity : BaseActivity() {
         setStateBadge(classicState, cur == ThemePref.CLASSIC)
         setStateBadge(newState, cur == ThemePref.NEWTIVI)
         setStateBadge(netflixState, cur == ThemePref.NETFLIX)
+        setStateBadge(cineNovaState, cur == ThemePref.CINENOVA)
         findViewById<View>(R.id.themeClassic).setOnClickListener { apply(ThemePref.CLASSIC) }
         findViewById<View>(R.id.themeNew).setOnClickListener { apply(ThemePref.NEWTIVI) }
         findViewById<View>(R.id.themeNetflix).setOnClickListener { apply(ThemePref.NETFLIX) }
+        findViewById<View>(R.id.themeCineNova).setOnClickListener { apply(ThemePref.CINENOVA) }
         findViewById<View>(R.id.themeClassic).requestFocus()
     }
 

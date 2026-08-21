@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 // Accueil du theme Netflix : grande banniere + raccourcis + rangees "Continuer a regarder" / "Ma liste".
 // 100% autonome et 100% local (historique + favoris) : aucun appel reseau ici, donc aucun risque
 // pour la lecture IPTV, la licence ou les serveurs. Les tuiles ouvrent les ecrans Netflix dedies.
-class NetflixHomeActivity : NtBase() {
+open class NetflixHomeActivity : NtBase() {
 
     data class Row(val title: String, val items: List<Item>, val landscape: Boolean)
 
@@ -167,12 +167,12 @@ class NetflixHomeActivity : NtBase() {
         private var lastLogo: String = ""
 
         fun bind() {
-            wire(R.id.heroPlayTv) { open(NflxLiveActivity::class.java) }
-            wire(R.id.heroMovies) { open(NflxMoviesActivity::class.java) }
-            wire(R.id.heroSeries) { open(NflxSeriesActivity::class.java) }
-            wire(R.id.tileTv) { open(NflxLiveActivity::class.java) }
-            wire(R.id.tileMovies) { open(NflxMoviesActivity::class.java) }
-            wire(R.id.tileSeries) { open(NflxSeriesActivity::class.java) }
+            wire(R.id.heroPlayTv) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaLiveActivity::class.java else NflxLiveActivity::class.java) }
+            wire(R.id.heroMovies) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaMoviesActivity::class.java else NflxMoviesActivity::class.java) }
+            wire(R.id.heroSeries) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaSeriesActivity::class.java else NflxSeriesActivity::class.java) }
+            wire(R.id.tileTv) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaLiveActivity::class.java else NflxLiveActivity::class.java) }
+            wire(R.id.tileMovies) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaMoviesActivity::class.java else NflxMoviesActivity::class.java) }
+            wire(R.id.tileSeries) { open(if (ThemePref.isCineNova(this@NetflixHomeActivity)) CineNovaSeriesActivity::class.java else NflxSeriesActivity::class.java) }
             wire(R.id.tileGuide) { open(NewGuideActivity::class.java) }
             wire(R.id.tilePlaylist) { open(PlaylistSettingsActivity::class.java) }
             wire(R.id.tileVoice) { open(VoiceActivity::class.java) }

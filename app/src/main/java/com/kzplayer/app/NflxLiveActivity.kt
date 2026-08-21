@@ -5,7 +5,7 @@ import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
-class NflxLiveActivity : NflxCatalogActivity() {
+open class NflxLiveActivity : NflxCatalogActivity() {
     override val kind = "live"
     override val screenTitle = "TV en direct"
     override val landscape = true

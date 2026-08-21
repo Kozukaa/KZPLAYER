@@ -77,6 +77,55 @@ object Tmdb {
         return ""
     }
 
+
+    private data class FoundTitle(val id: Int, val mediaType: String)
+    private val titleCache = ConcurrentHashMap<String, FoundTitle?>()
+    private val trailerCache = ConcurrentHashMap<String, String>()
+
+    private fun findTitle(name: String, series: Boolean): FoundTitle? {
+        if (!enabled()) return null
+        val q = normalize(name)
+        if (q.isBlank()) return null
+        val key = (if (series) "tv:" else "mv:") + q.lowercase()
+        if (titleCache.containsKey(key)) return titleCache[key]
+        val primary = if (series) "search/tv" else "search/movie"
+        val o = get("$API/$primary?api_key=${Config.TMDB_API_KEY}&language=fr-FR&include_adult=false&query=${enc(q)}")
+        val arr = o.optJSONArray("results")
+        val id = if (arr != null && arr.length() > 0) arr.optJSONObject(0)?.optInt("id", -1) ?: -1 else -1
+        val found = if (id > 0) FoundTitle(id, if (series) "tv" else "movie") else null
+        titleCache[key] = found
+        return found
+    }
+
+    suspend fun trailerUrl(name: String, series: Boolean = false): String = withContext(Dispatchers.IO) {
+        if (!enabled() || name.isBlank()) return@withContext ""
+        val base = normalize(name)
+        if (base.isBlank()) return@withContext ""
+        val key = (if (series) "tv:" else "mv:") + base.lowercase()
+        trailerCache[key]?.let { return@withContext it }
+        val found = try { findTitle(name, series) ?: findTitle(name, !series) } catch (_: Exception) { null }
+        if (found == null) { trailerCache[key] = ""; return@withContext "" }
+        val pick = fun(language: String): String {
+            val o = get("$API/${found.mediaType}/${found.id}/videos?api_key=${Config.TMDB_API_KEY}&language=$language")
+            val arr = o.optJSONArray("results") ?: return ""
+            var fallback = ""
+            for (i in 0 until arr.length()) {
+                val v = arr.optJSONObject(i) ?: continue
+                val site = v.optString("site")
+                val type = v.optString("type")
+                val k = v.optString("key")
+                if (!site.equals("YouTube", true) || k.isBlank()) continue
+                if (fallback.isBlank()) fallback = k
+                if (type.equals("Trailer", true)) return k
+            }
+            return fallback
+        }
+        val yt = pick("fr-FR").ifBlank { pick("en-US") }
+        val url = if (yt.isBlank()) "" else "https://www.youtube.com/watch?v=$yt"
+        trailerCache[key] = url
+        url
+    }
+
     fun enabled(): Boolean = Config.TMDB_API_KEY.isNotBlank()
 
     private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")

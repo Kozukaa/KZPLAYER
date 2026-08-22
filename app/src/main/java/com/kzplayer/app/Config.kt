@@ -59,6 +59,7 @@ object Config {
     // Pour ajouter un appareil : appui long sur la carte "Mise a jour" des parametres,
     // relever l empreinte affichee, puis la coller ici.
     val ADMIN_LICENSE_HASHES: List<String> = listOf(
-        // "COLLE_ICI_TON_EMPREINTE"
+        // Appareil principal de l administrateur (empreinte relevee le 22/08).
+        "7B96DD7EC22D1FFA68ADC75D02166C68A3063CFFF24DAA8A86247C1C28F203A5"
     )
 }

@@ -34,6 +34,10 @@ class SettingsActivity : BaseActivity() {
         // version installee et permet de verifier la derniere version publiee
         // depuis le panel admin.
         findViewById<View>(R.id.updateMenu).setOnClickListener { checkUpdate() }
+        // v356 : acces administrateur cache. Un appui long affiche l empreinte de la
+        // licence de cet appareil, et permet d activer le journal de diagnostic
+        // uniquement si cette licence est declaree administrateur.
+        findViewById<View>(R.id.updateMenu).setOnLongClickListener { showAdminDialog(); true }
         findViewById<TextView>(R.id.updateStateTv).text = "Version installee : ${currentVersion()}"
         findViewById<View>(R.id.panelCfMenu).setOnClickListener { editCfProxyUrl() }
         refreshCfProxyLabel()
@@ -50,6 +54,47 @@ class SettingsActivity : BaseActivity() {
     private fun currentVersion(): String = try {
         packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
     } catch (e: Exception) { "1.0" }
+
+    // Boite administrateur (appui long sur la carte Mise a jour).
+    private fun showAdminDialog() {
+        val fp = AdminMode.fingerprint(this)
+        if (!AdminMode.isAdmin(this)) {
+            AlertDialog.Builder(this)
+                .setTitle("Appareil")
+                .setMessage(
+                    "Licence : " + DeviceIdentity.licenseCode(this) + "
+
+" +
+                        "Empreinte :
+" + fp + "
+
+" +
+                        "Cet appareil n'est pas administrateur."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        val on = AdminMode.diagEnabled(this)
+        AlertDialog.Builder(this)
+            .setTitle("Mode administrateur")
+            .setMessage(
+                "Licence : " + DeviceIdentity.licenseCode(this) + "
+
+" +
+                    "Journal de diagnostic : " + (if (on) "active" else "desactive")
+            )
+            .setPositiveButton(if (on) "Desactiver" else "Activer") { _, _ ->
+                val next = AdminMode.toggleDiag(this)
+                Toast.makeText(
+                    this,
+                    if (next) "Journal de diagnostic active" else "Journal de diagnostic desactive",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNegativeButton("Fermer", null)
+            .show()
+    }
 
     private fun currentVersionCode(): Int = try {
         val info = packageManager.getPackageInfo(packageName, 0)

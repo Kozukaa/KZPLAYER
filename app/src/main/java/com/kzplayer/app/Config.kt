@@ -50,4 +50,15 @@ object Config {
     // Cle gratuite a creer sur https://www.themoviedb.org (Parametres du compte > API > cle API v3).
     // Laisse vide pour desactiver l'enrichissement (aucun effet sur le reste de l'app).
     const val TMDB_API_KEY = "9ce341907d2f15740cde4a2e746b75c3"
+
+    // ---------------- Licences administrateur (v356) ----------------
+    // Empreintes SHA-256 (majuscules) des codes de licence autorises a activer le
+    // journal de diagnostic. On ne stocke jamais le code lui-meme, seulement son
+    // empreinte : personne ne peut retrouver la licence en lisant l APK.
+    // Tant que la liste est vide, le journal est masque pour absolument tout le monde.
+    // Pour ajouter un appareil : appui long sur la carte "Mise a jour" des parametres,
+    // relever l empreinte affichee, puis la coller ici.
+    val ADMIN_LICENSE_HASHES: List<String> = listOf(
+        // "COLLE_ICI_TON_EMPREINTE"
+    )
 }

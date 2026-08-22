@@ -203,8 +203,12 @@ class BrowseActivity : BaseActivity() {
                         categories = prepareCategories(Api.stalkerCategories(pl, realKind), pl)
                         bindCategories()
                         setLoading(false)
+                        // v356 : le journal technique n est visible que pour un administrateur.
                         msgTv.text = if (categories.size <= 1 && Api.lastStalkerLog.isNotBlank()) {
-                            "Aucune categorie Stalker.\n\n${Api.lastStalkerLog}"
+                            if (AdminMode.diagEnabled(this@BrowseActivity))
+                                "Aucune categorie Stalker.\n\n${Api.lastStalkerLog}"
+                            else
+                                "Aucune cat\u00e9gorie disponible sur ce serveur."
                         } else {
                             if (kind == "replay") "Choisis une catégorie replay à gauche." else "Choisis une categorie a gauche."
                         }

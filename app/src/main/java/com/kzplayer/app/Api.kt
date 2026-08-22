@@ -956,6 +956,28 @@ object Api {
     )
     private var currentStbProfile: StbProfile = STB_PROFILES[0]
 
+    // v355 : mode compatibilite pour les portails MAG250 "stricts" (releve HTTP reel).
+    // Il n est JAMAIS actif au premier essai : on ne l active qu apres un echec complet
+    // du mode historique, et on le memorise ensuite serveur par serveur. Les serveurs
+    // qui fonctionnent aujourd hui reussissent au premier passage et ne passent jamais ici.
+    private var stbCompat = false
+    private val stbCompatServers = HashSet<String>()
+
+    private fun stbKey(serverUrl: String): String = serverUrl.trim().trimEnd('/')
+
+    // En-tetes supplementaires envoyes par les vrais boitiers MAG sur ces portails.
+    private fun stbCompatExtras(pl: Playlist): Map<String, String> {
+        if (!stbCompat) return emptyMap()
+        val sn = pl.stalkerSn.ifBlank { stbSerial(pl) }
+        val did = pl.stalkerDeviceId.ifBlank { stbDeviceId(pl) }
+        val did2 = pl.stalkerDeviceId2.ifBlank { did }
+        val m = LinkedHashMap<String, String>()
+        m["X-Device-Id"] = did
+        m["X-Device-Id-2"] = did2
+        m["X-Serial-Number"] = sn
+        return m
+    }
+
     private var stalkerToken: String? = null
     private var stalkerBase: String? = null
     // Dernier diagnostic de resolution de flux (affiche dans le lecteur en cas d'echec).
@@ -976,30 +998,40 @@ object Api {
     private fun stbDeviceId(pl: Playlist): String = sha256Hex(pl.mac.uppercase()).uppercase()
 
     private fun stbCookie(pl: Playlist): String =
-        "mac=" + enc(pl.mac) + "; stb_lang=en; timezone=Europe%2FParis"
+        if (stbCompat)
+            // Format releve sur un boitier MAG250 reel : mac non encodee, serial present,
+            // fuseau en clair. Utilise uniquement en mode compatibilite.
+            "mac=" + pl.mac + "; serial=" + pl.stalkerSn.ifBlank { stbSerial(pl) } +
+                "; stb_lang=en; timezone=Europe/Paris"
+        else
+            "mac=" + enc(pl.mac) + "; stb_lang=en; timezone=Europe%2FParis"
 
     // En-tetes MAG a renvoyer au lecteur pour lire un flux stalker.
     // Sans eux, nginx ferme la connexion -> HTTP 444. A appeler apres create_link (token deja obtenu).
     fun stalkerHeaders(pl: Playlist): Map<String, String> {
         val m = LinkedHashMap<String, String>()
-        m["User-Agent"] = currentStbProfile.ua
+        // En compat, le flux est refuse avec le User-Agent MAG : on utilise celui
+        // releve dans la capture reelle.
+        m["User-Agent"] = if (stbCompat) "IPTVSmartersPro" else currentStbProfile.ua
         m["Cookie"] = stbCookie(pl)
         m["X-User-Agent"] = "Model: ${currentStbProfile.model}; Link: WiFi"
         m["Referer"] = "${pl.serverUrl}/c/"
         val t = stalkerToken
         if (!t.isNullOrBlank()) m["Authorization"] = "Bearer $t"
+        m.putAll(stbCompatExtras(pl))
         return m
     }
 
     private fun stbCall(pl: Playlist, portal: String, query: String): String {
         fun applyStbHeaders(b: Request.Builder): Request.Builder {
-            b.header("User-Agent", currentStbProfile.ua)
+            b.header("User-Agent", if (stbCompat) "Mozilla/5.0 (QtEmbedded; Linux)" else currentStbProfile.ua)
                 .header("Accept", "*/*")
                 .header("Cookie", stbCookie(pl))
                 .header("X-User-Agent", "Model: ${currentStbProfile.model}; Link: WiFi")
                 .header("Referer", "${pl.serverUrl}/c/")
             val t = stalkerToken
             if (!t.isNullOrBlank()) b.header("Authorization", "Bearer $t")
+            for ((k, v) in stbCompatExtras(pl)) b.header(k, v)
             return b
         }
 
@@ -1036,6 +1068,23 @@ object Api {
     }
 
     private fun stalkerHandshake(pl: Playlist): Boolean {
+        // Mode historique en premier (aucun changement pour les serveurs qui marchent).
+        stbCompat = stbCompatServers.contains(stbKey(pl.serverUrl))
+        if (stalkerHandshakePass(pl)) return true
+        if (stbCompat) { stbCompat = false; return false }
+        // Repli unique : profil MAG250 strict releve sur la capture HTTP reelle.
+        stbCompat = true
+        stalkerToken = null
+        stalkerBase = null
+        if (stalkerHandshakePass(pl)) {
+            stbCompatServers.add(stbKey(pl.serverUrl))
+            return true
+        }
+        stbCompat = false
+        return false
+    }
+
+    private fun stalkerHandshakePass(pl: Playlist): Boolean {
         if (!hasCustomStalkerProfile(pl)) currentStbProfile = STB_PROFILES[0]
         val tried = StringBuilder()
         val candidates = stalkerPortalCandidates(pl.serverUrl)
@@ -1112,12 +1161,32 @@ object Api {
             val sig = sha256Hex((pl.mac + sn).uppercase()).uppercase()
             val ver = enc(currentStbProfile.ver)
             val metrics = enc("{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\",\"type\":\"STB\",\"uid\":\"$did\"}")
-            val q = "type=stb&action=get_profile&hd=1&ver=$ver" +
-                "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
-                "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
-                "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics" +
-                "&JsHttpRequest=1-xml"
+            val q = if (stbCompat) {
+                // Premier get_profile, copie exacte de la capture d un MAG250 :
+                // pas de hd=1, api_signature 263, timestamp, hw_version_2, metrics avec random.
+                val metricsCompat = enc(
+                    "{\"mac\":\"${pl.mac}\",\"sn\":\"$sn\",\"model\":\"${currentStbProfile.model}\"," +
+                        "\"type\":\"STB\",\"uid\":\"\",\"random\":\"${(100000..999999).random()}\"}"
+                )
+                "type=stb&action=get_profile&ver=$ver" +
+                    "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&image_version=${currentStbProfile.imageVersion}" +
+                    "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
+                    "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&client_type=STB" +
+                    "&hw_version_2=334&timestamp=${System.currentTimeMillis() / 1000}" +
+                    "&api_signature=263&metrics=$metricsCompat&JsHttpRequest=1-xml"
+            } else {
+                "type=stb&action=get_profile&hd=1&ver=$ver" +
+                    "&num_banks=2&sn=$sn&stb_type=${currentStbProfile.model}&client_type=STB&image_version=${currentStbProfile.imageVersion}" +
+                    "&video_out=hdmi&device_id=$did&device_id2=$did&signature=$sig" +
+                    "&auth_second_step=1&hw_version=1.7-BD-00&not_valid_token=0&metrics=$metrics" +
+                    "&JsHttpRequest=1-xml"
+            }
             stbCall(pl, portal, q)
+            // Deuxieme get_profile allege : indispensable sur ces portails, ils ne
+            // valident la session qu apres ce second appel.
+            if (stbCompat) {
+                stbCall(pl, portal, "type=stb&action=get_profile&sn=$sn&auth_second_step=1&JsHttpRequest=1-xml")
+            }
             return
         }
 
@@ -1146,11 +1215,15 @@ object Api {
 
         if (pl.stalkerHwVersion2.isNotBlank()) q += "&hw_version_2=${qv(pl.stalkerHwVersion2)}"
         if (pl.stalkerTimestamp.isNotBlank()) q += "&timestamp=${qv(pl.stalkerTimestamp)}"
-        q += "&api_signature=${qv(pl.stalkerApiSignature.ifBlank { "262" })}"
+        q += "&api_signature=${qv(pl.stalkerApiSignature.ifBlank { if (stbCompat) "263" else "262" })}"
         if (pl.stalkerPrehash.isNotBlank()) q += "&prehash=${qv(pl.stalkerPrehash)}"
         q += "&JsHttpRequest=1-xml"
 
         stbCall(pl, portal, q)
+        // Second get_profile allege (mode compatibilite uniquement).
+        if (stbCompat) {
+            stbCall(pl, portal, "type=stb&action=get_profile&sn=${qv(sn)}&auth_second_step=1&JsHttpRequest=1-xml")
+        }
     }
 
     private fun ensureStalker(pl: Playlist): String? {

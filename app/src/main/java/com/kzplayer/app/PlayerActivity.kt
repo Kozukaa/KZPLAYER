@@ -329,7 +329,9 @@ class PlayerActivity : AppCompatActivity() {
                     val u = candidates.getOrNull(candIdx) ?: ""
                     // Fenetre lisible (au lieu d'un toast fugace) avec le diagnostic complet :
                     // l'utilisateur peut lire / photographier l'URL exacte et la reponse du serveur.
-                    val diag = if (Session.current?.type == "stalker" && Api.lastStreamLog.isNotBlank())
+                    // v356 : diagnostic technique reserve aux licences administrateur.
+                    val diag = if (Session.current?.type == "stalker" && Api.lastStreamLog.isNotBlank() &&
+                        AdminMode.diagEnabled(this@PlayerActivity))
                         "\n\n--- Diagnostic ---\n${Api.lastStreamLog}" else ""
                     androidx.appcompat.app.AlertDialog.Builder(this@PlayerActivity)
                         .setTitle("Lecture impossible : $detail")

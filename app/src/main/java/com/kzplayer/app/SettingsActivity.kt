@@ -57,40 +57,31 @@ class SettingsActivity : BaseActivity() {
 
     // Boite administrateur (appui long sur la carte Mise a jour).
     private fun showAdminDialog() {
+        val nl = System.lineSeparator()
+        val lic = DeviceIdentity.licenseCode(this)
         val fp = AdminMode.fingerprint(this)
         if (!AdminMode.isAdmin(this)) {
+            val msg = "Licence : " + lic + nl + nl + "Empreinte :" + nl + fp + nl + nl +
+                "Cet appareil n est pas administrateur."
             AlertDialog.Builder(this)
                 .setTitle("Appareil")
-                .setMessage(
-                    "Licence : " + DeviceIdentity.licenseCode(this) + "
-
-" +
-                        "Empreinte :
-" + fp + "
-
-" +
-                        "Cet appareil n'est pas administrateur."
-                )
+                .setMessage(msg)
                 .setPositiveButton("OK", null)
                 .show()
             return
         }
         val on = AdminMode.diagEnabled(this)
+        val etat = if (on) "active" else "desactive"
+        val msg = "Licence : " + lic + nl + nl + "Journal de diagnostic : " + etat
+        val btn = if (on) "Desactiver" else "Activer"
         AlertDialog.Builder(this)
             .setTitle("Mode administrateur")
-            .setMessage(
-                "Licence : " + DeviceIdentity.licenseCode(this) + "
-
-" +
-                    "Journal de diagnostic : " + (if (on) "active" else "desactive")
-            )
-            .setPositiveButton(if (on) "Desactiver" else "Activer") { _, _ ->
+            .setMessage(msg)
+            .setPositiveButton(btn) { d, _ ->
+                d.dismiss()
                 val next = AdminMode.toggleDiag(this)
-                Toast.makeText(
-                    this,
-                    if (next) "Journal de diagnostic active" else "Journal de diagnostic desactive",
-                    Toast.LENGTH_SHORT
-                ).show()
+                val txt = if (next) "Journal de diagnostic active" else "Journal de diagnostic desactive"
+                Toast.makeText(this, txt, Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Fermer", null)
             .show()

@@ -73,17 +73,22 @@ class DetailActivity : BaseActivity() {
 
         trailerBtn.setOnClickListener {
             trailerBtn.isEnabled = false
-            trailerBtn.text = "Bande-annonce..."
+            trailerBtn.text = "Recherche de la bande-annonce..."
             lifecycleScope.launch {
-                // v342 : on tente en film puis en serie (les listes IPTV melangent les deux).
-                var yt = try { Tmdb.trailerUrl(item.name, false) } catch (_: Exception) { "" }
-                if (yt.isBlank()) yt = try { Tmdb.trailerUrl(item.name, true) } catch (_: Exception) { "" }
-                // v345 : on resout le vrai flux video et on le lit dans NOTRE lecteur.
-                val st = if (yt.isBlank()) null else try { YtStream.resolve(yt) } catch (_: Exception) { null }
+                // v346 : on cherche la bande-annonce DIRECTEMENT sur YouTube (nom du film
+                // nettoye + "bande annonce VF"), donc plus aucune dependance a TMDB.
+                var st = try { YtStream.findTrailer(item.name) } catch (_: Exception) { null }
+                // Repli : si TMDB connait le titre, on tente sa bande-annonce officielle.
+                if (st == null) {
+                    val yt = try { Tmdb.trailerUrl(item.name, false) } catch (_: Exception) { "" }
+                    if (yt.isNotBlank()) st = try { YtStream.resolve(yt) } catch (_: Exception) { null }
+                }
                 trailerBtn.isEnabled = true
                 trailerBtn.text = "Voir la bande-annonce"
                 if (st == null) {
-                    desc.text = "Aucune bande-annonce disponible pour ce titre."
+                    val why = YtStream.lastError
+                    desc.text = if (why.isBlank()) "Bande-annonce introuvable."
+                        else "Bande-annonce introuvable : " + why
                 } else {
                     startActivity(
                         Intent(this@DetailActivity, PlayerActivity::class.java)

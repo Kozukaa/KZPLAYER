@@ -158,7 +158,7 @@ object Tmdb {
      * Exemples de nettoyage : "FR - Titre du film 4K MULTI" -> "Titre du film",
      * "Titre - S01 E05" -> "Titre", "Titre : le retour" -> "Titre".
      */
-    private fun titleCandidates(raw: String): List<String> {
+    fun titleCandidates(raw: String): List<String> {
         val out = LinkedHashSet<String>()
         val base = normalize(raw)
         if (base.isNotBlank()) out.add(base)

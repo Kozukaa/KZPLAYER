@@ -172,7 +172,9 @@ class PlayerActivity : AppCompatActivity() {
             // Xtream / M3U : UA VLC (accepte par la quasi-totalite des panels IPTV).
             "VLC/3.0.20 LibVLC/3.0.20"
         }
-        val httpFactory = KzHttpDataSource.factory(this, userAgent = streamUa, allowCrossProtocolRedirects = true)
+        // v345 : bande-annonce YouTube -> User-Agent impose par le resolveur YtStream.
+        val forcedUa = intent.getStringExtra("forceUa")?.takeIf { it.isNotBlank() }
+        val httpFactory = KzHttpDataSource.factory(this, userAgent = forcedUa ?: streamUa, allowCrossProtocolRedirects = true)
         val mediaSourceFactory = if (isVod) {
             // Films / episodes : lecteur VOD standard. Pas de flags TS live, sinon certains VOD
             // chargent la duree mais restent figes sans son.

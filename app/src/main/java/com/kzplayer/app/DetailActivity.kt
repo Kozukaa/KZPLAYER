@@ -73,18 +73,25 @@ class DetailActivity : BaseActivity() {
 
         trailerBtn.setOnClickListener {
             trailerBtn.isEnabled = false
+            trailerBtn.text = "Bande-annonce..."
             lifecycleScope.launch {
                 // v342 : on tente en film puis en serie (les listes IPTV melangent les deux).
-                var url = try { Tmdb.trailerUrl(item.name, false) } catch (_: Exception) { "" }
-                if (url.isBlank()) url = try { Tmdb.trailerUrl(item.name, true) } catch (_: Exception) { "" }
+                var yt = try { Tmdb.trailerUrl(item.name, false) } catch (_: Exception) { "" }
+                if (yt.isBlank()) yt = try { Tmdb.trailerUrl(item.name, true) } catch (_: Exception) { "" }
+                // v345 : on resout le vrai flux video et on le lit dans NOTRE lecteur.
+                val st = if (yt.isBlank()) null else try { YtStream.resolve(yt) } catch (_: Exception) { null }
                 trailerBtn.isEnabled = true
-                if (url.isBlank()) {
-                    desc.text = "Aucune bande-annonce trouvée pour ce titre."
+                trailerBtn.text = "Voir la bande-annonce"
+                if (st == null) {
+                    desc.text = "Aucune bande-annonce disponible pour ce titre."
                 } else {
                     startActivity(
-                        Intent(this@DetailActivity, TrailerPlayerActivity::class.java)
-                            .putExtra("url", url)
-                            .putExtra("title", "Bande-annonce - ${item.name}")
+                        Intent(this@DetailActivity, PlayerActivity::class.java)
+                            .putExtra("url", st.url)
+                            .putExtra("title", "Bande-annonce - " + item.name)
+                            .putExtra("mode", "vod")
+                            .putExtra("historyKind", "trailer")
+                            .putExtra("forceUa", st.ua)
                     )
                 }
             }

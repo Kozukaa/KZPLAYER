@@ -168,13 +168,6 @@
             android:exported="false" />
 
         <activity
-            android:name=".TrailerPlayerActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:exported="false"
-            android:screenOrientation="sensorLandscape"
-            android:theme="@style/Theme.KZ.Fullscreen" />
-
-        <activity
             android:name=".ReplayProgramsActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false"

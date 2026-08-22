@@ -30,6 +30,9 @@ class TrailerActivity : BaseActivity() {
     private val ids: MutableList<String> = ArrayList()
     private var index = 0
     private var started = false
+    // v350 : une fois la lecture lancee, on ne change plus de video.
+    private var everPlayed = false
+    private var loading = false
     private var fallbackUsed = false
     private val ui = Handler(Looper.getMainLooper())
     private var watchdog: Runnable? = null
@@ -67,6 +70,10 @@ class TrailerActivity : BaseActivity() {
         w.webViewClient = object : WebViewClient() {
             // Aucune navigation : impossible de partir vers YouTube.
             override fun shouldOverrideUrlLoading(v: WebView?, r: WebResourceRequest?): Boolean = true
+            override fun onPageCommitVisible(v: WebView?, url: String?) {
+                if (fallbackUsed) injectSkin()
+            }
+
             override fun onPageFinished(v: WebView?, url: String?) {
                 if (fallbackUsed) injectSkin()
             }
@@ -76,9 +83,10 @@ class TrailerActivity : BaseActivity() {
 
     private fun playCurrent() {
         started = false
+        loading = false
         val w = web ?: return
         w.loadDataWithBaseURL(BASE, html(ids[index]), "text/html", "utf-8", null)
-        arm(9000L)
+        arm(14000L)
     }
 
     /** Si rien ne demarre dans le delai imparti, on considere la video refusee. */
@@ -90,6 +98,9 @@ class TrailerActivity : BaseActivity() {
     }
 
     private fun next() {
+        // v350 : securite. Si la video est deja lancee, on ne la coupe pas :
+        // c est ce qui faisait  quitter la bande-annonce pour en mettre une autre .
+        if (everPlayed) return
         watchdog?.let { ui.removeCallbacks(it) }
         if (fallbackUsed) { showError(); return }
         index += 1
@@ -111,26 +122,37 @@ class TrailerActivity : BaseActivity() {
         msg?.text = "Bande-annonce indisponible pour ce titre."
     }
 
-    /** Masque tout l habillage YouTube et met la video en plein ecran. */
+    /**
+     * Masque tout l habillage YouTube. La page YouTube se construit progressivement :
+     * un seul passage ne suffisait pas, le titre et la barre du bas revenaient ensuite.
+     * On repete donc l operation, et au lieu de viser des noms d elements precis
+     * (que YouTube change souvent), on cache tout ce qui n est pas la video elle-meme.
+     */
     private fun injectSkin() {
-        val css = StringBuilder()
-        css.append("header,ytm-mobile-topbar-renderer,.mobile-topbar-header,ytm-pivot-bar-renderer,")
-        css.append("ytm-item-section-renderer,ytm-single-column-watch-next-results-renderer,")
-        css.append("ytm-slim-video-metadata-section-renderer,ytm-companion-slot,#comments,")
-        css.append(".player-controls-background,.ytp-chrome-top,.ytp-chrome-bottom,.ytp-watermark,")
-        css.append(".ytp-show-cards-title,.ytp-pause-overlay,.ytp-gradient-top,.ytp-gradient-bottom")
-        css.append("{display:none!important}")
-        css.append("html,body{background:#000!important;overflow:hidden!important;margin:0!important}")
-        css.append("#player,.player-container,ytm-app{position:fixed!important;top:0!important;")
-        css.append("left:0!important;width:100vw!important;height:100vh!important;margin:0!important}")
-        css.append("video{width:100vw!important;height:100vh!important;object-fit:contain!important;")
-        css.append("background:#000!important}")
         val js = StringBuilder()
-        js.append("(function(){var s=document.createElement('style');s.innerHTML=" + BT + css.toString() + BT + ";")
-        js.append("document.head.appendChild(s);")
-        js.append("var v=document.querySelector('video');")
-        js.append("if(v){v.muted=true;v.play();v.onplaying=function(){v.muted=false;KZ.onPlaying();};}")
-        js.append("})()")
+        js.append("(function(){if(window.kzSolo)return;window.kzSolo=1;")
+        js.append("var st=document.createElement('style');")
+        js.append("st.innerHTML=" + BT)
+        js.append("html,body{background:#000!important;overflow:hidden!important;margin:0!important}")
+        js.append("video{width:100vw!important;height:100vh!important;object-fit:contain!important;")
+        js.append("background:#000!important;position:fixed!important;top:0!important;left:0!important}")
+        js.append(BT + ";document.documentElement.appendChild(st);")
+        // On remonte de la video jusqu au corps de la page en masquant tous les voisins :
+        // barre du haut, titre, controles, commentaires et suggestions disparaissent.
+        js.append("function solo(){var v=document.querySelector('video');if(!v)return;")
+        js.append("var n=v;while(n&&n!==document.body){var p=n.parentElement;if(!p)break;")
+        js.append("for(var i=0;i<p.children.length;i++){var c=p.children[i];")
+        js.append("if(c!==n){c.style.setProperty('display','none','important');}}")
+        js.append("p.style.setProperty('margin','0','important');")
+        js.append("p.style.setProperty('padding','0','important');n=p;}")
+        js.append("if(v.paused){v.muted=true;v.play();}")
+        js.append("if(!v.dataset.kz){v.dataset.kz=1;")
+        js.append("v.onplaying=function(){v.muted=false;KZ.onPlaying();};")
+        js.append("v.onwaiting=function(){KZ.onLoading();};")
+        js.append("v.onended=function(){KZ.onEnded();};}}")
+        // Repete pendant 30 secondes : suffisant pour couvrir tout le chargement.
+        js.append("solo();var k=0;var t=setInterval(function(){solo();k++;")
+        js.append("if(k>60){clearInterval(t);}},500);})()")
         try { web?.evaluateJavascript(js.toString(), null) } catch (_: Exception) {}
     }
 
@@ -148,6 +170,7 @@ class TrailerActivity : BaseActivity() {
         sb.append("iv_load_policy:3,playsinline:1,origin:'https://kzplayer.app'},")
         sb.append("events:{onReady:function(e){try{e.target.mute();e.target.playVideo();}catch(x){}},")
         sb.append("onStateChange:function(e){if(e.data==1){try{pl.unMute();}catch(x){}KZ.onPlaying();}")
+        sb.append("if(e.data==3){KZ.onLoading();}")
         sb.append("if(e.data==0){KZ.onEnded();}},")
         sb.append("onError:function(e){KZ.onError(''+e.data);}}});}")
         sb.append("setTimeout(function(){if(!window.YT){KZ.onError('api');}},7000);")
@@ -158,10 +181,26 @@ class TrailerActivity : BaseActivity() {
     /** Pont entre le lecteur web et l application. */
     inner class Bridge {
         @JavascriptInterface
-        fun onPlaying() { ui.post { started = true; msg?.visibility = View.GONE } }
+        fun onPlaying() {
+            ui.post {
+                started = true
+                everPlayed = true
+                watchdog?.let { ui.removeCallbacks(it) }
+                msg?.visibility = View.GONE
+            }
+        }
+
+        /** La video est en train de se charger : on laisse plus de temps. */
+        @JavascriptInterface
+        fun onLoading() {
+            ui.post {
+                if (everPlayed) return@post
+                if (!loading) { loading = true; arm(20000L) }
+            }
+        }
 
         @JavascriptInterface
-        fun onError(code: String) { ui.post { next() } }
+        fun onError(code: String) { ui.post { if (!everPlayed) next() } }
 
         @JavascriptInterface
         fun onEnded() { ui.post { finish() } }

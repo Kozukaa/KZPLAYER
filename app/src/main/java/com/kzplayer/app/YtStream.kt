@@ -139,7 +139,9 @@ object YtStream {
             for (suffix in listOf(" bande annonce VF", " official trailer")) {
                 val ids = try { searchVideoIds(n + suffix) } catch (_: Exception) { emptyList<String>() }
                 for (id in ids) if (!out.contains(id)) out.add(id)
-                if (out.size >= 8) return@withContext out.take(8)
+                // v350 : des que quelques candidats suffisent, on arrete de chercher
+                // (chaque recherche supplementaire allongeait l attente pour rien).
+                if (out.size >= 4) return@withContext out.take(8)
             }
         }
         if (out.isEmpty() && lastError.isBlank()) lastError = "recherche sans resultat"

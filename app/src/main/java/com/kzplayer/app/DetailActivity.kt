@@ -80,7 +80,10 @@ class DetailActivity : BaseActivity() {
                 // v348 : 1) on trouve la bande-annonce sur YouTube (recherche fiable),
                 //        2) on tente le flux direct pour la lire dans le lecteur KZ,
                 //        3) si YouTube bloque le flux, on la lit en plein ecran sans habillage.
-                val vid = try { YtStream.searchTrailerId(item.name) } catch (_: Exception) { "" }
+                // v349 : plusieurs bandes-annonces possibles ; le lecteur essaie la suivante
+                // si YouTube refuse la lecture hors de son site (erreur 152).
+                val vids = try { YtStream.searchTrailerIds(item.name) } catch (_: Exception) { emptyList<String>() }
+                val vid = vids.firstOrNull() ?: ""
                 val st = if (vid.isBlank()) null else try { YtStream.resolveVideo(vid) } catch (_: Exception) { null }
                 trailerBtn.isEnabled = true
                 trailerBtn.text = "Voir la bande-annonce"
@@ -97,7 +100,7 @@ class DetailActivity : BaseActivity() {
                 } else if (vid.isNotBlank()) {
                     startActivity(
                         Intent(this@DetailActivity, TrailerActivity::class.java)
-                            .putExtra("videoId", vid)
+                            .putStringArrayListExtra("videoIds", ArrayList(vids))
                             .putExtra("title", label)
                     )
                 } else {

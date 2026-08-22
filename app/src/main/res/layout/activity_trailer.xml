@@ -9,6 +9,24 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Couche invisible : aucun clic ne peut atteindre la page YouTube. -->
+    <View
+        android:id="@+id/trailerMask"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="false" />
+
+    <TextView
+        android:id="@+id/trailerMsg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textColor="@color/text"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

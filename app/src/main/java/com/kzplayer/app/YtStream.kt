@@ -125,6 +125,70 @@ object YtStream {
     }
 
     /** Trouve le premier identifiant de video dans une reponse JSON brute. */
+    /**
+     * v349 : certaines bandes-annonces interdisent la lecture hors de YouTube (erreur 152).
+     * On collecte donc plusieurs candidats, et le lecteur passe au suivant en cas de refus.
+     */
+    suspend fun searchTrailerIds(rawName: String): List<String> = withContext(Dispatchers.IO) {
+        lastError = ""
+        val out = ArrayList<String>()
+        val cands = Tmdb.titleCandidates(rawName)
+        val names = if (cands.isEmpty()) listOf(rawName.trim()) else cands
+        for (n in names.take(2)) {
+            if (n.length < 2) continue
+            for (suffix in listOf(" bande annonce VF", " official trailer")) {
+                val ids = try { searchVideoIds(n + suffix) } catch (_: Exception) { emptyList<String>() }
+                for (id in ids) if (!out.contains(id)) out.add(id)
+                if (out.size >= 8) return@withContext out.take(8)
+            }
+        }
+        if (out.isEmpty() && lastError.isBlank()) lastError = "recherche sans resultat"
+        out.take(8)
+    }
+
+    /** Jusqu a 6 identifiants de videos pour une recherche donnee. */
+    private fun searchVideoIds(query: String): List<String> {
+        val cl = JSONObject()
+        cl.put("clientName", "WEB")
+        cl.put("clientVersion", "2.20240726.00.00")
+        cl.put("hl", "fr")
+        cl.put("gl", "FR")
+        val root = JSONObject()
+        root.put("context", JSONObject().put("client", cl))
+        root.put("query", query)
+        root.put("params", "EgIQAQ%3D%3D")
+        val req = Request.Builder()
+            .url(SEARCH + "?key=" + KEY + "&prettyPrint=false")
+            .header("User-Agent", UA_WEB)
+            .header("Accept", "*/*")
+            .header("Accept-Language", "fr-FR,fr;q=0.9,en;q=0.8")
+            .header("Origin", "https://www.youtube.com")
+            .header("Referer", "https://www.youtube.com/")
+            .header("X-Youtube-Client-Name", "1")
+            .header("X-Youtube-Client-Version", "2.20240726.00.00")
+            .post(root.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .build()
+        val txt = Api.imageClient().newCall(req).execute().use { r ->
+            if (!r.isSuccessful) { lastError = "recherche HTTP " + r.code; return emptyList() }
+            r.body?.string() ?: ""
+        }
+        if (txt.isBlank()) { lastError = "recherche vide"; return emptyList() }
+        val out = ArrayList<String>()
+        val marker = "\"videoId\":\""
+        var from = 0
+        while (out.size < 6) {
+            val i = txt.indexOf(marker, from)
+            if (i < 0) break
+            val st = i + marker.length
+            val e = txt.indexOf("\"", st)
+            if (e < 0) break
+            val id = txt.substring(st, e)
+            if (id.length == 11 && !out.contains(id)) out.add(id)
+            from = e
+        }
+        return out
+    }
+
     private fun firstVideoId(txt: String): String {
         val marker = "\"videoId\":\""
         var from = 0

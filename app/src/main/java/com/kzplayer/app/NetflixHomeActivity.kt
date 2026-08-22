@@ -136,9 +136,45 @@ open class NetflixHomeActivity : NtBase() {
                 else -> Api.xtreamItems(pl, wanted, "__all__")
             }
         }
-        val anyAdded = items.any { it.added > 0L }
-        if (anyAdded) items.sortedByDescending { it.added } else items
+        sortRecent(items)
     } catch (e: Exception) { emptyList() }
+
+    /**
+     * v352 : certaines listes ne fournissent aucune date d ajout, ou une date fausse
+     * et identique pour tout le catalogue. On se fiait uniquement a cette date, d ou
+     * des films de 2006 dans  Films recents . On utilise donc l annee du titre
+     * (presente dans presque tous les noms de listes IPTV) comme critere principal,
+     * et la date d ajout seulement pour departager.
+     */
+    private fun sortRecent(items: List<Item>): List<Item> {
+        if (items.isEmpty()) return items
+        val thisYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        // Annee la plus recente trouvee dans le titre (bornee : on ignore les valeurs absurdes).
+        fun year(name: String): Int {
+            var best = 0
+            for (m in Regex("(19|20)[0-9][0-9]").findAll(name)) {
+                val y = m.value.toIntOrNull() ?: continue
+                if (y in 1930..(thisYear + 1) && y > best) best = y
+            }
+            return best
+        }
+        val withYear = items.map { it to year(it.name) }
+        val dated = withYear.filter { it.second > 0 }
+        // Assez de titres portent une annee : on classe par annee, puis par date d ajout.
+        if (dated.size >= 5) {
+            val sorted = dated.sortedWith(
+                compareByDescending<Pair<Item, Int>> { it.second }.thenByDescending { it.first.added },
+            ).map { it.first }
+            // On privilegie franchement les nouveautes : les 3 dernieres annees si possible.
+            val fresh = dated.filter { it.second >= thisYear - 2 }
+                .sortedWith(compareByDescending<Pair<Item, Int>> { it.second }.thenByDescending { it.first.added })
+                .map { it.first }
+            return if (fresh.size >= 5) fresh else sorted
+        }
+        // Aucune annee exploitable : on retombe sur la date d ajout quand elle varie.
+        val added = items.map { it.added }.filter { it > 0L }.distinct()
+        return if (added.size > 1) items.sortedByDescending { it.added } else items.reversed()
+    }
 
 
     // v338 : barre de navigation haute facon Netflix (Accueil / Chaines / Films / Series /

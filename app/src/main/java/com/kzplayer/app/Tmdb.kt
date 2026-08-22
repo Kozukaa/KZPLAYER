@@ -333,6 +333,49 @@ object Tmdb {
         out
     }
 
+    data class SimilarEntry(val title: String, val poster: String)
+
+    private val similarEntryCache = ConcurrentHashMap<String, List<SimilarEntry>>()
+
+    /**
+     * v351 : titres similaires AVEC leur affiche TMDB.
+     * Permet de les afficher immediatement, comme la distribution, sans attendre
+     * le chargement complet du catalogue de la liste de lecture.
+     */
+    suspend fun similarEntries(name: String, series: Boolean): List<SimilarEntry> = withContext(Dispatchers.IO) {
+        if (!enabled() || name.isBlank()) return@withContext emptyList<SimilarEntry>()
+        val key = (if (series) "tv:" else "mv:") + normalize(name).lowercase()
+        similarEntryCache[key]?.let { return@withContext it }
+        var found: FoundTitle? = null
+        for (cand in titleCandidates(name)) {
+            found = try { findTitle(cand, series) ?: findTitle(cand, !series) } catch (_: Exception) { null }
+            if (found != null) break
+        }
+        if (found == null) { similarEntryCache[key] = emptyList(); return@withContext emptyList<SimilarEntry>() }
+        val out = ArrayList<SimilarEntry>()
+        val seen = HashSet<String>()
+        for (path in listOf("recommendations", "similar")) {
+            if (out.size >= 20) break
+            try {
+                val o = get("$API/${found.mediaType}/${found.id}/$path?api_key=${Config.TMDB_API_KEY}&language=fr-FR&page=1")
+                val arr = o.optJSONArray("results") ?: continue
+                for (i in 0 until arr.length()) {
+                    val r = arr.optJSONObject(i) ?: continue
+                    val t = r.optString("title").ifBlank { r.optString("name") }
+                    if (t.isBlank()) continue
+                    val k = matchKey(t)
+                    if (k.isBlank() || !seen.add(k)) continue
+                    val pp = r.optString("poster_path")
+                    val poster = if (pp.isNotBlank() && pp != "null") IMGPOSTER + pp else ""
+                    out.add(SimilarEntry(t, poster))
+                    if (out.size >= 20) break
+                }
+            } catch (_: Exception) {}
+        }
+        similarEntryCache[key] = out
+        out
+    }
+
     // Titres similaires (noms TMDB). Le filtrage "present dans la liste de lecture" est fait cote UI.
     suspend fun similarTitles(name: String, series: Boolean): List<String> = withContext(Dispatchers.IO) {
         if (!enabled() || name.isBlank()) return@withContext emptyList<String>()

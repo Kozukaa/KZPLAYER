@@ -170,12 +170,24 @@ class DetailActivity : BaseActivity() {
         }
 
         lifecycleScope.launch {
-            val names = try { Tmdb.similarTitles(item.name, false) } catch (e: Exception) { emptyList<String>() }
-            if (names.isEmpty()) return@launch
-            // v348 : le catalogue peut contenir des milliers de films. Recherche et
-            // comparaison sont faites en tache de fond pour que l ecran reste fluide.
-            val found = withContext(Dispatchers.Default) {
-                val wanted = names.map { Tmdb.matchKey(it) }.filter { it.length >= 4 }.toHashSet()
+            // v351 : on affiche les similaires des que TMDB repond (affiches TMDB),
+            // exactement comme la distribution. Le catalogue de la liste de lecture
+            // etait tres long a charger et retardait tout l affichage.
+            val entries = try { Tmdb.similarEntries(item.name, false) } catch (e: Exception) { emptyList<Tmdb.SimilarEntry>() }
+            if (entries.isEmpty()) return@launch
+            val rows = entries.map { SimRow(it.title, it.poster, null) }
+            val adapter = SimAdapter(rows)
+            simTitle.visibility = View.VISIBLE
+            simRv.visibility = View.VISIBLE
+            simRv.layoutManager = LinearLayoutManager(this@DetailActivity, RecyclerView.HORIZONTAL, false)
+            simRv.adapter = adapter
+
+            // Ensuite seulement, en tache de fond : on repere ceux presents dans ta liste
+            // pour les rendre cliquables. L affichage est deja fait, rien ne bloque.
+            val byKey = withContext(Dispatchers.Default) {
+                val wanted = HashMap<String, Item>()
+                val keys = rows.map { Tmdb.matchKey(it.title) }.filter { it.length >= 4 }.toHashSet()
+                if (keys.isEmpty()) return@withContext wanted
                 val catalog = try {
                     when (pl.type) {
                         "m3u" -> Api.m3uItems(pl, "movie", "__all__")
@@ -183,17 +195,19 @@ class DetailActivity : BaseActivity() {
                         else -> Api.xtreamItems(pl, "movie", "__all__")
                     }
                 } catch (e: Exception) { emptyList<Item>() }
-                val mine = Tmdb.matchKey(item.name)
-                catalog.filter { c ->
+                for (c in catalog) {
                     val k = Tmdb.matchKey(c.name)
-                    k.isNotBlank() && k != mine && wanted.contains(k)
-                }.distinctBy { Tmdb.matchKey(it.name) }.take(20)
+                    if (k.isNotBlank() && keys.contains(k) && !wanted.containsKey(k)) wanted[k] = c
+                }
+                wanted
             }
-            if (found.isNotEmpty()) {
-                simTitle.visibility = View.VISIBLE
-                simRv.visibility = View.VISIBLE
-                simRv.layoutManager = LinearLayoutManager(this@DetailActivity, RecyclerView.HORIZONTAL, false)
-                simRv.adapter = SimilarAdapter(found)
+            if (byKey.isNotEmpty()) {
+                var changed = false
+                for (r in rows) {
+                    val c = byKey[Tmdb.matchKey(r.title)]
+                    if (c != null) { r.item = c; changed = true }
+                }
+                if (changed) adapter.notifyDataSetChanged()
             }
         }
     }
@@ -214,6 +228,48 @@ class DetailActivity : BaseActivity() {
             holder.role.text = c.role
             if (c.photo.isBlank()) holder.img.setImageResource(R.drawable.ic_person)
             else holder.img.load(c.photo) { crossfade(true); error(R.drawable.ic_person) }
+        }
+    }
+
+    /** Un titre similaire : affiche TMDB, et le film de ta liste s il y est. */
+    private class SimRow(val title: String, val poster: String, var item: Item?)
+
+    private inner class SimAdapter(val data: List<SimRow>) :
+        RecyclerView.Adapter<SimAdapter.VH>() {
+        inner class VH(v: View) : RecyclerView.ViewHolder(v) {
+            val poster: ImageView = v.findViewById(R.id.posterIv)
+            val name: TextView = v.findViewById(R.id.nameTv)
+            val sub: TextView = v.findViewById(R.id.subTv)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
+            VH(LayoutInflater.from(parent.context).inflate(R.layout.item_nflx_card, parent, false))
+
+        override fun getItemCount(): Int = data.size
+
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            val row = data[position]
+            holder.name.text = row.title
+            holder.sub.visibility = View.GONE
+            if (row.poster.isBlank()) holder.poster.setImageResource(R.drawable.ic_movie)
+            else holder.poster.load(row.poster) { crossfade(false); error(R.drawable.ic_movie) }
+            holder.itemView.setOnFocusChangeListener { v, has ->
+                val sc = if (has) 1.08f else 1f
+                v.animate().scaleX(sc).scaleY(sc).setDuration(110).start()
+            }
+            holder.itemView.setOnClickListener {
+                val target = row.item
+                if (target == null) {
+                    android.widget.Toast.makeText(
+                        this@DetailActivity,
+                        "Ce titre n est pas dans ta liste de lecture.",
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                } else {
+                    Session.detailItem = target
+                    startActivity(Intent(this@DetailActivity, DetailActivity::class.java))
+                }
+            }
         }
     }
 

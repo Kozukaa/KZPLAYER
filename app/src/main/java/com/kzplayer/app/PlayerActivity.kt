@@ -54,6 +54,8 @@ class PlayerActivity : AppCompatActivity() {
     // Recuperation audio VOD : si des pistes audio existent mais qu'aucune n'est selectionnee
     // (souvent une piste multicanal exclue par la limite stereo), on relache la limite une fois.
     private var audioRecoveryDone = false
+    // v352 : evite de lancer deux zappings en meme temps (touche maintenue).
+    private var zapBusy = false
 
     // Reconnexion automatique du direct (chaine qui se fige / coupe apres quelques minutes).
     private val recoveryHandler = Handler(Looper.getMainLooper())
@@ -644,6 +646,9 @@ class PlayerActivity : AppCompatActivity() {
                 showTopBarTemporarily()
                 when (event.keyCode) {
                     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> return super.dispatchKeyEvent(event)
+                    // v352 : zapping a la telecommande, dans tous les themes.
+                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_UP -> { zap(1); return true }
+                    KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_CHANNEL_DOWN -> { zap(-1); return true }
                     KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE,
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
                     KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
@@ -677,6 +682,73 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * v352 : zapping fleche haut / fleche bas pendant le direct.
+     *
+     * La liste des chaines est celle affichee avant la lecture (Session.liveChannels),
+     * donc le zapping suit l ordre de la categorie en cours, dans tous les themes.
+     * On relance proprement la lecture avec la chaine voisine ; le moteur du lecteur
+     * n est pas modifie.
+     */
+    private fun zap(delta: Int) {
+        if (!isLiveMode || zapBusy) return
+        val chans = Session.liveChannels.filter { it.kind == "live" || it.kind == "channel" }
+        if (chans.size < 2) {
+            Toast.makeText(this, "Liste des chaines indisponible pour le zapping.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        var cur = chans.indexOfFirst { it.name.equals(watchTitle, ignoreCase = true) }
+        if (cur < 0) cur = chans.indexOfFirst { (it.streamId ?: "") == watchSourceStreamId && watchSourceStreamId.isNotBlank() }
+        if (cur < 0) cur = 0
+        val n = chans.size
+        val target = chans[((cur + delta) % n + n) % n]
+        zapBusy = true
+        showTopBarTemporarily()
+        Toast.makeText(this, target.name, Toast.LENGTH_SHORT).show()
+        val pl = Session.current
+        if (pl != null && pl.type == "stalker") {
+            val cmd = target.cmd
+            if (cmd.isNullOrBlank()) {
+                zapBusy = false
+                Toast.makeText(this, "Flux indisponible pour cette chaine.", Toast.LENGTH_SHORT).show()
+                return
+            }
+            lifecycleScope.launch {
+                val link = try { Api.stalkerLink(pl, cmd, "live") } catch (e: Exception) { null }
+                if (link.isNullOrBlank()) {
+                    zapBusy = false
+                    Toast.makeText(this@PlayerActivity, "Impossible d obtenir le flux.", Toast.LENGTH_SHORT).show()
+                } else {
+                    openChannel(link, target)
+                }
+            }
+            return
+        }
+        val url = target.directUrl
+        if (url.isNullOrBlank()) {
+            zapBusy = false
+            Toast.makeText(this, "Flux indisponible pour cette chaine.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        openChannel(url, target)
+    }
+
+    /** Relance le lecteur sur la chaine voisine, sans animation ni retour au menu. */
+    private fun openChannel(url: String, target: Item) {
+        startActivity(
+            android.content.Intent(this, PlayerActivity::class.java)
+                .putExtra("url", url)
+                .putExtra("title", target.name)
+                .putExtra("logo", target.logo)
+                .putExtra("historyKind", "live")
+                .putExtra("mode", "live")
+                .putExtra("historySourceStreamId", target.streamId ?: "")
+                .putExtra("historySourceCmd", target.cmd ?: "")
+        )
+        overridePendingTransition(0, 0)
+        finish()
     }
 
     // Affiche la barre du haut puis la masque apres 4 s (utilise en direct).

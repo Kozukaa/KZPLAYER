@@ -23,12 +23,16 @@ object YtStream {
     private const val PLAYER = "https://www.youtube.com/youtubei/v1/player"
     private const val SEARCH = "https://www.youtube.com/youtubei/v1/search"
     private const val UA_WEB = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    private const val UA_MOBILE = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
 
     /** Flux pret a lire : URL + User-Agent a utiliser pour le telecharger. */
     data class Stream(val url: String, val ua: String)
 
     /** Derniere raison d echec, affichee a l utilisateur pour diagnostic. */
     @Volatile var lastError: String = ""
+
+    /** Statut renvoye par le dernier client interroge (UNPLAYABLE, HTTP403...). */
+    @Volatile private var lastStatus: String = ""
 
     private val streamCache = ConcurrentHashMap<String, Stream>()
     private val searchCache = ConcurrentHashMap<String, String>()
@@ -136,13 +140,18 @@ object YtStream {
 
     private fun resolveId(id: String): Stream? {
         streamCache[id]?.let { return it }
+        val journal = ArrayList<String>()
         for (c in clients) {
+            lastStatus = ""
             val s = try { ask(id, c) } catch (e: Exception) {
-                lastError = "reseau (" + (e.message ?: "inconnu") + ")"
+                lastStatus = "reseau"
                 null
             }
             if (s != null) { streamCache[id] = s; return s }
+            journal.add(c.name + "=" + (if (lastStatus.isBlank()) "?" else lastStatus))
         }
+        // Aucun client n a pu lire la video : on liste ce que chacun a repondu.
+        lastError = journal.joinToString(" ")
         return null
     }
 
@@ -152,15 +161,42 @@ object YtStream {
         val version: String,
         val ua: String,
         val preferHls: Boolean,
+        val embed: Boolean,
         val extra: Map<String, Any>
     )
 
+    /**
+     * v347 : YouTube exige desormais une attestation pour les clients mobiles
+     * classiques (IOS / ANDROID), qui repondent UNPLAYABLE. On passe donc en priorite
+     * par les clients casque et lecteur integre, qui n en ont pas besoin.
+     */
     private val clients: List<Cli> = listOf(
-        // Client iOS : renvoie un manifeste HLS, le plus fiable, deja gere par le lecteur.
+        // 1. Client casque (Quest) : pas d attestation, renvoie des mp4 complets.
+        Cli(
+            "ANDROID_VR", 28, "1.60.19",
+            "com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
+            false, false,
+            mapOf(
+                "androidSdkVersion" to 32,
+                "deviceMake" to "Oculus",
+                "deviceModel" to "Quest 3",
+                "osName" to "Android",
+                "osVersion" to "12L"
+            )
+        ),
+        // 2. Lecteur integre TV : concu pour la lecture hors du site.
+        Cli(
+            "TVHTML5_SIMPLY_EMBEDDED_PLAYER", 85, "2.0",
+            "Mozilla/5.0 (PlayStation; PlayStation 4/12.00) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+            true, true, emptyMap()
+        ),
+        // 3. Lecteur integre web.
+        Cli("WEB_EMBEDDED_PLAYER", 56, "1.20240723.01.00", UA_WEB, false, true, emptyMap()),
+        // 4. Client iOS : manifeste HLS quand il repond encore.
         Cli(
             "IOS", 5, "19.29.1",
             "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)",
-            true,
+            true, false,
             mapOf(
                 "deviceMake" to "Apple",
                 "deviceModel" to "iPhone16,2",
@@ -168,15 +204,10 @@ object YtStream {
                 "osVersion" to "17.5.1.21F90"
             )
         ),
-        // Client Android TV : mp4 complets, tres permissif.
-        Cli(
-            "ANDROID", 3, "19.30.36",
-            "com.google.android.youtube/19.30.36 (Linux; U; Android 13) gzip",
-            false,
-            mapOf("androidSdkVersion" to 33, "osName" to "Android", "osVersion" to "13")
-        ),
-        // Dernier recours : client web.
-        Cli("WEB", 1, "2.20240726.00.00", UA_WEB, false, emptyMap())
+        // 5. Client mobile web.
+        Cli("MWEB", 2, "2.20240726.01.00", UA_MOBILE, false, false, emptyMap()),
+        // 6. Dernier recours : client web classique.
+        Cli("WEB", 1, "2.20240726.00.00", UA_WEB, false, false, emptyMap())
     )
 
     private fun ask(id: String, c: Cli): Stream? {
@@ -187,8 +218,17 @@ object YtStream {
         cl.put("hl", "fr")
         cl.put("gl", "FR")
         for ((k, v) in c.extra) cl.put(k, v)
+        if (c.embed) cl.put("clientScreen", "EMBED")
+        val ctx = JSONObject().put("client", cl)
+        if (c.embed) {
+            // Les lecteurs integres exigent la page qui "heberge" la video.
+            ctx.put(
+                "thirdParty",
+                JSONObject().put("embedUrl", "https://www.youtube.com/")
+            )
+        }
         val root = JSONObject()
-        root.put("context", JSONObject().put("client", cl))
+        root.put("context", ctx)
         root.put("videoId", id)
         root.put("contentCheckOk", true)
         root.put("racyCheckOk", true)
@@ -202,14 +242,14 @@ object YtStream {
             .post(root.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
             .build()
         val txt = Api.imageClient().newCall(req).execute().use { r ->
-            if (!r.isSuccessful) { lastError = "lecteur HTTP " + r.code; return null }
+            if (!r.isSuccessful) { lastStatus = "HTTP" + r.code; return null }
             r.body?.string() ?: return null
         }
         val o = JSONObject(txt)
         val sd = o.optJSONObject("streamingData")
         if (sd == null) {
             val st = o.optJSONObject("playabilityStatus")?.optString("status", "") ?: ""
-            lastError = if (st.isBlank()) "reponse inattendue" else "video bloquee (" + st + ")"
+            lastStatus = if (st.isBlank()) "reponse inattendue" else st
             return null
         }
 
@@ -234,7 +274,7 @@ object YtStream {
         if (best.isNotBlank()) return Stream(best, c.ua)
         val hls2 = sd.optString("hlsManifestUrl", "")
         if (hls2.isNotBlank()) return Stream(hls2, c.ua)
-        lastError = "aucun flux lisible"
+        lastStatus = "sans flux"
         return null
     }
 }

@@ -33,6 +33,8 @@ abstract class NflxCatalogActivity : NtBase() {
     private val allItems = ArrayList<Item>()
     private var loadJob: Job? = null
     private var firstFocusDone = false
+    // v353 : derniere rangee (= categorie) dans laquelle une carte a ete cliquee.
+    protected var lastRowItems: List<Item> = emptyList()
 
     // Nombre de categories chargees dans l'ecran (rangees) et d'items par rangee.
     protected open val maxRows: Int = 12
@@ -232,7 +234,7 @@ abstract class NflxCatalogActivity : NtBase() {
                 // Downsample : bitmaps plus petits en memoire, scroll plus fluide.
                 size(if (landscape) 480 else 360, if (landscape) 270 else 540)
             }
-            holder.itemView.setOnClickListener { onCardClick(item) }
+            holder.itemView.setOnClickListener { lastRowItems = data; onCardClick(item) }
             holder.itemView.setOnFocusChangeListener { view, has ->
                 val s = if (has) 1.10f else 1f
                 view.animate().scaleX(s).scaleY(s).setDuration(120).start()

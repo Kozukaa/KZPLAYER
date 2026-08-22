@@ -45,10 +45,10 @@ class SettingsActivity : BaseActivity() {
         findViewById<View>(R.id.themeMenu).requestFocus()
     }
 
+    // v354 : on affiche uniquement le numero de version (ex : 3.2.1),
+    // sans le code de build entre parentheses.
     private fun currentVersion(): String = try {
-        val info = packageManager.getPackageInfo(packageName, 0)
-        val name = info.versionName ?: "1.0"
-        "$name (v${currentVersionCode()})"
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
     } catch (e: Exception) { "1.0" }
 
     private fun currentVersionCode(): Int = try {

@@ -699,19 +699,22 @@ class BrowseActivity : BaseActivity() {
                 val link = try { Api.stalkerLink(plCur, cmd, item.kind) } catch (e: Exception) { null }
                 setLoading(false)
                 if (!link.isNullOrBlank()) {
-                    if (item.kind == "live") previewLive(link, item.name, item.logo, item.streamId ?: "")
+                    if (item.kind == "live") previewLive(link, item.name, item.logo, item.streamId ?: "", item)
                     else play(link, item.name, item.logo, "movie")
                 } else msgTv.text = "Impossible d'obtenir le flux."
             }
             return
         }
         val url = item.directUrl ?: return
-        if (item.kind == "live") previewLive(url, item.name, item.logo, item.streamId ?: "")
+        if (item.kind == "live") previewLive(url, item.name, item.logo, item.streamId ?: "", item)
         else play(url, item.name, item.logo, if (item.kind == "movie" || item.kind == "episode") "movie" else "live")
     }
 
-    private fun previewLive(url: String, title: String, logo: String = "", streamId: String = "") {
-        Session.liveChannels = filtered.filter { it.kind == "live" }
+    private fun previewLive(url: String, title: String, logo: String = "", streamId: String = "", item: Item? = null) {
+        val chans = filtered.filter { it.kind == "live" || it.kind == "channel" }
+        Session.liveChannels = chans
+        // v353 : on retient la categorie affichee et la position exacte de la chaine.
+        ZapList.set(chans, item)
         startActivity(
             Intent(this, LivePreviewActivity::class.java)
                 .putExtra("url", url)

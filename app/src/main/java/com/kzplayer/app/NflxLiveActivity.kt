@@ -10,7 +10,11 @@ open class NflxLiveActivity : NflxCatalogActivity() {
     override val screenTitle = "TV en direct"
     override val landscape = true
     override fun onCardClick(item: Item) {
-        Session.liveChannels = allLoadedItems().filter { it.kind == "live" }
+        // v353 : on zappe dans la rangee (categorie) d ou vient la chaine cliquee.
+        val rowChans = lastRowItems.filter { it.kind == "live" || it.kind == "channel" }
+        val chans = if (rowChans.size > 1) rowChans else allLoadedItems().filter { it.kind == "live" || it.kind == "channel" }
+        Session.liveChannels = chans
+        ZapList.set(chans, item)
         val pl = Session.current
         val direct = item.directUrl
         val cmd = item.cmd
@@ -31,6 +35,9 @@ open class NflxLiveActivity : NflxCatalogActivity() {
                     .putExtra("logo", item.logo)
                     .putExtra("historyKind", "live")
                     .putExtra("mode", "live")
+                    .putExtra("historySourceStreamId", item.streamId ?: "")
+                    .putExtra("historySourceCmd", item.cmd ?: "")
+                    .putExtra("zapIndex", Session.zapIndex)
             )
         }
     }

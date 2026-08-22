@@ -224,6 +224,10 @@ class LivePreviewActivity : BaseActivity() {
         title = item.name
         titleTv.text = title
         streamId = item.streamId ?: ""
+        logo = item.logo
+        // v353 : on suit la position dans la categorie pour le zapping plein ecran.
+        if (Session.zapChannels.isEmpty()) ZapList.set(channels, item)
+        else Session.zapIndex = ZapList.indexOf(Session.zapChannels, item)
         val direct = item.directUrl
         val pl = Session.current
         if (!direct.isNullOrBlank()) {
@@ -249,6 +253,8 @@ class LivePreviewActivity : BaseActivity() {
                 .putExtra("logo", logo)
                 .putExtra("historyKind", "live")
                 .putExtra("mode", "live")
+                .putExtra("historySourceStreamId", streamId)
+                .putExtra("zapIndex", Session.zapIndex)
         )
     }
 

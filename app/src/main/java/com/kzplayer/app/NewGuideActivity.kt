@@ -331,7 +331,9 @@ open class NewGuideActivity : NtBase() {
     private fun startInline(item: Item, url: String) {
         playingItem = item
         playingUrl = url
-        Session.liveChannels = channels.filter { it.kind == "live" }
+        val chans = channels.filter { it.kind == "live" || it.kind == "channel" }
+        Session.liveChannels = chans
+        ZapList.set(chans, item)
         heroImg.visibility = View.INVISIBLE
         heroPlayer?.visibility = View.VISIBLE
         buildAndPlay(url)
@@ -368,11 +370,14 @@ open class NewGuideActivity : NtBase() {
             Intent(this, PlayerActivity::class.java)
                 .putExtra("url", u).putExtra("title", t).putExtra("logo", lg)
                 .putExtra("historyKind", "live").putExtra("mode", "live")
+                .putExtra("zapIndex", Session.zapIndex)
         )
     }
 
     private fun openPreview(url: String, item: Item) {
-        Session.liveChannels = channels.filter { it.kind == "live" }
+        val chans = channels.filter { it.kind == "live" || it.kind == "channel" }
+        Session.liveChannels = chans
+        ZapList.set(chans, item)
         startActivity(
             Intent(this, LivePreviewActivity::class.java)
                 .putExtra("url", url).putExtra("title", item.name)

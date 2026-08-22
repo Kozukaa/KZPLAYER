@@ -56,6 +56,8 @@ class PlayerActivity : AppCompatActivity() {
     private var audioRecoveryDone = false
     // v352 : evite de lancer deux zappings en meme temps (touche maintenue).
     private var zapBusy = false
+    // v353 : position de la chaine dans la categorie affichee (-1 = inconnue).
+    private var zapIdx = -1
 
     // Reconnexion automatique du direct (chaine qui se fige / coupe apres quelques minutes).
     private val recoveryHandler = Handler(Looper.getMainLooper())
@@ -123,6 +125,8 @@ class PlayerActivity : AppCompatActivity() {
         watchSourceCmd = intent.getStringExtra("historySourceCmd") ?: ""
         watchSourceStreamId = intent.getStringExtra("historySourceStreamId") ?: ""
         watchSourceContainerExt = intent.getStringExtra("historySourceContainerExt") ?: ""
+        // v353 : position exacte transmise par l ecran d origine (zapping).
+        zapIdx = intent.getIntExtra("zapIndex", -1)
         // Lecture a la suite : on ne conserve la file d'episodes que si on vient d'une liste d'episodes.
         if (!intent.getBooleanExtra("queued", false)) { Session.episodeQueue = emptyList(); Session.episodeIndex = -1 }
         // mode = "live" par defaut ; "vod" pour films/episodes.
@@ -694,16 +698,20 @@ class PlayerActivity : AppCompatActivity() {
      */
     private fun zap(delta: Int) {
         if (!isLiveMode || zapBusy) return
-        val chans = Session.liveChannels.filter { it.kind == "live" || it.kind == "channel" }
+        // On zappe UNIQUEMENT dans la categorie affichee avant la lecture.
+        val chans = Session.zapChannels
         if (chans.size < 2) {
-            Toast.makeText(this, "Liste des chaines indisponible pour le zapping.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Zapping indisponible : ouvre la chaine depuis une categorie.", Toast.LENGTH_SHORT).show()
             return
         }
-        var cur = chans.indexOfFirst { it.name.equals(watchTitle, ignoreCase = true) }
-        if (cur < 0) cur = chans.indexOfFirst { (it.streamId ?: "") == watchSourceStreamId && watchSourceStreamId.isNotBlank() }
-        if (cur < 0) cur = 0
+        var cur = zapIdx
+        if (cur !in chans.indices) cur = ZapList.indexOf(watchTitle, watchSourceStreamId, watchSourceCmd)
+        if (cur !in chans.indices) cur = 0
         val n = chans.size
-        val target = chans[((cur + delta) % n + n) % n]
+        val nextIdx = ((cur + delta) % n + n) % n
+        val target = chans[nextIdx]
+        zapIdx = nextIdx
+        Session.zapIndex = nextIdx
         zapBusy = true
         showTopBarTemporarily()
         Toast.makeText(this, target.name, Toast.LENGTH_SHORT).show()
@@ -746,6 +754,7 @@ class PlayerActivity : AppCompatActivity() {
                 .putExtra("mode", "live")
                 .putExtra("historySourceStreamId", target.streamId ?: "")
                 .putExtra("historySourceCmd", target.cmd ?: "")
+                .putExtra("zapIndex", zapIdx)
         )
         overridePendingTransition(0, 0)
         finish()

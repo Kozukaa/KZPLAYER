@@ -305,7 +305,13 @@ object Tmdb {
         if (!enabled() || name.isBlank()) return@withContext emptyList<CastMember>()
         val key = (if (series) "tv:" else "mv:") + normalize(name).lowercase()
         castCache[key]?.let { return@withContext it }
-        val found = try { findTitle(name, series) ?: findTitle(name, !series) } catch (_: Exception) { null }
+        // v348 : les noms des listes IPTV sont sales -> on essaie plusieurs variantes,
+        // exactement comme pour la bande-annonce (sinon casting et similaires restent vides).
+        var found: FoundTitle? = null
+        for (cand in titleCandidates(name)) {
+            found = try { findTitle(cand, series) ?: findTitle(cand, !series) } catch (_: Exception) { null }
+            if (found != null) break
+        }
         if (found == null) { castCache[key] = emptyList(); return@withContext emptyList<CastMember>() }
         val out = ArrayList<CastMember>()
         try {
@@ -332,7 +338,13 @@ object Tmdb {
         if (!enabled() || name.isBlank()) return@withContext emptyList<String>()
         val key = (if (series) "tv:" else "mv:") + normalize(name).lowercase()
         similarCache[key]?.let { return@withContext it }
-        val found = try { findTitle(name, series) ?: findTitle(name, !series) } catch (_: Exception) { null }
+        // v348 : les noms des listes IPTV sont sales -> on essaie plusieurs variantes,
+        // exactement comme pour la bande-annonce (sinon casting et similaires restent vides).
+        var found: FoundTitle? = null
+        for (cand in titleCandidates(name)) {
+            found = try { findTitle(cand, series) ?: findTitle(cand, !series) } catch (_: Exception) { null }
+            if (found != null) break
+        }
         if (found == null) { similarCache[key] = emptyList(); return@withContext emptyList<String>() }
         val out = ArrayList<String>()
         for (path in listOf("similar", "recommendations")) {

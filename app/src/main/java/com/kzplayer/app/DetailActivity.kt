@@ -14,7 +14,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class DetailActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,29 +77,31 @@ class DetailActivity : BaseActivity() {
             trailerBtn.isEnabled = false
             trailerBtn.text = "Recherche de la bande-annonce..."
             lifecycleScope.launch {
-                // v346 : on cherche la bande-annonce DIRECTEMENT sur YouTube (nom du film
-                // nettoye + "bande annonce VF"), donc plus aucune dependance a TMDB.
-                var st = try { YtStream.findTrailer(item.name) } catch (_: Exception) { null }
-                // Repli : si TMDB connait le titre, on tente sa bande-annonce officielle.
-                if (st == null) {
-                    val yt = try { Tmdb.trailerUrl(item.name, false) } catch (_: Exception) { "" }
-                    if (yt.isNotBlank()) st = try { YtStream.resolve(yt) } catch (_: Exception) { null }
-                }
+                // v348 : 1) on trouve la bande-annonce sur YouTube (recherche fiable),
+                //        2) on tente le flux direct pour la lire dans le lecteur KZ,
+                //        3) si YouTube bloque le flux, on la lit en plein ecran sans habillage.
+                val vid = try { YtStream.searchTrailerId(item.name) } catch (_: Exception) { "" }
+                val st = if (vid.isBlank()) null else try { YtStream.resolveVideo(vid) } catch (_: Exception) { null }
                 trailerBtn.isEnabled = true
                 trailerBtn.text = "Voir la bande-annonce"
-                if (st == null) {
-                    val why = YtStream.lastError
-                    desc.text = if (why.isBlank()) "Bande-annonce introuvable."
-                        else "Bande-annonce introuvable : " + why
-                } else {
+                val label = "Bande-annonce - " + item.name
+                if (st != null) {
                     startActivity(
                         Intent(this@DetailActivity, PlayerActivity::class.java)
                             .putExtra("url", st.url)
-                            .putExtra("title", "Bande-annonce - " + item.name)
+                            .putExtra("title", label)
                             .putExtra("mode", "vod")
                             .putExtra("historyKind", "trailer")
                             .putExtra("forceUa", st.ua)
                     )
+                } else if (vid.isNotBlank()) {
+                    startActivity(
+                        Intent(this@DetailActivity, TrailerActivity::class.java)
+                            .putExtra("videoId", vid)
+                            .putExtra("title", label)
+                    )
+                } else {
+                    desc.text = "Aucune bande-annonce trouvee pour ce titre."
                 }
             }
         }
@@ -165,19 +169,23 @@ class DetailActivity : BaseActivity() {
         lifecycleScope.launch {
             val names = try { Tmdb.similarTitles(item.name, false) } catch (e: Exception) { emptyList<String>() }
             if (names.isEmpty()) return@launch
-            val wanted = names.map { Tmdb.matchKey(it) }.filter { it.length >= 4 }.toHashSet()
-            val catalog = try {
-                when (pl.type) {
-                    "m3u" -> Api.m3uItems(pl, "movie", "__all__")
-                    "stalker" -> Api.stalkerItems(pl, "movie", "__all__")
-                    else -> Api.xtreamItems(pl, "movie", "__all__")
-                }
-            } catch (e: Exception) { emptyList<Item>() }
-            val mine = Tmdb.matchKey(item.name)
-            val found = catalog.filter { c ->
-                val k = Tmdb.matchKey(c.name)
-                k.isNotBlank() && k != mine && wanted.contains(k)
-            }.distinctBy { Tmdb.matchKey(it.name) }.take(20)
+            // v348 : le catalogue peut contenir des milliers de films. Recherche et
+            // comparaison sont faites en tache de fond pour que l ecran reste fluide.
+            val found = withContext(Dispatchers.Default) {
+                val wanted = names.map { Tmdb.matchKey(it) }.filter { it.length >= 4 }.toHashSet()
+                val catalog = try {
+                    when (pl.type) {
+                        "m3u" -> Api.m3uItems(pl, "movie", "__all__")
+                        "stalker" -> Api.stalkerItems(pl, "movie", "__all__")
+                        else -> Api.xtreamItems(pl, "movie", "__all__")
+                    }
+                } catch (e: Exception) { emptyList<Item>() }
+                val mine = Tmdb.matchKey(item.name)
+                catalog.filter { c ->
+                    val k = Tmdb.matchKey(c.name)
+                    k.isNotBlank() && k != mine && wanted.contains(k)
+                }.distinctBy { Tmdb.matchKey(it.name) }.take(20)
+            }
             if (found.isNotEmpty()) {
                 simTitle.visibility = View.VISIBLE
                 simRv.visibility = View.VISIBLE

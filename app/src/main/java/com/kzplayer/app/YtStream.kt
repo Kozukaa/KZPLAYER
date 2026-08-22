@@ -65,6 +65,30 @@ object YtStream {
         null
     }
 
+    /**
+     * v348 : renvoie l identifiant YouTube de la bande-annonce du titre demande,
+     * sans tenter de resoudre le flux (rapide : une seule requete dans la majorite des cas).
+     */
+    suspend fun searchTrailerId(rawName: String): String = withContext(Dispatchers.IO) {
+        lastError = ""
+        val cands = Tmdb.titleCandidates(rawName)
+        val names = if (cands.isEmpty()) listOf(rawName.trim()) else cands
+        for (n in names.take(2)) {
+            if (n.length < 2) continue
+            for (suffix in listOf(" bande annonce VF", " official trailer")) {
+                val vid = try { searchVideoId(n + suffix) } catch (_: Exception) { "" }
+                if (vid.isNotBlank()) return@withContext vid
+            }
+        }
+        if (lastError.isBlank()) lastError = "recherche sans resultat"
+        ""
+    }
+
+    /** Tente de recuperer un flux direct pour cet identifiant (peut echouer : YouTube bloque). */
+    suspend fun resolveVideo(id: String): Stream? = withContext(Dispatchers.IO) {
+        if (id.isBlank()) null else resolveId(id)
+    }
+
     /** Recherche YouTube : renvoie l identifiant de la premiere video trouvee. */
     private fun searchVideoId(query: String): String {
         searchCache[query]?.let { return it }

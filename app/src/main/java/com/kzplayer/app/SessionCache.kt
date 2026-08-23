@@ -11,9 +11,9 @@ import org.json.JSONObject
 // Android, appli remise en avant), Session.playlists etait vide et l'ecran
 // repartait sur un appel reseau checkLicense avec un message d'attente.
 //
-// Maintenant la liste des serveurs est ecrite sur le disque a chaque chargement
-// reussi, et restauree INSTANTANEMENT (sans reseau, sans attente) des qu'un
-// ecran en a besoin. Aucun message de chargement n'est plus necessaire.
+// Maintenant, la liste des serveurs est ecrite sur le disque a chaque
+// chargement reussi, et restauree INSTANTANEMENT (sans reseau, sans attente)
+// des qu'un ecran en a besoin. Aucun message de chargement n'est necessaire.
 //
 // N'appelle aucune API, ne touche ni au lecteur ni a Stalker : c'est juste une
 // copie locale de ce que le backend a deja renvoye.
@@ -40,7 +40,7 @@ object SessionCache {
     }
 
     // Restaure la session depuis le disque si elle est vide.
-    // Retourne true si des serveurs sont disponibles apres l'appel.
+    // Retourne true si on a bien des serveurs disponibles apres l'appel.
     fun restore(ctx: Context): Boolean {
         try {
             if (Session.playlists.isNotEmpty()) {

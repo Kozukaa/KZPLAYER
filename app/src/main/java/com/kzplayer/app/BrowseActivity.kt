@@ -50,9 +50,6 @@ class BrowseActivity : BaseActivity() {
     private var allKind: String = "live"
     private var voicePlay: String = ""
     private var voiceTriedPlay = false
-    // v375 : derniere categorie a reselectionner automatiquement quand on rouvre
-    // l ecran en mode toutes les listes (plus de "Choisis un serveur...").
-    private var pendingAutoCat: String = ""
 
     private lateinit var catRv: RecyclerView
     private lateinit var itemRv: RecyclerView
@@ -79,19 +76,6 @@ class BrowseActivity : BaseActivity() {
         setContentView(R.layout.activity_browse)
         kind = intent.getStringExtra("kind") ?: "live"
         findViewById<TextView>(R.id.titleTv).text = Session.browseTitle
-
-        // v376 : si l application s est fermee d un coup pendant la lecture, on affiche
-        // ici la cause exacte (une seule fois). Photographie cette fenetre si elle sort.
-        try {
-            val crash = CrashLog.take(this)
-            if (!crash.isNullOrBlank()) {
-                androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Derniere erreur (a photographier)")
-                    .setMessage(crash)
-                    .setPositiveButton("OK") { d, _ -> d.dismiss() }
-                    .show()
-            }
-        } catch (e: Throwable) {}
 
         catRv = findViewById(R.id.catRv)
         itemRv = findViewById(R.id.itemRv)
@@ -188,7 +172,7 @@ class BrowseActivity : BaseActivity() {
                         Session.playlists = res.playlists
                         Session.expiration = res.expiration
                         Session.current = Session.playlists.firstOrNull()
-                        SessionCache.save(this@BrowseActivity) // v375 : cache local des serveurs
+                        SessionCache.save(this@BrowseActivity)
                     }
                 } catch (e: Exception) {}
                 if (Session.current != null) loadCategories()
@@ -278,17 +262,7 @@ class BrowseActivity : BaseActivity() {
         setLoading(false)
         categories = serverRows()
         bindCategories()
-        // v375 : on rouvre TOUT SEUL le dernier serveur et la derniere categorie
-        // utilises, au lieu de demander de choisir un serveur a chaque fois.
-        val lastSrv = lastServerId()
-        val lastCat = lastCatId()
-        if (lastSrv.isNotBlank() && Session.playlists.any { it.id == lastSrv }) {
-            msgTv.text = ""
-            pendingAutoCat = lastCat
-            toggleServer(lastSrv)
-        } else {
-            msgTv.text = "Choisis un serveur, puis une cat\u00e9gorie."
-        }
+        msgTv.text = "Choisis un serveur, puis une cat\u00e9gorie."
         maybeWarmSearch()
     }
 
@@ -345,26 +319,7 @@ class BrowseActivity : BaseActivity() {
             categories = serverRows()
             bindCategories()
             msgTv.text = if (visible.isEmpty()) "Aucune cat\u00e9gorie sur " + pl.nom + "." else ""
-            // v375 : reprise automatique de la derniere categorie ouverte.
-            val want = pendingAutoCat
-            pendingAutoCat = ""
-            if (want.isNotBlank()) {
-                categories.firstOrNull { it.id == want }?.let { selectCategory(it) }
-            }
         }
-    }
-
-    // v375 : memoire du dernier serveur / derniere categorie utilises (par section).
-    private fun lastPrefs() = getSharedPreferences("kz_browse_last", MODE_PRIVATE)
-    private fun lastServerId(): String = lastPrefs().getString("srv_" + kind, "").orEmpty()
-    private fun lastCatId(): String = lastPrefs().getString("cat_" + kind, "").orEmpty()
-    private fun rememberLast(catId: String) {
-        try {
-            lastPrefs().edit()
-                .putString("srv_" + kind, srvOpen)
-                .putString("cat_" + kind, catId)
-                .apply()
-        } catch (_: Throwable) {}
     }
 
     // Applique automatiquement les listes "a afficher" configurees sur le PANEL, sans avoir a
@@ -550,7 +505,6 @@ class BrowseActivity : BaseActivity() {
         }
         selectedCat = cat.id
         catAdapter?.notifyDataSetChanged()
-        rememberLast(cat.id) // v375 : on retient le serveur + la categorie choisis
         // v359 : en mode multi-listes, la categorie porte l identifiant de sa liste.
         // On rebascule la liste active sur la bonne liste avant de charger le contenu,
         // ce qui garantit une lecture identique au mode une seule liste.
@@ -870,11 +824,6 @@ class BrowseActivity : BaseActivity() {
         Session.liveChannels = chans
         // v353 : on retient la categorie affichee et la position exacte de la chaine.
         ZapList.set(chans, item)
-        // v375 : on GARDE l ecran d apercu (mini-lecteur + programme TV, puis bascule
-        // automatique en plein ecran apres 5 s), comme dans les versions qui marchaient.
-        // Ce qui a change autour : l apercu arrete et libere son lecteur ET se ferme en
-        // passant en plein ecran, et le decodeur video est repasse en materiel. Plus de
-        // double lecture du meme flux, plus d ecran inutile en memoire derriere le lecteur.
         startActivity(
             Intent(this, LivePreviewActivity::class.java)
                 .putExtra("url", url)

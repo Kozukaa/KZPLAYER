@@ -67,16 +67,9 @@ class KzRenderersFactory(private val ctx: Context) : DefaultRenderersFactory(ctx
                         if (sw.isNotEmpty()) sw else all
                     }
                     else -> {
-                        // AUTO (v375) : MATERIEL prioritaire, logiciel en secours.
-                        //
-                        // Le decodeur logiciel prioritaire (v147) saturait le CPU des box :
-                        // image au ralenti, saccades, puis appli tuee par Android (retour
-                        // sur l'ecran des serveurs). On revient au comportement des
-                        // anciennes versions : accel materielle = image fluide a 100%.
-                        // setEnableDecoderFallback(true) garde le logiciel en secours si le
-                        // decodeur materiel echoue, et l'utilisateur peut toujours forcer
-                        // "Logiciel" dans les reglages si son firmware fige.
-                        if (hw.isNotEmpty()) hw + sw else all
+                        // AUTO : logiciel prioritaire, materiel en secours.
+                        // C'est ce qui repare les box dont le decodeur HW se fige.
+                        if (sw.isNotEmpty()) sw + hw else all
                     }
                 }
             }

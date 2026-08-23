@@ -33,7 +33,6 @@ class HomeActivity : BaseActivity() {
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                         Session.current = Session.playlists.firstOrNull()
                     }
-                    SessionCache.save(this@HomeActivity) // v375 : cache local des serveurs
                     expTv.text = Session.expiration?.let { "Expiration : $it" } ?: "Licence illimitée"
                 } else if (LicenseGuard.wasRecentlyActive(this@HomeActivity)) {
                     // Fenetre de grace : on ne montre pas "Licence inactive" a tort quand le
@@ -65,9 +64,6 @@ class HomeActivity : BaseActivity() {
         expTv.text = Session.expiration?.let { "Expiration : $it" } ?: ""
         // Auto-reparation : si l'appli a ete relancee (process tue), Session est vide.
         // On recharge alors licence + serveurs pour que les boutons refonctionnent.
-        // v375 : on restaure d'abord les serveurs depuis le cache local (instantane,
-        // sans reseau, sans message d'attente) ; on ne recharge que s'il n'y a rien.
-        if (Session.playlists.isEmpty()) SessionCache.restore(this)
         if (Session.playlists.isEmpty()) reloadPlaylists()
 
         liveCard.setOnClickListener { open("live", "TV") }

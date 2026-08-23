@@ -243,37 +243,78 @@ class LivePreviewActivity : BaseActivity() {
         }
     }
 
+    // v377 : PLEIN ECRAN SANS CHANGER D ECRAN.
+    // Avant, la bascule fermait l apercu et ouvrait un deuxieme ecran (le lecteur),
+    // qui rouvrait un deuxieme decodeur video et relisait le flux depuis le debut.
+    // Sur les box, le decodeur refusait -> l application se fermait d un coup et on
+    // revenait aux categories. Maintenant on ne change plus d ecran : on agrandit
+    // simplement l image a tout l ecran et le MEME lecteur continue de jouer, sans
+    // coupure, sans nouveau decodeur, sans relire le flux (important pour Stalker
+    // dont le lien n est valable qu une fois).
+    private var fsOn = false
+
     private fun openFullscreen() {
+        if (fsOn) return
+        fsOn = true
         autoFsDone = true
         uiHandler.removeCallbacks(autoFsRunnable)
-        // v373 : on libere le mini-lecteur AVANT d ouvrir le plein ecran.
-        // Sinon deux lecteurs lisent le meme flux en meme temps : l appareil sature
-        // et tue l application (retour "Chargement des serveurs...").
-        // v376 : on detache d abord la surface video, PUIS on libere le lecteur.
-        // Sans ca la puce video restait accrochee a l ancienne image.
-        try { playerView.player = null } catch (e: Throwable) {}
-        try { player?.stop() } catch (e: Throwable) {}
-        try { player?.release() } catch (e: Throwable) {}
-        player = null
-        val go = Intent(this, PlayerActivity::class.java)
-            .putExtra("url", url)
-            .putExtra("title", title)
-            .putExtra("logo", logo)
-            .putExtra("historyKind", "live")
-            .putExtra("mode", "live")
-            .putExtra("historySourceStreamId", streamId)
-            .putExtra("zapIndex", Session.zapIndex)
-        // v376 : la puce video (decodeur materiel) n est pas liberee instantanement.
-        // On laissait le plein ecran en ouvrir un second dans la meme seconde : sur les
-        // box, le decodeur refusait et l application se fermait d un coup ("paf") au bout
-        // de ~3 s. On attend un court instant que la puce soit libre avant d ouvrir.
-        uiHandler.postDelayed({
-            try {
-                startActivity(go)
-            } catch (e: Throwable) {}
-            // v375 : l apercu se ferme, il ne reste plus d ecran inutile derriere le lecteur.
-            finish()
-        }, 450L)
+        try {
+            // On masque tout ce qui entoure l image (titre, programme, guide) et on
+            // etire le lecteur sur toute la surface, niveau par niveau.
+            var child: View = playerView
+            var par = child.parent
+            while (par is ViewGroup) {
+                val vg: ViewGroup = par
+                var i = 0
+                while (i < vg.childCount) {
+                    val c = vg.getChildAt(i)
+                    if (c !== child) c.visibility = View.GONE
+                    i++
+                }
+                vg.setPadding(0, 0, 0, 0)
+                vg.setBackgroundColor(0xFF000000.toInt())
+                val lp = child.layoutParams
+                if (lp is LinearLayout.LayoutParams) {
+                    lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+                    lp.height = 0
+                    lp.weight = 1f
+                    lp.setMargins(0, 0, 0, 0)
+                    child.layoutParams = lp
+                } else if (lp != null) {
+                    lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+                    lp.height = ViewGroup.LayoutParams.MATCH_PARENT
+                    child.layoutParams = lp
+                }
+                if (vg.id == android.R.id.content) break
+                child = vg
+                par = vg.parent
+            }
+            playerView.setBackgroundColor(0xFF000000.toInt())
+            playerView.useController = true
+            playerView.requestFocus()
+            // Barres systeme cachees, comme un vrai plein ecran.
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+            val ctl = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+            ctl.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            ctl.systemBarsBehavior =
+                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } catch (e: Throwable) {
+            // Meme en cas de souci d affichage, la lecture continue : on ne ferme rien.
+        }
+        // Historique : la chaine est marquee comme regardee, comme avant.
+        try { WatchHistory.touch(this, url, title, logo, "live") } catch (e: Throwable) {}
+    }
+
+    // RETOUR : en plein ecran on repasse a l apercu (sans couper la lecture) ;
+    // sur l apercu, on revient a la liste des chaines.
+    override fun onBackPressed() {
+        if (fsOn) { recreatePreviewFromFullscreen(); return }
+        super.onBackPressed()
+    }
+
+    private fun recreatePreviewFromFullscreen() {
+        // On quitte simplement l ecran : le lecteur est libere proprement par onStop.
+        finish()
     }
 
     override fun onStop() {

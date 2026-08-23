@@ -80,12 +80,13 @@ class PlayerActivity : AppCompatActivity() {
                     val stalled = now - lastProgressTs
                     val buffering = p.playbackState == Player.STATE_BUFFERING
                     // Image figee / son coupe : la lecture n'avance plus depuis trop longtemps.
-                    if (lastProgressTs > 0L && ((buffering && stalled > 12000L) || stalled > 20000L)) {
+                    // v359 : detection plus rapide (avant : 12 s / 20 s).
+                    if (lastProgressTs > 0L && ((buffering && stalled > 5000L) || stalled > 9000L)) {
                         reconnectLive()
                     }
                 }
             }
-            recoveryHandler.postDelayed(this, 3000)
+            recoveryHandler.postDelayed(this, 2000)
         }
     }
 
@@ -223,8 +224,13 @@ class PlayerActivity : AppCompatActivity() {
                 .build()
         } else {
             // Live TV / zapping : buffer court pour demarrer vite et reduire la latence.
+            // v359 : le buffer de 1,5 s etait trop juste sur les serveurs lents :
+            // au premier trou de reseau l image se figeait. On garde un demarrage rapide
+            // (1,2 s avant de lancer l image) mais on remplit jusqu a 30 s d avance.
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(1500, 8000, 500, 1000)
+                .setBufferDurationsMs(3000, 30000, 1200, 2500)
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .setTargetBufferBytes(-1)
                 .build()
         }
         playerBuilder.setLoadControl(loadControl)
@@ -343,7 +349,7 @@ class PlayerActivity : AppCompatActivity() {
         })
         playCurrent()
         lastProgressTs = SystemClock.elapsedRealtime()
-        if (isLiveMode) recoveryHandler.postDelayed(stallWatchdog, 3000)
+        if (isLiveMode) recoveryHandler.postDelayed(stallWatchdog, 2000)
     }
 
     private fun playCurrent() {
@@ -571,11 +577,19 @@ class PlayerActivity : AppCompatActivity() {
         val p = player ?: return
         if (!isLiveMode) return
         val now = SystemClock.elapsedRealtime()
-        if (now - lastReconnectTs < 5000L) return
+        // v359 : on se rebranche plus vite et beaucoup plus longtemps qu avant
+        // (avant : 5 s d attente et 12 essais seulement, la chaine restait figee).
+        if (now - lastReconnectTs < 2500L) return
         lastReconnectTs = now
         liveRetries++
-        if (liveRetries > 12) return
-        candIdx = workingCandIdx.coerceIn(0, (candidates.size - 1).coerceAtLeast(0))
+        if (liveRetries > 60) return
+        val safeMax = (candidates.size - 1).coerceAtLeast(0)
+        // Si la meme variante d URL echoue 3 fois de suite, on essaie la suivante
+        // (.ts / .m3u8 / sans extension) au lieu de s acharner sur celle qui ne repond plus.
+        candIdx = if (liveRetries % 3 == 0 && candidates.size > 1)
+            (candIdx + 1) % candidates.size
+        else
+            workingCandIdx.coerceIn(0, safeMax)
         lastPos = -1L
         lastProgressTs = now
         playCurrent()

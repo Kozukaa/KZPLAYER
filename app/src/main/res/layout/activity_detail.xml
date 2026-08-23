@@ -152,26 +152,75 @@
             android:layout_marginTop="10dp"
             android:visibility="gone" />
 
-        <Button
-            android:id="@+id/trailerBtn"
+        <!-- v359 : boutons compacts, sur une seule ligne, avec un focus tres visible -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Voir la bande-annonce"
-            android:layout_marginTop="8dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:clipChildren="false"
+            android:layout_marginTop="12dp">
 
-        <Button
-            android:id="@+id/playBtn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="\u25B6  LIRE"
-            android:textColor="@color/text"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:background="@drawable/bg_button_focus"
-            android:stateListAnimator="@null"
-            android:focusable="true"
-            android:clickable="true"
-            android:layout_marginTop="14dp" />
+            <Button
+                android:id="@+id/playBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="\u25B6  Lire"
+                android:textColor="@color/text"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textAllCaps="false"
+                android:includeFontPadding="false"
+                android:background="@drawable/bg_action_btn"
+                android:stateListAnimator="@null"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_gravity="center_vertical" />
+            <Button
+                android:id="@+id/trailerBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="Bande-annonce"
+                android:textColor="@color/text"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textAllCaps="false"
+                android:includeFontPadding="false"
+                android:background="@drawable/bg_action_btn"
+                android:stateListAnimator="@null"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_marginStart="10dp"
+                android:layout_gravity="center_vertical" />
+            <Button
+                android:id="@+id/downloadBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="42dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="\u2913  T\u00e9l\u00e9charger"
+                android:textColor="@color/text"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textAllCaps="false"
+                android:includeFontPadding="false"
+                android:background="@drawable/bg_action_btn"
+                android:stateListAnimator="@null"
+                android:focusable="true"
+                android:clickable="true"
+                android:layout_marginStart="10dp"
+                android:layout_gravity="center_vertical" />
+        </LinearLayout>
 
     </LinearLayout>
 

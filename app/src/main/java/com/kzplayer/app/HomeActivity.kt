@@ -72,6 +72,10 @@ class HomeActivity : BaseActivity() {
         findViewById<View>(R.id.catchupCard).visibility = View.GONE
         findViewById<View>(R.id.favorisCard).setOnClickListener { open("favorites", "Favoris") }
         findViewById<View>(R.id.reloadCard).setOnClickListener { reloadPlaylists() }
+        // v361 : bouton Replay -> page replay directe (plusieurs jours en arriere).
+        findViewById<View>(R.id.replayCard).setOnClickListener {
+            startActivity(Intent(this, ReplayHubActivity::class.java))
+        }
         findViewById<View>(R.id.settingsCard).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         // Bouton micro (commande vocale) : present dans le layout mais non branche -> on le rebranche.
         val playlistBtn = findViewById<View>(R.id.playlistBtn)
@@ -84,7 +88,8 @@ class HomeActivity : BaseActivity() {
         val focusables = listOf<View>(
             playlistBtn, micBtn, liveCard, moviesCard, seriesCard,
             findViewById(R.id.favorisCard),
-            findViewById(R.id.reloadCard), findViewById(R.id.settingsCard), findViewById(R.id.subCard)
+            findViewById(R.id.reloadCard), findViewById(R.id.replayCard),
+            findViewById(R.id.settingsCard), findViewById(R.id.subCard)
         )
         focusables.forEach { addFocusBounce(it) }
         // Donne le focus a la premiere carte des l'ouverture (utile a la telecommande)

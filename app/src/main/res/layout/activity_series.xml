@@ -74,6 +74,22 @@
                 android:layout_marginStart="8dp" />
         </LinearLayout>
 
+        <!-- v360 : vrai bouton de telechargement (choix saison + episodes) -->
+        <TextView
+            android:id="@+id/downloadBtn"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:gravity="center"
+            android:text="\u2913  T\u00e9l\u00e9charger"
+            android:textColor="@color/text"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:includeFontPadding="false"
+            android:background="@drawable/bg_action_btn"
+            android:focusable="true"
+            android:clickable="true"
+            android:layout_marginTop="10dp" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

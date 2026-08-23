@@ -29,6 +29,7 @@ class DetailActivity : BaseActivity() {
         val desc = findViewById<TextView>(R.id.detailDesc)
         val playBtn = findViewById<Button>(R.id.playBtn)
         val trailerBtn = findViewById<Button>(R.id.trailerBtn)
+        val downloadBtn = findViewById<Button>(R.id.downloadBtn)
         val favBtn = findViewById<TextView>(R.id.favBtn)
         val prog = findViewById<ProgressBar>(R.id.detailProgress)
         val back = findViewById<TextView>(R.id.backBtn)
@@ -108,6 +109,31 @@ class DetailActivity : BaseActivity() {
                 }
             }
         }
+
+        // v359 : telechargement du film dans la memoire de l appareil.
+        downloadBtn.setOnClickListener {
+            prog.visibility = View.VISIBLE
+            downloadBtn.isEnabled = false
+            lifecycleScope.launch {
+                val dlUrl = try {
+                    if (pl.type == "stalker") Api.stalkerLink(pl, item.cmd ?: "", "movie")
+                    else item.directUrl
+                } catch (e: Exception) { null }
+                prog.visibility = View.GONE
+                downloadBtn.isEnabled = true
+                val msg = Downloads.enqueue(this@DetailActivity, item.name, dlUrl ?: "")
+                android.widget.Toast.makeText(this@DetailActivity, msg, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+
+        // v359 : focus bien visible (leger agrandissement du bouton survole).
+        for (b in listOf(playBtn, trailerBtn, downloadBtn)) {
+            b.setOnFocusChangeListener { v, has ->
+                v.animate().scaleX(if (has) 1.06f else 1f).scaleY(if (has) 1.06f else 1f)
+                    .setDuration(120).start()
+            }
+        }
+        playBtn.requestFocus()
 
         playBtn.setOnClickListener {
             prog.visibility = View.VISIBLE

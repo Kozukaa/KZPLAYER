@@ -42,6 +42,17 @@ class SeriesActivity : BaseActivity() {
             favBtn.text = if (added) "★" else "☆"
         }
 
+        // v360 : bouton Telecharger : choix de la saison puis des episodes.
+        val dlBtn = findViewById<TextView>(R.id.downloadBtn)
+        dlBtn.setOnClickListener {
+            if (rows.isEmpty())
+                android.widget.Toast.makeText(this, "\u00c9pisodes pas encore charg\u00e9s.", android.widget.Toast.LENGTH_SHORT).show()
+            else DownloadPicker.show(this, DownloadPicker.groupSeasons(rows))
+        }
+        dlBtn.setOnFocusChangeListener { v, has ->
+            v.animate().scaleX(if (has) 1.04f else 1f).scaleY(if (has) 1.04f else 1f).setDuration(110).start()
+        }
+
         findViewById<TextView>(R.id.seriesTitle).text = series.name
         findViewById<ImageView>(R.id.posterIv).load(series.logo) {
             placeholder(R.drawable.bg_tile)
@@ -210,6 +221,13 @@ class SeriesActivity : BaseActivity() {
             }
 
             holder.v.setOnClickListener { onClick(item) }
+            // v359 : appui long sur un episode = telechargement dans l appareil.
+            holder.v.setOnLongClickListener {
+                if (item.kind == "episode" || item.directUrl != null || item.cmd != null) {
+                    Downloads.requestItem(holder.v.context, item)
+                    true
+                } else false
+            }
         }
     }
 }

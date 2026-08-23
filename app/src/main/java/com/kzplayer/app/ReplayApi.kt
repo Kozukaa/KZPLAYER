@@ -73,7 +73,8 @@ object ReplayApi {
             o.optJSONArray("epg_listings") ?: o.optJSONArray("data") ?: JSONArray()
         } catch (e: Exception) { JSONArray() }
         val now = System.currentTimeMillis()
-        val floor = now - 3L * 24L * 3600L * 1000L
+        // v361 : on remonte jusqu a 8 jours en arriere (avant : 3 jours).
+        val floor = now - 8L * 24L * 3600L * 1000L
         val out = ArrayList<Prog>()
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
@@ -107,6 +108,48 @@ object ReplayApi {
         return out
     }
 
+    // v361 : minuit du jour demande (0 = aujourd hui, 1 = hier, ...).
+    private fun midnight(offsetDays: Int): Long {
+        val c = java.util.Calendar.getInstance()
+        c.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        c.set(java.util.Calendar.MINUTE, 0)
+        c.set(java.util.Calendar.SECOND, 0)
+        c.set(java.util.Calendar.MILLISECOND, 0)
+        c.add(java.util.Calendar.DAY_OF_YEAR, -offsetDays)
+        return c.timeInMillis
+    }
+
+    fun dayLabel(offsetDays: Int): String = when (offsetDays) {
+        0 -> "Aujourd hui"
+        1 -> "Hier"
+        else -> try {
+            SimpleDateFormat("EEE d MMM", Locale.FRENCH).format(Date(midnight(offsetDays)))
+        } catch (e: Exception) { "J-" + offsetDays }
+    }
+
+    // Garde seulement les programmes du jour demande.
+    fun filterDay(list: List<Prog>, offsetDays: Int): List<Prog> {
+        val from = midnight(offsetDays)
+        val to = from + 24L * 3600L * 1000L
+        return list.filter { it.startMs >= from && it.startMs < to }
+    }
+
+    // Si le serveur ne donne pas de guide pour ce jour : tranches de 30 minutes.
+    fun slotsForDay(offsetDays: Int): List<Prog> {
+        val step = 30L * 60L * 1000L
+        val from = midnight(offsetDays)
+        val now = System.currentTimeMillis()
+        var end = (from + 24L * 3600L * 1000L).coerceAtMost((now / step) * step)
+        val out = ArrayList<Prog>()
+        while (end - step >= from && out.size < 48) {
+            val start = end - step
+            val p = Prog("Archive", "", "", start, end)
+            out.add(p.copy(time = label(p)))
+            end = start
+        }
+        return out
+    }
+
     fun timeshiftUrl(pl: Playlist, streamId: String, startMs: Long, durationMin: Int): String {
         val d = if (durationMin < 1) 60 else durationMin
         val stamp = try {
@@ -120,7 +163,8 @@ object ReplayApi {
     private suspend fun stalkerPrograms(pl: Playlist, chId: String): List<Prog> {
         val epg = try { Api.stalkerShortEpg(pl, chId) } catch (e: Exception) { emptyList() }
         val now = System.currentTimeMillis()
-        val floor = now - 3L * 24L * 3600L * 1000L
+        // v361 : on remonte jusqu a 8 jours en arriere (avant : 3 jours).
+        val floor = now - 8L * 24L * 3600L * 1000L
         val out = ArrayList<Prog>()
         for (e in epg) {
             if (e.startMs <= 0L || e.endMs <= e.startMs) continue

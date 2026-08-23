@@ -189,7 +189,8 @@ open class NetflixHomeActivity : NtBase() {
         nav(R.id.navChannels) { open(NflxLiveActivity::class.java) }
         nav(R.id.navMovies) { open(NflxMoviesActivity::class.java) }
         nav(R.id.navSeries) { open(NflxSeriesActivity::class.java) }
-        nav(R.id.navReplay) { openBrowse("replay", "Replay") }
+        // v361 : page replay directe au lieu du parcours par categories.
+        nav(R.id.navReplay) { startActivity(Intent(this, ReplayHubActivity::class.java)) }
         nav(R.id.navGuide) { open(NewGuideActivity::class.java) }
         nav(R.id.navMyList) { openBrowse("favorites", "Ma liste") }
         nav(R.id.navPlaylist) { open(PlaylistSettingsActivity::class.java) }

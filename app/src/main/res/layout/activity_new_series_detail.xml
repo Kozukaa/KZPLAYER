@@ -91,6 +91,25 @@
                     android:textColor="@color/text"
                     android:textStyle="bold"
                     android:background="@drawable/bg_button_focus" />
+                <!-- v360 : vrai bouton de telechargement, a cote de Lecture -->
+                <Button
+                    android:id="@+id/downloadBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="38dp"
+                    android:layout_weight="1"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:text="\u2913 T\u00e9l\u00e9charger"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:textColor="@color/text"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false"
+                    android:background="@drawable/bg_action_btn"
+                    android:stateListAnimator="@null"
+                    android:focusable="true"
+                    android:clickable="true"
+                    android:layout_marginStart="8dp" />
                 <TextView
                     android:id="@+id/favBtn"
                     android:layout_width="0dp"

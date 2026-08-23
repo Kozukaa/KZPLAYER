@@ -65,6 +65,12 @@ class NewSeriesDetailActivity : BaseActivity() {
         favBtn.setOnClickListener { Favorites.toggle(this, series); refreshFav() }
         episodeRv.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
         playBtn.setOnClickListener { playFirstOfSeason() }
+        // v360 : bouton Telecharger : on choisit la saison puis les episodes voulus.
+        findViewById<Button>(R.id.downloadBtn).setOnClickListener {
+            if (seasons.isEmpty())
+                android.widget.Toast.makeText(this, "\u00c9pisodes pas encore charg\u00e9s.", android.widget.Toast.LENGTH_SHORT).show()
+            else DownloadPicker.show(this, seasons.toList())
+        }
 
         setLoading(true)
         lifecycleScope.launch {
@@ -197,6 +203,11 @@ class NewSeriesDetailActivity : BaseActivity() {
                 holder.v.translationZ = if (hasFocus) 14f else 0f
             }
             holder.v.setOnClickListener { playEpisode(item) }
+            // v359 : appui long sur un episode = telechargement dans l appareil.
+            holder.v.setOnLongClickListener {
+                Downloads.requestItem(holder.v.context, item)
+                true
+            }
         }
     }
 }

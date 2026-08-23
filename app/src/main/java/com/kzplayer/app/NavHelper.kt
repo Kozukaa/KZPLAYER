@@ -25,6 +25,7 @@ object NavHelper {
         NavItem(R.id.navGuide, R.id.navGuideImg, R.id.navGuideLabel, "guide"),
         NavItem(R.id.navMovies, R.id.navMoviesImg, R.id.navMoviesLabel, "movies"),
         NavItem(R.id.navSeries, R.id.navSeriesImg, R.id.navSeriesLabel, "series"),
+        NavItem(R.id.navReplay, R.id.navReplayImg, R.id.navReplayLabel, "replay"),
         NavItem(R.id.navSearch, R.id.navSearchImg, R.id.navSearchLabel, "search"),
         NavItem(R.id.navMic, R.id.navMicImg, R.id.navMicLabel, "mic"),
         NavItem(R.id.navPlaylist, R.id.navPlaylistImg, R.id.navPlaylistLabel, "playlist"),
@@ -36,6 +37,10 @@ object NavHelper {
         wire(act, R.id.navGuide, R.id.navGuideImg, active == "guide") { go(act, NewGuideActivity::class.java, active, "guide") }
         wire(act, R.id.navMovies, R.id.navMoviesImg, active == "movies") { go(act, NewMoviesActivity::class.java, active, "movies") }
         wire(act, R.id.navSeries, R.id.navSeriesImg, active == "series") { go(act, NewSeriesActivity::class.java, active, "series") }
+        // v361 : Replay -> page replay directe (plusieurs jours en arriere).
+        wire(act, R.id.navReplay, R.id.navReplayImg, active == "replay") {
+            act.startActivity(Intent(act, ReplayHubActivity::class.java))
+        }
         wire(act, R.id.navSearch, R.id.navSearchImg, false) {
             act.findViewById<EditText?>(R.id.searchEt)?.requestFocus()
         }

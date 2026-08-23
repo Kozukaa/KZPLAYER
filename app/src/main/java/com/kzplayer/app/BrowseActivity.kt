@@ -39,6 +39,9 @@ class BrowseActivity : BaseActivity() {
     private var loadingAllForSearch: Boolean = false
     private var searchJob: Job? = null
     private var multiMode: Boolean = false
+    // v359 : separateur utilise pour retenir la liste d origine d une categorie
+    // quand toutes les listes sont affichees en meme temps.
+    private val catSep = "@@"
     private var voicePlay: String = ""
     private var voiceTriedPlay = false
 
@@ -169,6 +172,12 @@ class BrowseActivity : BaseActivity() {
         val pl = existing
         if (ownPlaylistId.isBlank()) ownPlaylistId = pl.id
         val realKind = if (kind == "replay") "live" else kind
+        // v359 : mode "toutes les listes en meme temps" (facon TiviMate).
+        if (MultiListPref.isAll(this) && Session.playlists.size > 1 &&
+            kind != "favorites" && !multiMode) {
+            loadCategoriesAllLists(realKind)
+            return
+        }
         setLoading(true)
         msgTv.text = ""
         lifecycleScope.launch {
@@ -229,6 +238,45 @@ class BrowseActivity : BaseActivity() {
                 msgTv.text = "Erreur de chargement : ${e.message}"
                 setLoading(false)
             }
+        }
+    }
+
+    // v359 : fusionne les categories de TOUTES les listes actives. L identifiant de
+    // chaque categorie devient "<idCategorie>@@<idListe>" pour savoir sur quel serveur
+    // aller chercher le contenu au moment du clic. Les listes sont ajoutees au fur et a
+    // mesure : l ecran est utilisable des la premiere liste chargee, et un serveur lent
+    // ou en panne ne bloque jamais les autres.
+    private fun loadCategoriesAllLists(realKind: String) {
+        setLoading(true)
+        msgTv.text = "Chargement de toutes les listes..."
+        lifecycleScope.launch {
+            val merged = ArrayList<Category>()
+            var loaded = 0
+            for (pl in Session.playlists) {
+                val base = try {
+                    kotlinx.coroutines.withTimeoutOrNull(25000L) {
+                        when (pl.type) {
+                            "m3u" -> Api.m3uCategories(pl, realKind)
+                            "stalker" -> Api.stalkerCategories(pl, realKind)
+                            else -> Api.xtreamCategories(pl, realKind)
+                        }
+                    } ?: emptyList()
+                } catch (e: Exception) { emptyList<Category>() }
+                val visible = filterHiddenCategories(base, pl).filter { !it.id.startsWith("__") }
+                for (c in visible) {
+                    merged.add(Category(c.id + catSep + pl.id, pl.nom + " - " + c.name))
+                }
+                loaded++
+                categories = withSpecialCategories(merged.toList())
+                bindCategories()
+                if (merged.isNotEmpty()) setLoading(false)
+                msgTv.text = "Listes charg\u00e9es : " + loaded + " / " + Session.playlists.size
+            }
+            setLoading(false)
+            msgTv.text = if (merged.isEmpty()) "Aucune cat\u00e9gorie disponible."
+                else "Choisis une cat\u00e9gorie a gauche."
+            maybeStartVoicePlay()
+            maybeWarmSearch()
         }
     }
 
@@ -409,7 +457,16 @@ class BrowseActivity : BaseActivity() {
     private fun selectCategory(cat: Category) {
         selectedCat = cat.id
         catAdapter?.notifyDataSetChanged()
-        val pl = Session.current ?: return
+        // v359 : en mode multi-listes, la categorie porte l identifiant de sa liste.
+        // On rebascule la liste active sur la bonne liste avant de charger le contenu,
+        // ce qui garantit une lecture identique au mode une seule liste.
+        val sepAt = cat.id.lastIndexOf(catSep)
+        val catPl = if (sepAt > 0)
+            Session.playlists.firstOrNull { it.id == cat.id.substring(sepAt + catSep.length) }
+        else null
+        val catId = if (sepAt > 0) cat.id.substring(0, sepAt) else cat.id
+        if (catPl != null) Session.current = catPl
+        val pl = catPl ?: Session.current ?: return
         if (cat.id == "__favorites__") {
             items = Favorites.forKind(this, kind)
             applyFilter()
@@ -441,7 +498,7 @@ class BrowseActivity : BaseActivity() {
             "m3u" -> {
                 setLoading(true)
                 lifecycleScope.launch {
-                    try { items = Api.m3uItems(pl, realKind, cat.id) }
+                    try { items = Api.m3uItems(pl, realKind, catId) }
                     catch (e: Exception) { msgTv.text = "Erreur : ${e.message}" }
                     if (kind == "replay") items = items.filter { it.catchup }
                     applyFilter()
@@ -449,11 +506,11 @@ class BrowseActivity : BaseActivity() {
                     setLoading(false)
                 }
             }
-            "stalker" -> { setLoading(true); lifecycleScope.launch { loadStalkerInto(cat.id) } }
+            "stalker" -> { setLoading(true); lifecycleScope.launch { loadStalkerInto(catId) } }
             else -> {
                 setLoading(true)
                 lifecycleScope.launch {
-                    try { items = Api.xtreamItems(pl, realKind, cat.id) }
+                    try { items = Api.xtreamItems(pl, realKind, catId) }
                     catch (e: Exception) { msgTv.text = "Erreur : ${e.message}" }
                     if (kind == "replay") items = items.filter { it.catchup }
                     applyFilter()

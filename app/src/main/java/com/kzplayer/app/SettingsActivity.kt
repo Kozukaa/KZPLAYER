@@ -30,6 +30,12 @@ class SettingsActivity : BaseActivity() {
             startActivity(Intent(this, PlaylistSettingsActivity::class.java))
         }
         findViewById<View>(R.id.reloadMenu).setOnClickListener { reloadPlaylists() }
+        // v359 : choix entre une seule liste active et toutes les listes en meme temps.
+        findViewById<View>(R.id.multiListMenu).setOnClickListener { pickListMode() }
+        refreshMultiListLabel()
+        // v359 : vidage du cache de l application.
+        findViewById<View>(R.id.cacheMenu).setOnClickListener { clearCache() }
+        refreshCacheLabel()
         // Mise a jour : carte TOUJOURS visible (jamais masquee) qui affiche la
         // version installee et permet de verifier la derniere version publiee
         // depuis le panel admin.
@@ -54,6 +60,52 @@ class SettingsActivity : BaseActivity() {
     private fun currentVersion(): String = try {
         packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
     } catch (e: Exception) { "1.0" }
+
+    // v359 : libelle de la carte Mode des listes.
+    private fun refreshMultiListLabel() {
+        findViewById<TextView>(R.id.multiListStateTv).text = MultiListPref.label(this)
+    }
+
+    // Choix du mode : une seule liste (historique) ou toutes en meme temps.
+    private fun pickListMode() {
+        val labels = arrayOf<CharSequence>(
+            "Une seule liste (liste active)",
+            "Toutes les listes en m\u00eame temps"
+        )
+        val current = if (MultiListPref.isAll(this)) 1 else 0
+        AlertDialog.Builder(this)
+            .setTitle("Mode des listes")
+            .setSingleChoiceItems(labels, current) { d, which ->
+                MultiListPref.setAll(this, which == 1)
+                refreshMultiListLabel()
+                d.dismiss()
+                Toast.makeText(this, MultiListPref.label(this), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Fermer", null)
+            .show()
+    }
+
+    // v359 : libelle de la carte Vider le cache (taille actuelle).
+    private fun refreshCacheLabel() {
+        val size = try { CacheCleaner.cacheBytes(this) } catch (e: Exception) { 0L }
+        findViewById<TextView>(R.id.cacheStateTv).text = "Cache actuel : " + CacheCleaner.human(size)
+    }
+
+    // Vide le cache apres confirmation. Aucun reglage ni favori n est touche.
+    private fun clearCache() {
+        val size = try { CacheCleaner.cacheBytes(this) } catch (e: Exception) { 0L }
+        AlertDialog.Builder(this)
+            .setTitle("Vider le cache")
+            .setMessage("Cache actuel : " + CacheCleaner.human(size) + ". Les r\u00e9glages, la licence et les favoris ne sont pas touch\u00e9s.")
+            .setPositiveButton("Vider") { d, _ ->
+                d.dismiss()
+                val freed = try { CacheCleaner.clear(this) } catch (e: Exception) { 0L }
+                refreshCacheLabel()
+                Toast.makeText(this, "Cache vid\u00e9 : " + CacheCleaner.human(freed) + " lib\u00e9r\u00e9s", Toast.LENGTH_LONG).show()
+            }
+            .setNegativeButton("Annuler", null)
+            .show()
+    }
 
     // Boite administrateur (appui long sur la carte Mise a jour).
     private fun showAdminDialog() {

@@ -62,6 +62,9 @@ class DownloadsActivity : BaseActivity() {
     }
 
     private fun refresh() {
+        // v372 : un telechargement en echec (jeton du serveur expire, coupure reseau)
+        // est relance tout seul avec un lien frais, jusqu a 3 essais par titre.
+        try { Downloads.autoRetryFailed(this) } catch (e: Exception) {}
         tasks = Downloads.pending(this)
         // Un fichier encore en telechargement ne doit pas apparaitre comme termine.
         val busy = tasks.map { it.fileName }.toSet()
@@ -151,13 +154,20 @@ class DownloadsActivity : BaseActivity() {
                 h.progBar.visibility = View.VISIBLE
                 h.progBar.isIndeterminate = t.total <= 0L
                 if (t.total > 0L) h.progBar.progress = Downloads.percent(t)
-                h.playBtn.text = "En cours"
+                val echec = t.status == android.app.DownloadManager.STATUS_FAILED
+                h.playBtn.text = if (echec) "Relancer" else "En cours"
                 h.playBtn.setOnClickListener {
-                    Toast.makeText(
-                        this@DownloadsActivity,
-                        "T\u00e9l\u00e9chargement en cours : " + Downloads.percent(t).toString() + " %",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    if (echec) {
+                        // v372 : relance manuelle avec un lien tout neuf.
+                        Downloads.retryTask(this@DownloadsActivity, t, notify = true)
+                        ui.postDelayed({ refresh() }, 1500L)
+                    } else {
+                        Toast.makeText(
+                            this@DownloadsActivity,
+                            "T\u00e9l\u00e9chargement en cours : " + Downloads.percent(t).toString() + " %",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
                 h.playRow.setOnClickListener { }
                 h.delBtn.text = "Annuler"

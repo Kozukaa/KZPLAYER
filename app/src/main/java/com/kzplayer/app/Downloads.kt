@@ -37,7 +37,7 @@ object Downloads {
     fun requestItem(ctx: Context, item: Item, notify: Boolean = true) {
         val direct = item.directUrl
         if (!direct.isNullOrBlank()) {
-            val msg = enqueue(ctx, item.name, direct)
+            val msg = enqueue(ctx, item.name, direct, item.cmd ?: "")
             if (notify) toast(ctx, msg)
             return
         }
@@ -50,7 +50,7 @@ object Downloads {
         if (notify) toast(ctx, "Pr\u00e9paration du t\u00e9l\u00e9chargement...")
         CoroutineScope(Dispatchers.Main).launch {
             val link = try { Api.stalkerLink(pl, cmd, "movie") } catch (e: Exception) { null }
-            val msg = enqueue(ctx, item.name, link ?: "")
+            val msg = enqueue(ctx, item.name, link ?: "", cmd)
             if (notify) toast(ctx, msg)
         }
     }
@@ -159,6 +159,86 @@ object Downloads {
         return if (p < 0) 0 else if (p > 100) 100 else p
     }
 
+    // ---------------------------------------------------------------------
+    // v372 : memoire de la source d un telechargement + relance automatique.
+    // Cause du bug : sur un serveur Stalker/Xtream le lien de telechargement
+    // contient un jeton qui expire ; au bout d un moment le gestionnaire Android
+    // recoit une erreur HTTP et affiche "Echec du telechargement", ou reste bloque
+    // sur "En attente de connexion" quand la connexion est vue comme limitee.
+    // On memorise donc de quoi refaire un lien tout neuf et on relance tout seul.
+    // ---------------------------------------------------------------------
+    private const val PREF = "kz_dl_src"
+
+    private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+
+    private fun rememberSource(ctx: Context, fileName: String, title: String, url: String, cmd: String) {
+        if (fileName.isBlank()) return
+        try {
+            prefs(ctx).edit()
+                .putString("t_" + fileName, title)
+                .putString("u_" + fileName, url)
+                .putString("c_" + fileName, cmd)
+                .apply()
+        } catch (e: Exception) {}
+    }
+
+    private fun retryCount(ctx: Context, fileName: String): Int =
+        try { prefs(ctx).getInt("r_" + fileName, 0) } catch (e: Exception) { 0 }
+
+    private fun bumpRetry(ctx: Context, fileName: String) {
+        try {
+            prefs(ctx).edit().putInt("r_" + fileName, retryCount(ctx, fileName) + 1).apply()
+        } catch (e: Exception) {}
+    }
+
+    /**
+     * Relance un telechargement echoue : on supprime la tache ratee, on redemande
+     * un lien FRAIS au serveur quand c est possible (jeton expire) puis on relance.
+     * Le fichier repart proprement, sans intervention de l utilisateur.
+     */
+    fun retryTask(ctx: Context, t: Task, notify: Boolean = false) {
+        val fic = t.fileName
+        val p = try { prefs(ctx) } catch (e: Exception) { null }
+        val titre = p?.getString("t_" + fic, null) ?: t.name
+        val ancienUrl = p?.getString("u_" + fic, null) ?: ""
+        val cmd = p?.getString("c_" + fic, null) ?: ""
+        bumpRetry(ctx, fic)
+        // On enleve la tache ratee et le fichier partiel avant de repartir.
+        try { cancelTask(ctx, t) } catch (e: Exception) {}
+        val pl = Session.current
+        if (cmd.isNotBlank() && pl != null) {
+            CoroutineScope(Dispatchers.Main).launch {
+                val frais = try { Api.stalkerLink(pl, cmd, "movie") } catch (e: Exception) { null }
+                val url = if (!frais.isNullOrBlank()) frais else ancienUrl
+                val msg = enqueue(ctx, titre, url, cmd)
+                if (notify) toast(ctx, msg)
+            }
+            return
+        }
+        if (ancienUrl.isBlank()) {
+            if (notify) toast(ctx, "Impossible de relancer ce t\u00e9l\u00e9chargement : relance-le depuis la fiche du titre.")
+            return
+        }
+        val msg = enqueue(ctx, titre, ancienUrl, cmd)
+        if (notify) toast(ctx, msg)
+    }
+
+    /**
+     * Relance automatiquement les telechargements en echec (3 essais maximum par
+     * titre, pour ne pas boucler a l infini sur un serveur vraiment mort).
+     * Renvoie true si au moins une relance a ete lancee.
+     */
+    fun autoRetryFailed(ctx: Context): Boolean {
+        var relance = false
+        for (t in tasks(ctx)) {
+            if (t.status != DownloadManager.STATUS_FAILED) continue
+            if (retryCount(ctx, t.fileName) >= 3) continue
+            retryTask(ctx, t, notify = false)
+            relance = true
+        }
+        return relance
+    }
+
     // Texte affiche sous le titre pendant le telechargement.
     fun statusText(t: Task): String {
         if (t.status == DownloadManager.STATUS_FAILED) return "\u00c9chec du t\u00e9l\u00e9chargement"
@@ -176,7 +256,9 @@ object Downloads {
     }
 
     // Renvoie le message a afficher a l utilisateur.
-    fun enqueue(ctx: Context, title: String, url: String): String {
+    // cmd : commande du serveur (Stalker) qui permet de refabriquer un lien frais
+    // si le jeton expire pendant le telechargement.
+    fun enqueue(ctx: Context, title: String, url: String, cmd: String = ""): String {
         if (url.isBlank()) return "Lien de téléchargement introuvable."
         if (url.contains(".m3u8")) return "Ce contenu est diffusé en direct : téléchargement impossible."
         return try {
@@ -187,13 +269,28 @@ object Downloads {
             req.addRequestHeader("User-Agent", Config.USER_AGENT)
             req.setTitle(if (title.isBlank()) name else title)
             req.setDescription("KZ Player")
-            req.setAllowedOverRoaming(false)
-            // v371 : Wi-Fi ET donnees mobiles autorises, sinon le telechargement
-            // restait bloque en attente sur certains appareils.
+            // v372 : correction du blocage "En attente de connexion".
+            // Certains boitiers / telephones annoncent leur connexion comme limitee
+            // ou en itinerance : le gestionnaire Android mettait alors le
+            // telechargement en attente indefiniment. On autorise tout type de reseau.
+            req.setAllowedOverRoaming(true)
             try { req.setAllowedOverMetered(true) } catch (e: Exception) {}
-            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            try {
+                req.setAllowedNetworkTypes(
+                    DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE
+                )
+            } catch (e: Exception) {}
+            if (android.os.Build.VERSION.SDK_INT >= 24) {
+                try { req.setRequiresCharging(false) } catch (e: Exception) {}
+                try { req.setRequiresDeviceIdle(false) } catch (e: Exception) {}
+            }
+            // Notification visible pendant TOUT le telechargement : Android traite la
+            // tache en priorite et ne l endort pas quand on quitte l ecran.
+            req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
             req.setDestinationInExternalFilesDir(ctx, Environment.DIRECTORY_MOVIES, name)
             dm.enqueue(req)
+            // v372 : on garde de quoi relancer tout seul si le jeton du serveur expire.
+            rememberSource(ctx, name, if (title.isBlank()) name else title, url, cmd)
             "T\u00e9l\u00e9chargement lanc\u00e9 : " + name +
                 " - suis la progression dans Param\u00e8tres > T\u00e9l\u00e9chargement"
         } catch (e: Exception) {

@@ -49,6 +49,11 @@ class ReplayProgramsActivity : BaseActivity() {
             msgTv.text = "Le replay avec archive n'est pas disponible sur ce type de serveur."
             return
         }
+        if (pl.type == "stalker") {
+            msgTv.text = "Le Replay est indisponible sur ce type de code. " +
+                "Veuillez l'utiliser via un Xtream ou un M3U"
+            return
+        }
         if (pl.type == "stalker" && chCmd.isBlank()) {
             msgTv.text = "Cette chaine ne fournit pas de flux Stalker exploitable."
             return

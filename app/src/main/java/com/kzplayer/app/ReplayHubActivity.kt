@@ -119,8 +119,24 @@ class ReplayHubActivity : BaseActivity() {
     private fun loadCategories() {
         val pl = Session.current
         if (pl == null) { msgTv.text = "Aucun serveur actif."; return }
-        if (pl.type != "xtream" && pl.type != "stalker") {
-            msgTv.text = "Le replay n est disponible que sur les serveurs Xtream et Stalker."
+        // v367 : les portails Stalker/MAG ne donnent pas d archive exploitable.
+        if (pl.type == "stalker") {
+            cats = emptyList()
+            channels = emptyList()
+            shown = emptyList()
+            progs = emptyList()
+            chRv.adapter?.notifyDataSetChanged()
+            progRv.adapter?.notifyDataSetChanged()
+            leftTitle.text = "Replay"
+            progress.visibility = View.GONE
+            searchEt.visibility = View.GONE
+            msgTv.text = "Le Replay est indisponible sur ce type de code. " +
+                "Veuillez l'utiliser via un Xtream ou un M3U"
+            return
+        }
+        if (pl.type != "xtream") {
+            msgTv.text = "Le Replay est indisponible sur ce type de code. " +
+                "Veuillez l'utiliser via un Xtream ou un M3U"
             return
         }
         leftTitle.text = "Catégories"
@@ -201,6 +217,11 @@ class ReplayHubActivity : BaseActivity() {
     private fun playProg(p: ReplayApi.Prog) {
         val pl = Session.current ?: return
         val ch = selCh ?: return
+        if (pl.type == "stalker") {
+            msgTv.text = "Le Replay est indisponible sur ce type de code. " +
+                "Veuillez l'utiliser via un Xtream ou un M3U"
+            return
+        }
         progress.visibility = View.VISIBLE
         msgTv.text = "Recherche de l archive..."
         lifecycleScope.launch {

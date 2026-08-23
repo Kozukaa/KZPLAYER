@@ -35,6 +35,10 @@ class SettingsActivity : BaseActivity() {
         refreshMultiListLabel()
         // v359 : vidage du cache de l application.
         findViewById<View>(R.id.cacheMenu).setOnClickListener { clearCache() }
+        // v368 : ecran des telechargements (lecture hors ligne + suppression)
+        findViewById<View>(R.id.downloadsMenu).setOnClickListener {
+            startActivity(Intent(this, DownloadsActivity::class.java))
+        }
         refreshCacheLabel()
         // Mise a jour : carte TOUJOURS visible (jamais masquee) qui affiche la
         // version installee et permet de verifier la derniere version publiee
@@ -64,6 +68,11 @@ class SettingsActivity : BaseActivity() {
     // v359 : libelle de la carte Mode des listes.
     private fun refreshMultiListLabel() {
         findViewById<TextView>(R.id.multiListStateTv).text = MultiListPref.label(this)
+        val dl = Downloads.list(this)
+        findViewById<TextView>(R.id.downloadsStateTv).text =
+            if (dl.isEmpty()) "Aucun titre t\u00e9l\u00e9charg\u00e9"
+            else dl.size.toString() + (if (dl.size > 1) " titres" else " titre") +
+                "  \u2022  " + Downloads.human(Downloads.totalSize(this))
     }
 
     // Choix du mode : une seule liste (historique) ou toutes en meme temps.

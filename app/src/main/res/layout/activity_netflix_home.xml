@@ -30,9 +30,9 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="96dp"
-                android:layout_height="30dp"
-                android:layout_marginEnd="14dp"
+                android:layout_width="78dp"
+                android:layout_height="26dp"
+                android:layout_marginEnd="8dp"
                 android:adjustViewBounds="true"
                 android:contentDescription="@null"
                 android:scaleType="fitStart"
@@ -41,46 +41,91 @@
             <TextView
                 android:id="@+id/navPlaylist"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Liste" />
 
             <TextView
                 android:id="@+id/navHome"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Accueil" />
 
             <TextView
                 android:id="@+id/navChannels"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Chaînes" />
 
             <TextView
                 android:id="@+id/navMovies"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Films" />
 
             <TextView
                 android:id="@+id/navSeries"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Séries" />
 
             <TextView
                 android:id="@+id/navReplay"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Replay" />
 
             <TextView
                 android:id="@+id/navGuide"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Guide TV" />
 
             <TextView
                 android:id="@+id/navMyList"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Ma liste" />
 
             <TextView
                 android:id="@+id/navSettings"
                 style="@style/KzNavItem"
+                android:minWidth="0dp"
+                android:layout_marginEnd="2dp"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:textSize="12sp"
                 android:text="Paramètres" />
 
         </LinearLayout>

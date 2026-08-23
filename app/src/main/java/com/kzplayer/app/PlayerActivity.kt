@@ -183,10 +183,16 @@ class PlayerActivity : AppCompatActivity() {
         // v345 : bande-annonce YouTube -> User-Agent impose par le resolveur YtStream.
         val forcedUa = intent.getStringExtra("forceUa")?.takeIf { it.isNotBlank() }
         val httpFactory = KzHttpDataSource.factory(this, userAgent = forcedUa ?: streamUa, allowCrossProtocolRedirects = true)
+        // v368 : fichier telecharge sur l appareil -> lecture locale (hors ligne).
+        val isLocalFile = url.startsWith("file:") || url.startsWith("/") ||
+            url.startsWith("content:")
+        val srcFactory: androidx.media3.datasource.DataSource.Factory =
+            if (isLocalFile) androidx.media3.datasource.DefaultDataSource.Factory(this)
+            else httpFactory
         val mediaSourceFactory = if (isVod) {
             // Films / episodes : lecteur VOD standard. Pas de flags TS live, sinon certains VOD
             // chargent la duree mais restent figes sans son.
-            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory)
+            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(srcFactory)
         } else {
             // Live IPTV : beaucoup de flux sont du MPEG-TS brut sans IDR/AUD.
             val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
@@ -194,7 +200,7 @@ class PlayerActivity : AppCompatActivity() {
                     androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
                         androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
                 )
-            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
+            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(srcFactory, extractors)
         }
         // v147 : usine de renderers KZ qui donne la priorite au decodeur video LOGICIEL
         // (fixe l'image figee sur les box dont le decodeur materiel plante silencieusement).

@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,6 +54,30 @@ object Downloads {
             if (notify) toast(ctx, msg)
         }
     }
+
+    // v368 : dossier ou sont ranges les telechargements de l application.
+    fun dir(ctx: Context): java.io.File? =
+        try { ctx.getExternalFilesDir(Environment.DIRECTORY_MOVIES) } catch (e: Exception) { null }
+
+    // v368 : liste des fichiers telecharges, les plus recents en premier.
+    fun list(ctx: Context): List<java.io.File> {
+        val d = dir(ctx) ?: return emptyList()
+        val all = try { d.listFiles() } catch (e: Exception) { null } ?: return emptyList()
+        return all.filter { it.isFile && it.length() > 0L }
+            .sortedByDescending { it.lastModified() }
+    }
+
+    // v368 : suppression d un titre telecharge.
+    fun remove(f: java.io.File): Boolean = try { f.delete() } catch (e: Exception) { false }
+
+    // v368 : taille lisible (Mo / Go).
+    fun human(bytes: Long): String {
+        val mo = bytes.toDouble() / (1024.0 * 1024.0)
+        if (mo >= 1024.0) return String.format(Locale.US, "%.2f Go", mo / 1024.0)
+        return String.format(Locale.US, "%.0f Mo", mo)
+    }
+
+    fun totalSize(ctx: Context): Long = list(ctx).sumOf { it.length() }
 
     // Renvoie le message a afficher a l utilisateur.
     fun enqueue(ctx: Context, title: String, url: String): String {

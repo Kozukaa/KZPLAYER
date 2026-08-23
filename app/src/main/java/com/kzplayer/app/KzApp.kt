@@ -23,9 +23,6 @@ class KzApp : Application(), ImageLoaderFactory {
         super.onCreate()
         // v149 : initialise le resolveur DNS-over-HTTPS avec le contexte app avant
         // qu'Api.kt (ou toute autre partie de l'app) ne construise ses OkHttpClient.
-        // v379 : on garde la trace de la derniere erreur fatale pour pouvoir l afficher
-        // au prochain lancement (l appli se fermait sans rien dire).
-        try { CrashLog.install(this) } catch (_: Exception) {}
         try { DohDns.init(this) } catch (_: Exception) {}
         try { Api.cfProxyBase = Config.currentCfProxyUrl(this) } catch (_: Exception) {}
         try { AutoReloader.runIfNeeded(this) } catch (_: Exception) {}

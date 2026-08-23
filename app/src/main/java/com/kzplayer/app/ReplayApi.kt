@@ -198,7 +198,7 @@ object ReplayApi {
             }
             val tried = ArrayList<String>()
             for (u in cands) {
-                val ok = probe(u)
+                val ok = verify(u, p.startMs)
                 tried.add((if (ok) "OK   " else "NON  ") + u)
                 if (ok) {
                     lastArchiveLog = tried.joinToString(System.lineSeparator())
@@ -257,19 +257,63 @@ object ReplayApi {
 
     private fun chr47(): Char = 47.toChar()
 
-    // Test rapide : on demande les premiers octets. Une page d erreur (HTML / JSON)
-    // ou un code HTTP en erreur = URL refusee.
-    private fun probe(url: String): Boolean = try {
+    // v364 : controle STRICT de l archive.
+    // Avant, une URL qui repondait "200 OK" etait acceptee... meme quand le serveur
+    // ignorait la demande d archive et renvoyait le DIRECT (on cliquait sur lundi 23h
+    // et on tombait sur le direct d aujourd hui). Maintenant :
+    //  - page d erreur (HTML / JSON) = refuse ;
+    //  - playlist HLS : on lit la date reelle du flux (#EXT-X-PROGRAM-DATE-TIME) et on
+    //    refuse si elle ne correspond pas au jour demande ; une playlist de direct
+    //    (sans date, sans fin de liste) est refusee ;
+    //  - flux binaire : accepte seulement sur une vraie adresse d archive
+    //    (/timeshift..., timeshift_abs-..., /archive-...).
+    private fun verify(url: String, wantStartMs: Long): Boolean = try {
         val req = Request.Builder().url(url)
-            .header("Range", "bytes=0-2048")
+            .header("Range", "bytes=0-16384")
             .header("User-Agent", "IPTVSmartersPro")
             .build()
         Api.imageClient().newCall(req).execute().use { r ->
             val ct = (r.header("Content-Type") ?: "").lowercase()
-            val bad = ct.contains("html") || ct.contains("json") || ct.contains("/xml")
-            r.isSuccessful && !bad
+            if (!r.isSuccessful) false
+            else if (ct.contains("html") || ct.contains("json") || ct.contains("/xml")) false
+            else {
+                val isPlaylist = ct.contains("mpegurl") || url.contains(".m3u8")
+                if (isPlaylist) {
+                    val body = try { r.body?.string() ?: "" } catch (e: Exception) { "" }
+                    checkPlaylist(body, wantStartMs)
+                } else dedicatedArchivePath(url)
+            }
         }
     } catch (e: Exception) { false }
+
+    // Une playlist est acceptee seulement si elle prouve qu il s agit bien de l archive
+    // du bon jour (date du flux) ou d un enregistrement termine (fin de liste / VOD).
+    private fun checkPlaylist(body: String, wantStartMs: Long): Boolean {
+        if (body.isBlank()) return false
+        if (!body.contains("#EXTM3U")) return false
+        val m = Regex("EXT-X-PROGRAM-DATE-TIME:([0-9]{4})-([0-9]{2})-([0-9]{2})").find(body)
+        if (m != null) {
+            val want = try {
+                SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(wantStartMs))
+            } catch (e: Exception) { "" }
+            val got = m.groupValues[1] + "-" + m.groupValues[2] + "-" + m.groupValues[3]
+            if (want.isBlank()) return false
+            // meme jour, ou jour voisin (programme a cheval sur minuit / decalage horaire)
+            val dayMs = 24L * 3600L * 1000L
+            val prev = try { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(wantStartMs - dayMs)) } catch (e: Exception) { "" }
+            val next = try { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(wantStartMs + dayMs)) } catch (e: Exception) { "" }
+            return got == want || got == prev || got == next
+        }
+        val vod = body.contains("#EXT-X-ENDLIST") || body.uppercase().contains("PLAYLIST-TYPE:VOD")
+        return vod
+    }
+
+    // Vraies adresses d archive (elles ne renvoient jamais le direct).
+    private fun dedicatedArchivePath(url: String): Boolean {
+        val u = url.lowercase()
+        return u.contains("/timeshift/") || u.contains("timeshift.php") ||
+            u.contains("timeshift_abs-") || u.contains("/archive-")
+    }
 
     // Ajoute utc=<debut> & lutc=<maintenant> (+ duree) sans casser les parametres deja presents.
     private fun withArchiveParams(url: String, p: Prog): String {

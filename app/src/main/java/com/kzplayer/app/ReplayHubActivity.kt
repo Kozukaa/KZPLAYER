@@ -209,7 +209,8 @@ class ReplayHubActivity : BaseActivity() {
             } catch (e: Exception) { "" }
             progress.visibility = View.GONE
             if (url.isBlank()) {
-                msgTv.text = "Ce serveur ne donne pas d archive pour ce programme."
+                msgTv.text = "Ce serveur ne fournit pas l archive de ce programme " +
+                    "(il renverrait le direct). Essaie un autre horaire ou une autre chaine."
                 if (AdminMode.diagEnabled(this@ReplayHubActivity)) {
                     msgTv.text = "Archive indisponible." + System.lineSeparator() + ReplayApi.lastArchiveLog
                 }

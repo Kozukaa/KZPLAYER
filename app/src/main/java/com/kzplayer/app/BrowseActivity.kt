@@ -42,6 +42,12 @@ class BrowseActivity : BaseActivity() {
     // v359 : separateur utilise pour retenir la liste d origine d une categorie
     // quand toutes les listes sont affichees en meme temps.
     private val catSep = "@@"
+    // v363 : mode toutes les listes = menu deroulant serveur > categories.
+    // Les categories d un serveur ne sont chargees qu au moment ou on le deplie,
+    // donc l ouverture de l ecran est immediate.
+    private var srvOpen: String = ""
+    private val srvCatCache = HashMap<String, List<Category>>()
+    private var allKind: String = "live"
     private var voicePlay: String = ""
     private var voiceTriedPlay = false
 
@@ -247,36 +253,67 @@ class BrowseActivity : BaseActivity() {
     // mesure : l ecran est utilisable des la premiere liste chargee, et un serveur lent
     // ou en panne ne bloque jamais les autres.
     private fun loadCategoriesAllLists(realKind: String) {
-        setLoading(true)
-        msgTv.text = "Chargement de toutes les listes..."
-        lifecycleScope.launch {
-            val merged = ArrayList<Category>()
-            var loaded = 0
-            for (pl in Session.playlists) {
-                val base = try {
-                    kotlinx.coroutines.withTimeoutOrNull(25000L) {
-                        when (pl.type) {
-                            "m3u" -> Api.m3uCategories(pl, realKind)
-                            "stalker" -> Api.stalkerCategories(pl, realKind)
-                            else -> Api.xtreamCategories(pl, realKind)
-                        }
-                    } ?: emptyList()
-                } catch (e: Exception) { emptyList<Category>() }
-                val visible = filterHiddenCategories(base, pl).filter { !it.id.startsWith("__") }
-                for (c in visible) {
-                    merged.add(Category(c.id + catSep + pl.id, pl.nom + " - " + c.name))
+        allKind = realKind
+        setLoading(false)
+        categories = serverRows()
+        bindCategories()
+        msgTv.text = "Choisis un serveur, puis une cat\u00e9gorie."
+        maybeWarmSearch()
+    }
+
+    // Menu : un serveur par ligne. Le serveur ouvert affiche ses categories dessous.
+    private fun serverRows(): List<Category> {
+        val out = ArrayList<Category>()
+        out.addAll(withSpecialCategories(emptyList()))
+        for (pl in Session.playlists) {
+            val open = srvOpen == pl.id
+            val arrow = if (open) "\u25be  " else "\u25b8  "
+            out.add(Category("__srv__" + pl.id, arrow + pl.nom.uppercase()))
+            if (open) {
+                for (c in srvCatCache[pl.id] ?: emptyList()) {
+                    out.add(Category(c.id + catSep + pl.id, "      " + c.name))
                 }
-                loaded++
-                categories = withSpecialCategories(merged.toList())
-                bindCategories()
-                if (merged.isNotEmpty()) setLoading(false)
-                msgTv.text = "Listes charg\u00e9es : " + loaded + " / " + Session.playlists.size
             }
+        }
+        return out
+    }
+
+    // Clic sur un serveur : on deplie (chargement de ses categories une seule fois) ou on replie.
+    private fun toggleServer(plId: String) {
+        if (srvOpen == plId) {
+            srvOpen = ""
+            categories = serverRows()
+            bindCategories()
+            return
+        }
+        srvOpen = plId
+        val pl = Session.playlists.firstOrNull { it.id == plId } ?: return
+        Session.current = pl
+        if (srvCatCache.containsKey(plId)) {
+            categories = serverRows()
+            bindCategories()
+            return
+        }
+        setLoading(true)
+        msgTv.text = "Chargement de " + pl.nom + "..."
+        categories = serverRows()
+        bindCategories()
+        lifecycleScope.launch {
+            val base = try {
+                kotlinx.coroutines.withTimeoutOrNull(20000L) {
+                    when (pl.type) {
+                        "m3u" -> Api.m3uCategories(pl, allKind)
+                        "stalker" -> Api.stalkerCategories(pl, allKind)
+                        else -> Api.xtreamCategories(pl, allKind)
+                    }
+                } ?: emptyList()
+            } catch (e: Exception) { emptyList<Category>() }
+            val visible = filterHiddenCategories(base, pl).filter { !it.id.startsWith("__") }
+            srvCatCache[plId] = visible
             setLoading(false)
-            msgTv.text = if (merged.isEmpty()) "Aucune cat\u00e9gorie disponible."
-                else "Choisis une cat\u00e9gorie a gauche."
-            maybeStartVoicePlay()
-            maybeWarmSearch()
+            categories = serverRows()
+            bindCategories()
+            msgTv.text = if (visible.isEmpty()) "Aucune cat\u00e9gorie sur " + pl.nom + "." else ""
         }
     }
 
@@ -455,6 +492,12 @@ class BrowseActivity : BaseActivity() {
     }
 
     private fun selectCategory(cat: Category) {
+        // v363 : ligne de serveur (mode toutes les listes) -> on deplie / replie ses categories.
+        if (cat.id.startsWith("__srv__")) {
+            selectedCat = cat.id
+            toggleServer(cat.id.substring(7))
+            return
+        }
         selectedCat = cat.id
         catAdapter?.notifyDataSetChanged()
         // v359 : en mode multi-listes, la categorie porte l identifiant de sa liste.

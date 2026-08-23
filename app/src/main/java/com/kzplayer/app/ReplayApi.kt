@@ -183,14 +183,93 @@ object ReplayApi {
      *    utc / lutc acceptes par les portails Stalker (Flussonic / Astra / Ministra).
      *    Aucune modification d'Api.kt ni du protocole Stalker existant.
      */
-    suspend fun archiveUrl(pl: Playlist, streamId: String, cmd: String, p: Prog): String {
-        if (pl.type == "xtream") return timeshiftUrl(pl, streamId, p.startMs, durationMin(p))
-        if (pl.type != "stalker") return ""
-        if (cmd.isBlank()) return ""
+    // v363 : les serveurs ne parlent pas tous le meme langage pour les archives.
+    // On prepare donc plusieurs URL possibles, on les teste vraiment une par une
+    // (petite requete HTTP) et on garde la premiere qui renvoie bien de la video.
+    // Fini le ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED sur une page d erreur HTML.
+    var lastArchiveLog: String = ""
+
+    suspend fun archiveUrl(pl: Playlist, streamId: String, cmd: String, p: Prog): String =
+        withContext(Dispatchers.IO) {
+            val cands = archiveCandidates(pl, streamId, cmd, p)
+            if (cands.isEmpty()) {
+                lastArchiveLog = "Aucune URL d archive possible pour cette chaine."
+                return@withContext ""
+            }
+            val tried = ArrayList<String>()
+            for (u in cands) {
+                val ok = probe(u)
+                tried.add((if (ok) "OK   " else "NON  ") + u)
+                if (ok) {
+                    lastArchiveLog = tried.joinToString(System.lineSeparator())
+                    return@withContext u
+                }
+            }
+            lastArchiveLog = tried.joinToString(System.lineSeparator())
+            ""
+        }
+
+    // Toutes les URL d archive connues pour ce serveur / ce programme.
+    private suspend fun archiveCandidates(pl: Playlist, streamId: String, cmd: String, p: Prog): List<String> {
+        val out = ArrayList<String>()
+        val dur = durationMin(p)
+        val srv = pl.serverUrl.trimEnd(chr47())
+        val startSec = p.startMs / 1000L
+        val nowSec = System.currentTimeMillis() / 1000L
+        val durSec = ((p.endMs - p.startMs) / 1000L).coerceAtLeast(60L)
+        val stamp = try {
+            SimpleDateFormat("yyyy-MM-dd:HH-mm", Locale.US).format(Date(p.startMs))
+        } catch (e: Exception) { "" }
+        if (pl.type == "xtream") {
+            if (streamId.isBlank()) return out
+            val u = enc(pl.username)
+            val w = enc(pl.password)
+            out.add(srv + "/timeshift/" + u + "/" + w + "/" + dur + "/" + stamp + "/" + streamId + ".ts")
+            out.add(srv + "/timeshift/" + u + "/" + w + "/" + dur + "/" + stamp + "/" + streamId + ".m3u8")
+            out.add(srv + "/streaming/timeshift.php?username=" + u + "&password=" + w +
+                "&stream=" + enc(streamId) + "&start=" + enc(stamp) + "&duration=" + dur)
+            out.add(srv + "/timeshift.php?username=" + u + "&password=" + w +
+                "&stream=" + enc(streamId) + "&start=" + enc(stamp) + "&duration=" + dur)
+            return out.distinct()
+        }
+        if (pl.type != "stalker" || cmd.isBlank()) return out
         val base = try { Api.stalkerLink(pl, cmd, "live") } catch (e: Exception) { null }
-        if (base.isNullOrBlank()) return ""
-        return withArchiveParams(base, p)
+        if (base.isNullOrBlank()) return out
+        val clean = base.trim()
+        // Essai A : parametres utc et lutc - Ministra, Astra, Flussonic
+        out.add(withArchiveParams(clean, p))
+        val sep = if (clean.contains("?")) "&" else "?"
+        out.add(clean + sep + "utc=" + startSec + "&lutc=" + nowSec)
+        out.add(clean + sep + "utcstart=" + startSec + "&lutc=" + nowSec)
+        // Essai B : formats Flussonic timeshift_abs et archive
+        val noQuery = clean.substringBefore("?")
+        val slash = noQuery.lastIndexOf(chr47())
+        if (slash > 8) {
+            val root = noQuery.substring(0, slash)
+            out.add(root + "/timeshift_abs-" + startSec + ".m3u8")
+            out.add(root + "/timeshift_abs-" + startSec + ".ts")
+            out.add(root + "/archive-" + startSec + "-" + durSec + ".m3u8")
+            out.add(root + "/archive-" + startSec + "-" + durSec + ".ts")
+            out.add(root + "/index-" + startSec + "-" + durSec + ".m3u8")
+        }
+        return out.distinct()
     }
+
+    private fun chr47(): Char = 47.toChar()
+
+    // Test rapide : on demande les premiers octets. Une page d erreur (HTML / JSON)
+    // ou un code HTTP en erreur = URL refusee.
+    private fun probe(url: String): Boolean = try {
+        val req = Request.Builder().url(url)
+            .header("Range", "bytes=0-2048")
+            .header("User-Agent", "IPTVSmartersPro")
+            .build()
+        Api.imageClient().newCall(req).execute().use { r ->
+            val ct = (r.header("Content-Type") ?: "").lowercase()
+            val bad = ct.contains("html") || ct.contains("json") || ct.contains("/xml")
+            r.isSuccessful && !bad
+        }
+    } catch (e: Exception) { false }
 
     // Ajoute utc=<debut> & lutc=<maintenant> (+ duree) sans casser les parametres deja presents.
     private fun withArchiveParams(url: String, p: Prog): String {

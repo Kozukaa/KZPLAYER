@@ -151,12 +151,16 @@ class BrowseActivity : BaseActivity() {
     }
 
     private fun loadCategories() {
+        // v375 : plus jamais "Chargement des serveurs...". Si la session est vide
+        // (process relance par Android), on la restaure instantanement depuis le
+        // cache local, sans reseau et sans ecran d'attente.
+        if (Session.current == null && Session.playlists.isEmpty()) SessionCache.restore(this)
         val existing = Session.current ?: Session.playlists.firstOrNull()?.also { Session.current = it }
         if (existing == null) {
             // Session vide (appli relancee / process tue / retour tardif) : on recharge licence +
             // serveurs puis on reessaie, au lieu de laisser un ecran sans aucune categorie.
             setLoading(true)
-            msgTv.text = "Chargement des serveurs..."
+            msgTv.text = ""
             lifecycleScope.launch {
                 try {
                     val res = Api.checkLicense(
@@ -168,6 +172,7 @@ class BrowseActivity : BaseActivity() {
                         Session.playlists = res.playlists
                         Session.expiration = res.expiration
                         Session.current = Session.playlists.firstOrNull()
+                        SessionCache.save(this@BrowseActivity) // v375 : cache local des serveurs
                     }
                 } catch (e: Exception) {}
                 if (Session.current != null) loadCategories()

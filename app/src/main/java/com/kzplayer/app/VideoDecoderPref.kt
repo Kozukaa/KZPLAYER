@@ -16,7 +16,7 @@ import android.content.Context
 object VideoDecoderPref {
     private const val PREFS = "kz_player"
     private const val KEY = "video_decoder_mode"
-    const val AUTO = "auto"           // Logiciel prioritaire, materiel en secours
+    const val AUTO = "auto"           // v375 : materiel prioritaire, logiciel en secours
     const val SOFTWARE = "software"   // Force le decodeur logiciel
     const val HARDWARE = "hardware"   // Force le decodeur materiel (accel HW)
 
@@ -33,12 +33,12 @@ object VideoDecoderPref {
     fun label(value: String): String = when (value) {
         SOFTWARE -> "Logiciel (compatibilit\u00e9 maximale)"
         HARDWARE -> "Mat\u00e9riel (acc\u00e9l\u00e9ration GPU)"
-        else -> "Auto (logiciel prioritaire)"
+        else -> "Auto (mat\u00e9riel prioritaire)"
     }
 
     fun description(value: String): String = when (value) {
         SOFTWARE -> "Force le d\u00e9codeur logiciel. Idem si l'image reste fig\u00e9e."
         HARDWARE -> "Force le d\u00e9codeur mat\u00e9riel. Rapide mais peut figer sur certaines box."
-        else -> "Logiciel prioritaire, mat\u00e9riel en secours. Recommand\u00e9."
+        else -> "Mat\u00e9riel prioritaire, logiciel en secours. Image fluide. Recommand\u00e9."
     }
 }

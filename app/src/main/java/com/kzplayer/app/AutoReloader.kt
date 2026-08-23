@@ -25,6 +25,7 @@ object AutoReloader {
                     Session.playlists = res.playlists
                     Session.expiration = res.expiration
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) Session.current = Session.playlists.firstOrNull()
+                    SessionCache.save(app) // v375 : cache local des serveurs
                     prefs.edit().putLong(KEY_LAST, System.currentTimeMillis()).apply()
                     ok = true
                 }

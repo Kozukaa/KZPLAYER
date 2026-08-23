@@ -10,6 +10,9 @@ import kotlinx.coroutines.launch
 abstract class NtBase : BaseActivity() {
     protected fun ensureSession(onReady: () -> Unit) {
         if (Session.current != null) { onReady(); return }
+        // v375 : restauration instantanee des serveurs depuis le cache local
+        // (aucun reseau, aucun message d'attente).
+        if (SessionCache.restore(this)) { onReady(); return }
         val existing = Session.playlists.firstOrNull()
         if (existing != null) { Session.current = existing; onReady(); return }
         lifecycleScope.launch {
@@ -24,6 +27,7 @@ abstract class NtBase : BaseActivity() {
                     Session.playlists = res.playlists
                     Session.expiration = res.expiration
                     Session.current = res.playlists.firstOrNull()
+                    SessionCache.save(this@NtBase) // v375 : cache local des serveurs
                 }
             } catch (e: Exception) {}
             onReady()

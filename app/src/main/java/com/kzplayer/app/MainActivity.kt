@@ -54,6 +54,7 @@ class MainActivity : BaseActivity() {
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                         Session.current = Session.playlists.firstOrNull()
                     }
+                    SessionCache.save(this@MainActivity) // v375 : cache local des serveurs
                     startActivity(Intent(this@MainActivity, ThemePref.homeClass(this@MainActivity)))
                 } else if (LicenseGuard.wasRecentlyActive(this@MainActivity)) {
                     // Fenetre de grace : licence vue active il y a moins de 24h.

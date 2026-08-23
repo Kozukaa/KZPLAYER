@@ -75,6 +75,18 @@ class BrowseActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_browse)
         kind = intent.getStringExtra("kind") ?: "live"
+        // v379 : si l application s est fermee d un coup, on affiche ici la cause exacte
+        // (une seule fois). Photographie cette fenetre si elle apparait.
+        try {
+            val crashTxt = CrashLog.take(this)
+            if (!crashTxt.isNullOrBlank()) {
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Derniere erreur (a photographier)")
+                    .setMessage(crashTxt)
+                    .setPositiveButton("OK") { d, _ -> d.dismiss() }
+                    .show()
+            }
+        } catch (e: Throwable) {}
         findViewById<TextView>(R.id.titleTv).text = Session.browseTitle
 
         catRv = findViewById(R.id.catRv)

@@ -331,9 +331,7 @@ open class NewGuideActivity : NtBase() {
     private fun startInline(item: Item, url: String) {
         playingItem = item
         playingUrl = url
-        val chans = channels.filter { it.kind == "live" || it.kind == "channel" }
-        Session.liveChannels = chans
-        ZapList.set(chans, item)
+        Session.liveChannels = channels.filter { it.kind == "live" }
         heroImg.visibility = View.INVISIBLE
         heroPlayer?.visibility = View.VISIBLE
         buildAndPlay(url)
@@ -366,32 +364,15 @@ open class NewGuideActivity : NtBase() {
     }
 
     private fun openFullscreen(t: String, u: String, lg: String) {
-        // v373 : ON LIBERE L APERCU AVANT D OUVRIR LE PLEIN ECRAN.
-        // C etait la cause du plantage : l apercu du guide continuait a lire le flux
-        // pendant que le plein ecran en lancait un deuxieme (2 lecteurs + 2 decodeurs
-        // sur le meme flux). L appareil manquait de memoire et tuait l application
-        // apres quelques secondes : on retombait sur "Chargement des serveurs...".
-        try { inlinePlayer?.stop() } catch (e: Throwable) {}
-        try { inlinePlayer?.release() } catch (e: Throwable) {}
-        inlinePlayer = null
-        try { heroPlayer?.player = null } catch (e: Throwable) {}
         startActivity(
             Intent(this, PlayerActivity::class.java)
                 .putExtra("url", u).putExtra("title", t).putExtra("logo", lg)
                 .putExtra("historyKind", "live").putExtra("mode", "live")
-                .putExtra("zapIndex", Session.zapIndex)
         )
     }
 
     private fun openPreview(url: String, item: Item) {
-        val chans = channels.filter { it.kind == "live" || it.kind == "channel" }
-        Session.liveChannels = chans
-        ZapList.set(chans, item)
-        // v373 : idem, un seul lecteur a la fois.
-        try { inlinePlayer?.stop() } catch (e: Throwable) {}
-        try { inlinePlayer?.release() } catch (e: Throwable) {}
-        inlinePlayer = null
-        try { heroPlayer?.player = null } catch (e: Throwable) {}
+        Session.liveChannels = channels.filter { it.kind == "live" }
         startActivity(
             Intent(this, LivePreviewActivity::class.java)
                 .putExtra("url", url).putExtra("title", item.name)

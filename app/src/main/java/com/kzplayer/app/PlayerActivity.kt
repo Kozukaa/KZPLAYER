@@ -54,10 +54,6 @@ class PlayerActivity : AppCompatActivity() {
     // Recuperation audio VOD : si des pistes audio existent mais qu'aucune n'est selectionnee
     // (souvent une piste multicanal exclue par la limite stereo), on relache la limite une fois.
     private var audioRecoveryDone = false
-    // v352 : evite de lancer deux zappings en meme temps (touche maintenue).
-    private var zapBusy = false
-    // v353 : position de la chaine dans la categorie affichee (-1 = inconnue).
-    private var zapIdx = -1
 
     // Reconnexion automatique du direct (chaine qui se fige / coupe apres quelques minutes).
     private val recoveryHandler = Handler(Looper.getMainLooper())
@@ -66,73 +62,68 @@ class PlayerActivity : AppCompatActivity() {
     private var liveRetries = 0
     private var workingCandIdx = 0
     private var lastReconnectTs = 0L
-    // v372 : surveillance de l image figee, en DIRECT ET EN VOD.
-    // Correctif du bug v371 : le chien de garde se declenchait pendant le tampon normal
-    // (demarrage / petit trou reseau) -> la chaine se relancait sans arret. Maintenant on
-    // ne relance QUE si l image est vraiment morte :
-    //  - temps de grace apres chaque lancement / reconnexion,
-    //  - si le tampon se remplit encore, on ne touche a rien,
-    //  - seuils beaucoup plus tolerants.
-    private var playStartTs = 0L
-    private var lastBuffered = -1L
     private val stallWatchdog = object : Runnable {
         override fun run() {
-            try { tick() } catch (e: Throwable) {}
-            recoveryHandler.postDelayed(this, 2000)
-        }
-        private fun tick() {
             val p = player
-            if (p != null && p.playWhenReady && p.playbackState != Player.STATE_ENDED) {
+            if (p != null && isLiveMode && p.playWhenReady && p.playbackState != Player.STATE_ENDED) {
                 val now = SystemClock.elapsedRealtime()
                 val pos = p.currentPosition
-                val buffered = try { p.totalBufferedDuration } catch (e: Exception) { 0L }
-                // Chargement normal : on ne relance rien pendant 20 s apres un demarrage.
-                val grace = playStartTs == 0L || now - playStartTs < 20000L
-                // Le tampon avance = le serveur envoie des donnees = on laisse tourner.
-                val networkAlive = buffered > lastBuffered + 300L
-                lastBuffered = buffered
                 if (pos != lastPos) {
                     lastPos = pos
                     lastProgressTs = now
                     liveRetries = 0
-                } else if (networkAlive) {
-                    lastProgressTs = now
-                } else if (!grace) {
+                } else {
                     val stalled = now - lastProgressTs
                     val buffering = p.playbackState == Player.STATE_BUFFERING
-                    if (isLiveMode) {
-                        // Direct : image vraiment morte depuis 15 s -> nouveau lien.
-                        if (lastProgressTs > 0L && ((buffering && stalled > 15000L) || stalled > 20000L)) {
-                            reconnectLive()
-                        }
-                    } else {
-                        // Film / episode : on relance a la meme seconde, sans perdre la place.
-                        if (lastProgressTs > 0L && ((buffering && stalled > 25000L) || stalled > 35000L)) {
-                            resumeVod()
-                        }
+                    // Image figee / son coupe : la lecture n'avance plus depuis trop longtemps.
+                    if (lastProgressTs > 0L && ((buffering && stalled > 12000L) || stalled > 20000L)) {
+                        reconnectLive()
                     }
                 }
             }
+            recoveryHandler.postDelayed(this, 3000)
         }
     }
 
-    // v371 : reprise d un film / episode bloque, a la seconde ou il s est arrete.
-    private var lastVodResumeTs = 0L
-    private fun resumeVod() {
-        val p = player ?: return
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastVodResumeTs < 8000L) return
-        lastVodResumeTs = now
-        val at = p.currentPosition
-        lastPos = -1L
-        lastProgressTs = now
-        playStartTs = now
-        lastBuffered = -1L
-        try {
-            p.prepare()
-            if (at > 0L) p.seekTo(at)
-            p.play()
-        } catch (e: Exception) {}
+    // v380 : IMAGE FIGEE (le son continue, l image ne bouge plus).
+    // Aucune reconnexion, aucun rechargement, aucun rebuffer : on se contente de
+    // rebrancher l affichage sur le lecteur, ce qui recree la surface de dessin.
+    // La lecture ne s arrete pas une seule fois, le flux n est pas retelecharge.
+    private var lastFrames = -1L
+    private var lastFramesTs = 0L
+    private var surfaceKicks = 0
+    private val frozenImageWatchdog = object : Runnable {
+        override fun run() {
+            try {
+                val p = player
+                if (p != null && p.isPlaying && p.videoSize.width > 0) {
+                    val frames = try {
+                        (p.videoDecoderCounters?.renderedOutputBufferCount ?: 0).toLong()
+                    } catch (e: Throwable) { -1L }
+                    val now = SystemClock.elapsedRealtime()
+                    if (frames < 0L) {
+                        // Compteur indisponible : on ne fait rien du tout.
+                    } else if (frames != lastFrames) {
+                        // Des images arrivent : tout va bien, on remet le compteur a zero.
+                        lastFrames = frames
+                        lastFramesTs = now
+                        surfaceKicks = 0
+                    } else if (lastFramesTs > 0L && now - lastFramesTs > 5000L && surfaceKicks < 3) {
+                        // Plus aucune image depuis 5 s alors que la lecture tourne :
+                        // on rebranche juste l affichage.
+                        surfaceKicks++
+                        lastFramesTs = now
+                        try {
+                            playerView.player = null
+                            playerView.player = p
+                        } catch (e: Throwable) {}
+                    }
+                } else {
+                    lastFramesTs = SystemClock.elapsedRealtime()
+                }
+            } catch (e: Throwable) {}
+            recoveryHandler.postDelayed(this, 2000)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -171,15 +162,12 @@ class PlayerActivity : AppCompatActivity() {
         watchSourceCmd = intent.getStringExtra("historySourceCmd") ?: ""
         watchSourceStreamId = intent.getStringExtra("historySourceStreamId") ?: ""
         watchSourceContainerExt = intent.getStringExtra("historySourceContainerExt") ?: ""
-        // v353 : position exacte transmise par l ecran d origine (zapping).
-        zapIdx = intent.getIntExtra("zapIndex", -1)
         // Lecture a la suite : on ne conserve la file d'episodes que si on vient d'une liste d'episodes.
         if (!intent.getBooleanExtra("queued", false)) { Session.episodeQueue = emptyList(); Session.episodeIndex = -1 }
         // mode = "live" par defaut ; "vod" pour films/episodes.
         // Securite : on detecte aussi automatiquement les VOD par URL, au cas ou un ecran
         // n'envoie pas l'extra mode=vod (ex: series M3U /series/... ou fichiers mp4/mkv/avi).
         val mode = intent.getStringExtra("mode") ?: "live"
-        forcedMime = intent.getStringExtra("mime") ?: ""
         val lowerUrl = url.lowercase()
         val pathOnly = lowerUrl.substringBefore('?')
         val looksVod = lowerUrl.contains("/series/") || lowerUrl.contains("/movie/") ||
@@ -225,23 +213,11 @@ class PlayerActivity : AppCompatActivity() {
             // Xtream / M3U : UA VLC (accepte par la quasi-totalite des panels IPTV).
             "VLC/3.0.20 LibVLC/3.0.20"
         }
-        // v345 : bande-annonce YouTube -> User-Agent impose par le resolveur YtStream.
-        val forcedUa = intent.getStringExtra("forceUa")?.takeIf { it.isNotBlank() }
-        val httpFactory = KzHttpDataSource.factory(this, userAgent = forcedUa ?: streamUa, allowCrossProtocolRedirects = true)
-        // v368 : fichier telecharge sur l appareil -> lecture locale (hors ligne).
-        val isLocalFile = url.startsWith("file:") || url.startsWith("/") ||
-            url.startsWith("content:")
-        val srcFactory: androidx.media3.datasource.DataSource.Factory =
-            if (isLocalFile) androidx.media3.datasource.DefaultDataSource.Factory(this)
-            else httpFactory
-        // v371 : un morceau de flux qui repond mal est reessaye plusieurs fois
-        // au lieu de figer l image tout de suite.
-        val errPolicy = androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy(6)
+        val httpFactory = KzHttpDataSource.factory(this, userAgent = streamUa, allowCrossProtocolRedirects = true)
         val mediaSourceFactory = if (isVod) {
             // Films / episodes : lecteur VOD standard. Pas de flags TS live, sinon certains VOD
             // chargent la duree mais restent figes sans son.
-            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(srcFactory)
-                .setLoadErrorHandlingPolicy(errPolicy)
+            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory)
         } else {
             // Live IPTV : beaucoup de flux sont du MPEG-TS brut sans IDR/AUD.
             val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
@@ -249,8 +225,7 @@ class PlayerActivity : AppCompatActivity() {
                     androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
                         androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
                 )
-            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(srcFactory, extractors)
-                .setLoadErrorHandlingPolicy(errPolicy)
+            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
         }
         // v147 : usine de renderers KZ qui donne la priorite au decodeur video LOGICIEL
         // (fixe l'image figee sur les box dont le decodeur materiel plante silencieusement).
@@ -272,10 +247,6 @@ class PlayerActivity : AppCompatActivity() {
 
         val playerBuilder = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
-            // v372 : le setWakeMode n est PLUS pose ici. En v371 il etait dans le builder
-            // sans la permission WAKE_LOCK -> l appli plantait au bout de ~3 s de lecture.
-            // Il est maintenant applique apres construction, protege par un try/catch :
-            // meme si le boitier refuse le wake lock, la lecture continue normalement.
         val loadControl = if (isVod) {
             // VOD/films/series : buffer equilibre.
             // v38 etait tres stable mais un peu lent au demarrage ; ici on garde assez de marge
@@ -285,17 +256,8 @@ class PlayerActivity : AppCompatActivity() {
                 .build()
         } else {
             // Live TV / zapping : buffer court pour demarrer vite et reduire la latence.
-            // v359 : le buffer de 1,5 s etait trop juste sur les serveurs lents :
-            // au premier trou de reseau l image se figeait. On garde un demarrage rapide
-            // (1,2 s avant de lancer l image) mais on remplit jusqu a 30 s d avance.
-            // v373 : CORRECTION SACCADES. Le reglage v372 (tampon arriere de 10 s,
-            // priorite au temps sur la taille, taille de tampon illimitee) saturait
-            // la memoire des boitiers : image au ralenti et tres saccadee.
-            // On revient a un tampon simple et leger, avec juste assez d avance
-            // (2,5 s avant de lancer l image, 30 s d avance max) pour absorber les
-            // trous reseau sans figer et sans saccader.
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(2500, 30000, 2500, 3000)
+                .setBufferDurationsMs(1500, 8000, 500, 1000)
                 .build()
         }
         playerBuilder.setLoadControl(loadControl)
@@ -314,9 +276,6 @@ class PlayerActivity : AppCompatActivity() {
             true
         )
         p.volume = 1.0f
-        // v372 : garde le reseau actif pendant la lecture, mais SANS jamais faire planter
-        // l appli si la permission ou le boitier ne le permet pas.
-        try { p.setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK) } catch (e: Throwable) {}
         if (isVod) {
             // Optimisation audio VOD : si plusieurs pistes existent, ExoPlayer prefere une piste compatible
             // avec peu de canaux (stereo) plutot qu'une piste 5.1/DTS que le boitier ne sort pas.
@@ -403,9 +362,7 @@ class PlayerActivity : AppCompatActivity() {
                     val u = candidates.getOrNull(candIdx) ?: ""
                     // Fenetre lisible (au lieu d'un toast fugace) avec le diagnostic complet :
                     // l'utilisateur peut lire / photographier l'URL exacte et la reponse du serveur.
-                    // v356 : diagnostic technique reserve aux licences administrateur.
-                    val diag = if (Session.current?.type == "stalker" && Api.lastStreamLog.isNotBlank() &&
-                        AdminMode.diagEnabled(this@PlayerActivity))
+                    val diag = if (Session.current?.type == "stalker" && Api.lastStreamLog.isNotBlank())
                         "\n\n--- Diagnostic ---\n${Api.lastStreamLog}" else ""
                     androidx.appcompat.app.AlertDialog.Builder(this@PlayerActivity)
                         .setTitle("Lecture impossible : $detail")
@@ -417,8 +374,10 @@ class PlayerActivity : AppCompatActivity() {
         })
         playCurrent()
         lastProgressTs = SystemClock.elapsedRealtime()
-        // v371 : la surveillance tourne aussi sur les films et les episodes.
-        recoveryHandler.postDelayed(stallWatchdog, 2000)
+        if (isLiveMode) recoveryHandler.postDelayed(stallWatchdog, 3000)
+        // v380 : surveillance de l image (direct ET films/series). Ne touche pas au flux.
+        lastFramesTs = SystemClock.elapsedRealtime()
+        recoveryHandler.postDelayed(frozenImageWatchdog, 4000)
     }
 
     private fun playCurrent() {
@@ -430,11 +389,6 @@ class PlayerActivity : AppCompatActivity() {
         p.playWhenReady = true
         p.prepare()
         p.play()
-        // v372 : depart du temps de grace (aucune relance pendant le chargement).
-        playStartTs = SystemClock.elapsedRealtime()
-        lastBuffered = -1L
-        lastPos = -1L
-        lastProgressTs = playStartTs
     }
 
     // Lecture a la suite : a la fin d'un episode, on enchaine automatiquement sur le suivant
@@ -478,16 +432,8 @@ class PlayerActivity : AppCompatActivity() {
 
     // ---- Sous-titres externes multilangues (OpenSubtitles) ----
     // Construit le MediaItem en y greffant, si demande, une piste de sous-titres externe.
-    // v365 : type de flux detecte par ReplayApi (HLS ou MPEG-TS). Sans lui, ExoPlayer
-    // devine avec l extension et echoue en ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED.
-    private var forcedMime: String = ""
-
     private fun buildMediaItem(u: String): MediaItem {
         val b = MediaItem.Builder().setUri(Uri.parse(u))
-        val fm = if (forcedMime.isNotBlank()) forcedMime
-            else if (u.contains(".m3u8")) "application/x-mpegURL"
-            else ""
-        if (fm.isNotBlank()) b.setMimeType(fm)
         val sub = currentSubUrl
         if (!sub.isNullOrBlank()) {
             val mime = when (currentSubFormat.lowercase()) {
@@ -659,21 +605,13 @@ class PlayerActivity : AppCompatActivity() {
         val p = player ?: return
         if (!isLiveMode) return
         val now = SystemClock.elapsedRealtime()
-        // v372 : plus de reconnexions en boucle (10 s minimum entre deux essais) et on
-        // reste sur la variante d URL qui fonctionnait au lieu de changer sans arret.
-        if (now - lastReconnectTs < 10000L) return
+        if (now - lastReconnectTs < 5000L) return
         lastReconnectTs = now
         liveRetries++
-        if (liveRetries > 30) return
-        val safeMax = (candidates.size - 1).coerceAtLeast(0)
-        candIdx = if (liveRetries >= 3 && liveRetries % 3 == 0 && candidates.size > 1)
-            (candIdx + 1) % candidates.size
-        else
-            workingCandIdx.coerceIn(0, safeMax)
+        if (liveRetries > 12) return
+        candIdx = workingCandIdx.coerceIn(0, (candidates.size - 1).coerceAtLeast(0))
         lastPos = -1L
         lastProgressTs = now
-        playStartTs = now
-        lastBuffered = -1L
         playCurrent()
     }
 
@@ -748,9 +686,6 @@ class PlayerActivity : AppCompatActivity() {
                 showTopBarTemporarily()
                 when (event.keyCode) {
                     KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> return super.dispatchKeyEvent(event)
-                    // v352 : zapping a la telecommande, dans tous les themes.
-                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_UP -> { zap(1); return true }
-                    KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_CHANNEL_DOWN -> { zap(-1); return true }
                     KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE,
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
                     KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
@@ -784,78 +719,6 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
         return super.dispatchKeyEvent(event)
-    }
-
-    /**
-     * v352 : zapping fleche haut / fleche bas pendant le direct.
-     *
-     * La liste des chaines est celle affichee avant la lecture (Session.liveChannels),
-     * donc le zapping suit l ordre de la categorie en cours, dans tous les themes.
-     * On relance proprement la lecture avec la chaine voisine ; le moteur du lecteur
-     * n est pas modifie.
-     */
-    private fun zap(delta: Int) {
-        if (!isLiveMode || zapBusy) return
-        // On zappe UNIQUEMENT dans la categorie affichee avant la lecture.
-        val chans = Session.zapChannels
-        if (chans.size < 2) {
-            Toast.makeText(this, "Zapping indisponible : ouvre la chaine depuis une categorie.", Toast.LENGTH_SHORT).show()
-            return
-        }
-        var cur = zapIdx
-        if (cur !in chans.indices) cur = ZapList.indexOf(watchTitle, watchSourceStreamId, watchSourceCmd)
-        if (cur !in chans.indices) cur = 0
-        val n = chans.size
-        val nextIdx = ((cur + delta) % n + n) % n
-        val target = chans[nextIdx]
-        zapIdx = nextIdx
-        Session.zapIndex = nextIdx
-        zapBusy = true
-        showTopBarTemporarily()
-        Toast.makeText(this, target.name, Toast.LENGTH_SHORT).show()
-        val pl = Session.current
-        if (pl != null && pl.type == "stalker") {
-            val cmd = target.cmd
-            if (cmd.isNullOrBlank()) {
-                zapBusy = false
-                Toast.makeText(this, "Flux indisponible pour cette chaine.", Toast.LENGTH_SHORT).show()
-                return
-            }
-            lifecycleScope.launch {
-                val link = try { Api.stalkerLink(pl, cmd, "live") } catch (e: Exception) { null }
-                if (link.isNullOrBlank()) {
-                    zapBusy = false
-                    Toast.makeText(this@PlayerActivity, "Impossible d obtenir le flux.", Toast.LENGTH_SHORT).show()
-                } else {
-                    openChannel(link, target)
-                }
-            }
-            return
-        }
-        val url = target.directUrl
-        if (url.isNullOrBlank()) {
-            zapBusy = false
-            Toast.makeText(this, "Flux indisponible pour cette chaine.", Toast.LENGTH_SHORT).show()
-            return
-        }
-        openChannel(url, target)
-    }
-
-    /** Relance le lecteur sur la chaine voisine, sans animation ni retour au menu. */
-    private fun openChannel(url: String, target: Item) {
-        startActivity(
-            android.content.Intent(this, PlayerActivity::class.java)
-                .putExtra("url", url)
-                .putExtra("title", target.name)
-                .putExtra("logo", target.logo)
-                .putExtra("historyKind", "live")
-                .putExtra("mode", "live")
-                .putExtra("historySourceStreamId", target.streamId ?: "")
-                .putExtra("historySourceCmd", target.cmd ?: "")
-                .putExtra("zapIndex", zapIdx)
-        )
-        overridePendingTransition(0, 0)
-        finish()
     }
 
     // Affiche la barre du haut puis la masque apres 4 s (utilise en direct).

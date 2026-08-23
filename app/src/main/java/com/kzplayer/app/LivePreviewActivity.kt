@@ -151,12 +151,9 @@ class LivePreviewActivity : BaseActivity() {
         // v148 : meme fix que le plein ecran (decodeur video logiciel prioritaire
         // pour ne pas rester fige sur la premiere frame sur les box TV cassees).
         val renderersFactory = KzRenderersFactory(this)
-            // v378 : les decodeurs logiciels ne passent qu en secours (la puce video d abord).
-            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            // v378 : memes reserves que le lecteur plein ecran fluide (avant, l apercu
-            // demarrait avec une toute petite reserve -> saccades des que le debit bougeait).
-            .setBufferDurationsMs(2500, 30000, 2500, 3000)
+            .setBufferDurationsMs(1500, 8000, 500, 1000)
             .build()
         val p = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
@@ -227,10 +224,6 @@ class LivePreviewActivity : BaseActivity() {
         title = item.name
         titleTv.text = title
         streamId = item.streamId ?: ""
-        logo = item.logo
-        // v353 : on suit la position dans la categorie pour le zapping plein ecran.
-        if (Session.zapChannels.isEmpty()) ZapList.set(channels, item)
-        else Session.zapIndex = ZapList.indexOf(Session.zapChannels, item)
         val direct = item.directUrl
         val pl = Session.current
         if (!direct.isNullOrBlank()) {
@@ -246,100 +239,17 @@ class LivePreviewActivity : BaseActivity() {
         }
     }
 
-    // v377 : PLEIN ECRAN SANS CHANGER D ECRAN.
-    // Avant, la bascule fermait l apercu et ouvrait un deuxieme ecran (le lecteur),
-    // qui rouvrait un deuxieme decodeur video et relisait le flux depuis le debut.
-    // Sur les box, le decodeur refusait -> l application se fermait d un coup et on
-    // revenait aux categories. Maintenant on ne change plus d ecran : on agrandit
-    // simplement l image a tout l ecran et le MEME lecteur continue de jouer, sans
-    // coupure, sans nouveau decodeur, sans relire le flux (important pour Stalker
-    // dont le lien n est valable qu une fois).
-    private var fsOn = false
-
     private fun openFullscreen() {
-        if (fsOn) return
-        fsOn = true
         autoFsDone = true
         uiHandler.removeCallbacks(autoFsRunnable)
-        try {
-            // On masque tout ce qui entoure l image (titre, programme, guide) et on
-            // etire le lecteur sur toute la surface, niveau par niveau.
-            var child: View = playerView
-            var par = child.parent
-            while (par is ViewGroup) {
-                val vg: ViewGroup = par
-                var i = 0
-                while (i < vg.childCount) {
-                    val c = vg.getChildAt(i)
-                    if (c !== child) c.visibility = View.GONE
-                    i++
-                }
-                vg.setPadding(0, 0, 0, 0)
-                vg.setBackgroundColor(0xFF000000.toInt())
-                val lp = child.layoutParams
-                if (lp is LinearLayout.LayoutParams) {
-                    lp.width = ViewGroup.LayoutParams.MATCH_PARENT
-                    lp.height = 0
-                    lp.weight = 1f
-                    lp.setMargins(0, 0, 0, 0)
-                    child.layoutParams = lp
-                } else if (lp != null) {
-                    lp.width = ViewGroup.LayoutParams.MATCH_PARENT
-                    lp.height = ViewGroup.LayoutParams.MATCH_PARENT
-                    child.layoutParams = lp
-                }
-                if (vg.id == android.R.id.content) break
-                child = vg
-                par = vg.parent
-            }
-            playerView.setBackgroundColor(0xFF000000.toInt())
-            playerView.useController = true
-            playerView.requestFocus()
-            // v378 : ECRAN NOIR AVEC LE SON. En s agrandissant, la vue perdait la surface
-            // sur laquelle l image est dessinee : le son continuait, l image disparaissait.
-            // Une fois le nouveau format applique, on rebranche le lecteur sur la vue :
-            // l image revient immediatement et la lecture n est pas coupee.
-            playerView.post {
-                try {
-                    val p = player
-                    if (p != null) {
-                        playerView.player = null
-                        playerView.player = p
-                        if (!p.isPlaying) { p.playWhenReady = true; p.play() }
-                    }
-                } catch (e: Throwable) {}
-            }
-            // v378 : on coupe le guide TV en plein ecran. Il continuait a telecharger les
-            // programmes de toutes les chaines en arriere-plan pendant la lecture : c est
-            // une des causes des saccades.
-            try {
-                epgRv.adapter = null
-                epgRv.visibility = View.GONE
-                epgData.clear()
-            } catch (e: Throwable) {}
-            // Barres systeme cachees, comme un vrai plein ecran.
-            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
-            val ctl = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
-            ctl.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            ctl.systemBarsBehavior =
-                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        } catch (e: Throwable) {
-            // Meme en cas de souci d affichage, la lecture continue : on ne ferme rien.
-        }
-        // Historique : la chaine est marquee comme regardee, comme avant.
-        try { WatchHistory.touch(this, url, title, logo, "live") } catch (e: Throwable) {}
-    }
-
-    // RETOUR : en plein ecran on repasse a l apercu (sans couper la lecture) ;
-    // sur l apercu, on revient a la liste des chaines.
-    override fun onBackPressed() {
-        if (fsOn) { recreatePreviewFromFullscreen(); return }
-        super.onBackPressed()
-    }
-
-    private fun recreatePreviewFromFullscreen() {
-        // On quitte simplement l ecran : le lecteur est libere proprement par onStop.
-        finish()
+        startActivity(
+            Intent(this, PlayerActivity::class.java)
+                .putExtra("url", url)
+                .putExtra("title", title)
+                .putExtra("logo", logo)
+                .putExtra("historyKind", "live")
+                .putExtra("mode", "live")
+        )
     }
 
     override fun onStop() {

@@ -126,6 +126,16 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+
+    // v382 : detecte les chaines Full HD (categorie FHD, nom contenant FHD / 1080 /
+    // FULL HD). Sert uniquement a choisir le decodeur video. Aucune autre incidence.
+    private fun estFullHd(nom: String): Boolean {
+        val t = (nom + " " + (try { Session.browseTitle } catch (e: Throwable) { "" }))
+            .uppercase()
+        return t.contains("FHD") || t.contains("1080") ||
+            t.contains("FULL HD") || t.contains("FULLHD")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Plein ecran paysage
@@ -230,7 +240,7 @@ class PlayerActivity : AppCompatActivity() {
         // v147 : usine de renderers KZ qui donne la priorite au decodeur video LOGICIEL
         // (fixe l'image figee sur les box dont le decodeur materiel plante silencieusement).
         // setEnableDecoderFallback(true) est deja active dans KzRenderersFactory.
-        val renderersFactory = KzRenderersFactory(this)
+        val renderersFactory = KzRenderersFactory(this, estFullHd(title))
             // CORRECTION SYNC SON/IMAGE (v86) :
             // - VOD/series : EXTENSION_RENDERER_MODE_ON => on prefere le decodeur AUDIO MATERIEL
             //   (AAC/H264 parfaitement synchronises). Avant, le mode PREFER forcait FFmpeg logiciel

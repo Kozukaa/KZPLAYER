@@ -47,6 +47,16 @@ class LivePreviewActivity : BaseActivity() {
     private var autoFsDone = false
     private val autoFsRunnable = Runnable { openFullscreen() }
 
+
+    // v382 : detecte les chaines Full HD (categorie FHD, nom contenant FHD / 1080 /
+    // FULL HD). Sert uniquement a choisir le decodeur video. Aucune autre incidence.
+    private fun estFullHd(nom: String): Boolean {
+        val t = (nom + " " + (try { Session.browseTitle } catch (e: Throwable) { "" }))
+            .uppercase()
+        return t.contains("FHD") || t.contains("1080") ||
+            t.contains("FULL HD") || t.contains("FULLHD")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // v154 : sur telephone (sw<600dp) on laisse l'orientation naturelle du device.
@@ -150,7 +160,7 @@ class LivePreviewActivity : BaseActivity() {
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
         // v148 : meme fix que le plein ecran (decodeur video logiciel prioritaire
         // pour ne pas rester fige sur la premiere frame sur les box TV cassees).
-        val renderersFactory = KzRenderersFactory(this)
+        val renderersFactory = KzRenderersFactory(this, estFullHd(title))
             .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(1500, 8000, 500, 1000)

@@ -28,7 +28,16 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 //   on change seulement l'ORDRE de selection des decodeurs video.
 // - setEnableDecoderFallback(true) est conserve : si le decodeur choisi
 //   echoue a l'init, ExoPlayer bascule automatiquement sur le suivant.
-class KzRenderersFactory(private val ctx: Context) : DefaultRenderersFactory(ctx) {
+// v382 : parametre forceHardware. Utilise UNIQUEMENT pour les chaines Full HD
+// (1080p), qui saccadent avec le decodeur logiciel car elles demandent trop de
+// calcul. Pour toutes les autres chaines, rien ne change : le decodeur logiciel
+// reste prioritaire comme avant (c est lui qui evite l image figee).
+// Le logiciel reste place juste derriere en secours, et setEnableDecoderFallback(true)
+// bascule dessus automatiquement si le materiel refuse le flux.
+class KzRenderersFactory(
+    private val ctx: Context,
+    private val forceHardware: Boolean = false
+) : DefaultRenderersFactory(ctx) {
 
     init {
         // Repli automatique sur un autre decodeur en cas d'echec d'init.
@@ -55,6 +64,11 @@ class KzRenderersFactory(private val ctx: Context) : DefaultRenderersFactory(ctx
 
                 val sw = all.filter { it.softwareOnly }
                 val hw = all.filter { !it.softwareOnly }
+
+                // v382 : chaine Full HD -> materiel d abord (fluidite), logiciel en secours.
+                if (forceHardware && VideoDecoderPref.current(ctx) != VideoDecoderPref.SOFTWARE) {
+                    return if (hw.isNotEmpty()) hw + sw else all
+                }
 
                 return when (VideoDecoderPref.current(ctx)) {
                     VideoDecoderPref.HARDWARE -> {

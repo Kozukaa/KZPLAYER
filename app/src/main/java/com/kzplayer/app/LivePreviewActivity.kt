@@ -151,9 +151,12 @@ class LivePreviewActivity : BaseActivity() {
         // v148 : meme fix que le plein ecran (decodeur video logiciel prioritaire
         // pour ne pas rester fige sur la premiere frame sur les box TV cassees).
         val renderersFactory = KzRenderersFactory(this)
-            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            // v378 : les decodeurs logiciels ne passent qu en secours (la puce video d abord).
+            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(1500, 8000, 500, 1000)
+            // v378 : memes reserves que le lecteur plein ecran fluide (avant, l apercu
+            // demarrait avec une toute petite reserve -> saccades des que le debit bougeait).
+            .setBufferDurationsMs(2500, 30000, 2500, 3000)
             .build()
         val p = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
@@ -292,6 +295,28 @@ class LivePreviewActivity : BaseActivity() {
             playerView.setBackgroundColor(0xFF000000.toInt())
             playerView.useController = true
             playerView.requestFocus()
+            // v378 : ECRAN NOIR AVEC LE SON. En s agrandissant, la vue perdait la surface
+            // sur laquelle l image est dessinee : le son continuait, l image disparaissait.
+            // Une fois le nouveau format applique, on rebranche le lecteur sur la vue :
+            // l image revient immediatement et la lecture n est pas coupee.
+            playerView.post {
+                try {
+                    val p = player
+                    if (p != null) {
+                        playerView.player = null
+                        playerView.player = p
+                        if (!p.isPlaying) { p.playWhenReady = true; p.play() }
+                    }
+                } catch (e: Throwable) {}
+            }
+            // v378 : on coupe le guide TV en plein ecran. Il continuait a telecharger les
+            // programmes de toutes les chaines en arriere-plan pendant la lecture : c est
+            // une des causes des saccades.
+            try {
+                epgRv.adapter = null
+                epgRv.visibility = View.GONE
+                epgData.clear()
+            } catch (e: Throwable) {}
             // Barres systeme cachees, comme un vrai plein ecran.
             androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
             val ctl = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)

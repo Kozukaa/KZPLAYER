@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- v145 : telechargement + installation en direct des mises a jour -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- v372 : telechargeur interne des films/series (service au premier plan).
+         Le gestionnaire Android bouclait sur "En attente pour reessayer". -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Compatibilite Android TV / boitier : ces materiels n'ont pas d'ecran tactile -->
     <uses-feature
@@ -29,6 +34,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.KZ"
         android:usesCleartextTraffic="true">
+
+        <!-- v372 : telechargeur interne KZ Player (reprise a l octet + lien rafraichi) -->
+        <service
+            android:name=".DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <activity
             android:name=".MainActivity"

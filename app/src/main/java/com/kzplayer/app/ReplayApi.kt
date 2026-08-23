@@ -1,6 +1,8 @@
 package com.kzplayer.app
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.json.JSONArray
@@ -75,14 +77,20 @@ object ReplayApi {
         val now = System.currentTimeMillis()
         // v361 : on remonte jusqu a 8 jours en arriere (avant : 3 jours).
         val floor = now - 8L * 24L * 3600L * 1000L
+        val off = serverOffsetMs(pl)
         val out = ArrayList<Prog>()
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
             val title = maybeBase64(o.optString("title").ifBlank { o.optString("name") })
             if (title.isBlank()) continue
             val desc = maybeBase64(o.optString("description").ifBlank { o.optString("descr") })
-            val start = (o.optString("start_timestamp").toLongOrNull() ?: 0L) * 1000L
-            val stop = (o.optString("stop_timestamp").ifBlank { o.optString("end_timestamp") }.toLongOrNull() ?: 0L) * 1000L
+            var start = (o.optString("start_timestamp").toLongOrNull() ?: 0L) * 1000L
+            var stop = (o.optString("stop_timestamp").ifBlank { o.optString("end_timestamp") }.toLongOrNull() ?: 0L) * 1000L
+            // v366 : horaires exacts. Les champs texte du serveur sont convertis avec
+            // son fuseau, ce qui evite les heures decalees affichees dans le replay.
+            val ps = parseServerTime(o.optString("start"), off)
+            val pe = parseServerTime(o.optString("end").ifBlank { o.optString("stop") }, off)
+            if (ps > 0L && pe > ps) { start = ps; stop = pe }
             if (start <= 0L || stop <= start) continue
             if (stop > now) continue
             if (start < floor) continue
@@ -191,23 +199,46 @@ object ReplayApi {
 
     suspend fun archiveUrl(pl: Playlist, streamId: String, cmd: String, p: Prog): String =
         withContext(Dispatchers.IO) {
-            val cands = archiveCandidates(pl, streamId, cmd, p)
-            if (cands.isEmpty()) {
-                lastArchiveLog = "Aucune URL d archive possible pour cette chaine."
-                return@withContext ""
-            }
-            val tried = ArrayList<String>()
-            for (u in cands) {
-                val r = probe(u, p.startMs)
-                tried.add(r.tag + "  " + u)
-                if (r.ok) {
-                    lastArchiveMime = r.mime
-                    lastArchiveLog = tried.joinToString(System.lineSeparator())
-                    return@withContext u
+            val startSec = p.startMs / 1000L
+            val durSec = ((p.endMs - p.startMs) / 1000L).coerceAtLeast(60L)
+            // v366 STALKER : le portail donne lui-meme le lien de l enregistrement.
+            // Ces liens sont a usage unique (play_token) : les tester avant lecture les
+            // grillait et rendait le lancement tres long. On les joue donc directement.
+            if (pl.type == "stalker") {
+                val direct = try {
+                    Api.stalkerArchiveLinks(pl, streamId, cmd, startSec, durSec)
+                } catch (e: Exception) { emptyList<String>() }
+                val first = direct.firstOrNull { it.isNotBlank() }
+                if (first != null) {
+                    lastArchiveMime = if (first.contains(".m3u8")) "application/x-mpegURL" else ""
+                    lastArchiveLog = "Lien archive donne par le portail (joue direct) :" +
+                        System.lineSeparator() + first + System.lineSeparator() +
+                        Api.lastArchiveStalkerLog
+                    return@withContext first
                 }
             }
-            lastArchiveMime = ""
+            val cands = archiveCandidates(pl, streamId, cmd, p)
+            if (cands.isEmpty()) {
+                lastArchiveMime = ""
+                lastArchiveLog = "Aucune URL d archive possible pour cette chaine." +
+                    System.lineSeparator() + Api.lastArchiveStalkerLog
+                return@withContext ""
+            }
+            // v366 : tous les candidats sont testes EN MEME TEMPS (avant : un par un,
+            // ce qui pouvait prendre 30 s). On garde le meilleur dans l ordre de priorite.
+            val results = coroutineScope {
+                cands.map { u -> async(Dispatchers.IO) { Pair(u, probe(u, p.startMs)) } }
+                    .map { it.await() }
+            }
+            val tried = ArrayList<String>()
+            for (pair in results) tried.add(pair.second.tag + "  " + pair.first)
             lastArchiveLog = tried.joinToString(System.lineSeparator())
+            val good = results.firstOrNull { it.second.ok }
+            if (good != null) {
+                lastArchiveMime = good.second.mime
+                return@withContext good.first
+            }
+            lastArchiveMime = ""
             ""
         }
 
@@ -219,15 +250,19 @@ object ReplayApi {
         val startSec = p.startMs / 1000L
         val nowSec = System.currentTimeMillis() / 1000L
         val durSec = ((p.endMs - p.startMs) / 1000L).coerceAtLeast(60L)
-        val stamp = try {
+        // v366 : les URL timeshift Xtream attendent l heure LOCALE DU SERVEUR.
+        // Avant on envoyait l heure de la box : on tombait a cote (mauvaise emission).
+        val stamp = if (pl.type == "xtream") serverStamp(pl, p.startMs) else try {
             SimpleDateFormat("yyyy-MM-dd:HH-mm", Locale.US).format(Date(p.startMs))
         } catch (e: Exception) { "" }
         if (pl.type == "xtream") {
             if (streamId.isBlank()) return out
             val u = enc(pl.username)
             val w = enc(pl.password)
-            out.add(srv + "/timeshift/" + u + "/" + w + "/" + dur + "/" + stamp + "/" + streamId + ".ts")
+            // HLS (.m3u8) en premier : demarrage plus rapide et son beaucoup plus fiable
+            // que le .ts brut (certains serveurs y mettent un son que la TV ne lit pas).
             out.add(srv + "/timeshift/" + u + "/" + w + "/" + dur + "/" + stamp + "/" + streamId + ".m3u8")
+            out.add(srv + "/timeshift/" + u + "/" + w + "/" + dur + "/" + stamp + "/" + streamId + ".ts")
             out.add(srv + "/streaming/timeshift.php?username=" + u + "&password=" + w +
                 "&stream=" + enc(streamId) + "&start=" + enc(stamp) + "&duration=" + dur)
             out.add(srv + "/timeshift.php?username=" + u + "&password=" + w +
@@ -239,14 +274,8 @@ object ReplayApi {
                 "&lutc=" + nowSec)
             return out.distinct()
         }
-        if (pl.type != "stalker") return out
-        // v365 : ETAPE 1 - le vrai protocole d archive du portail (tv_archive).
-        val real = try {
-            Api.stalkerArchiveLinks(pl, streamId, cmd, startSec, durSec)
-        } catch (e: Exception) { emptyList<String>() }
-        for (u in real) if (u.isNotBlank() && !out.contains(u)) out.add(u)
-        if (cmd.isBlank()) return out.distinct()
-        // ETAPE 2 - repli : lien de la chaine + parametres d archive.
+        if (pl.type != "stalker" || cmd.isBlank()) return out
+        // Repli Stalker : lien de la chaine + parametres d archive.
         val base = try { Api.stalkerLink(pl, cmd, "live") } catch (e: Exception) { null }
         if (base.isNullOrBlank()) return out.distinct()
         val clean = base.trim()
@@ -271,6 +300,55 @@ object ReplayApi {
 
     private fun chr47(): Char = 47.toChar()
 
+    // ---- v366 : heure du serveur ----
+    // Le guide Xtream et les URL timeshift sont exprimes dans le fuseau du SERVEUR.
+    // On calcule une fois le decalage serveur/UTC, puis on convertit tout proprement.
+    private val srvOffset = HashMap<String, Long>()
+
+    private fun serverOffsetMs(pl: Playlist): Long {
+        val key = pl.serverUrl + "|" + pl.username
+        val known = srvOffset[key]
+        if (known != null) return known
+        var off = 0L
+        try {
+            val url = pl.serverUrl.trimEnd(chr47()) + "/player_api.php?username=" +
+                enc(pl.username) + "&password=" + enc(pl.password)
+            val txt = Api.imageClient().newCall(Request.Builder().url(url).build())
+                .execute().use { it.body?.string() ?: "" }
+            val si = JSONObject(txt).optJSONObject("server_info")
+            if (si != null) {
+                var ts = si.optString("timestamp_now").toLongOrNull() ?: 0L
+                if (ts <= 0L) ts = si.optLong("timestamp_now", 0L)
+                val timeNow = si.optString("time_now").trim()
+                if (ts > 0L && timeNow.isNotBlank()) {
+                    val f = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+                    f.timeZone = java.util.TimeZone.getTimeZone("GMT")
+                    val asUtc = try { f.parse(timeNow)?.time ?: 0L } catch (e: Exception) { 0L }
+                    if (asUtc > 0L) off = ((asUtc - ts * 1000L) / 60000L) * 60000L
+                }
+            }
+        } catch (e: Exception) {}
+        srvOffset[key] = off
+        return off
+    }
+
+    // Horodatage attendu par les URL timeshift : heure locale du serveur.
+    private fun serverStamp(pl: Playlist, ms: Long): String = try {
+        val f = SimpleDateFormat("yyyy-MM-dd:HH-mm", Locale.US)
+        f.timeZone = java.util.TimeZone.getTimeZone("GMT")
+        f.format(Date(ms + serverOffsetMs(pl)))
+    } catch (e: Exception) { "" }
+
+    // "2026-08-23 21:00:00" (heure serveur) -> vraie heure universelle.
+    private fun parseServerTime(txt: String, offsetMs: Long): Long = try {
+        if (txt.isBlank()) 0L else {
+            val f = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+            f.timeZone = java.util.TimeZone.getTimeZone("GMT")
+            val t = f.parse(txt.trim())?.time ?: 0L
+            if (t > 0L) t - offsetMs else 0L
+        }
+    } catch (e: Exception) { 0L }
+
     // v365 : controle de l archive, souple mais sur.
     // On accepte tout ce qui est de la VRAIE video (playlist HLS ou flux MPEG-TS).
     // On refuse : les erreurs HTTP, les pages HTML/JSON, et les playlists dont la date
@@ -279,13 +357,22 @@ object ReplayApi {
 
     private class Verdict(val ok: Boolean, val mime: String, val tag: String)
 
+    // Client dedie aux tests : timeouts courts pour ne jamais faire attendre.
+    private val probeClient by lazy {
+        Api.imageClient().newBuilder()
+            .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+            .callTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
+
     private fun probe(url: String, wantStartMs: Long): Verdict {
         return try {
             val req = Request.Builder().url(url)
-                .header("Range", "bytes=0-65535")
+                .header("Range", "bytes=0-32767")
                 .header("User-Agent", "IPTVSmartersPro")
                 .build()
-            Api.imageClient().newCall(req).execute().use { r ->
+            probeClient.newCall(req).execute().use { r ->
                 if (!r.isSuccessful) return@use Verdict(false, "", "HTTP" + r.code)
                 val ct = (r.header("Content-Type") ?: "").lowercase()
                 if (ct.contains("html") || ct.contains("json") || ct.contains("/xml")) {

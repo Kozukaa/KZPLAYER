@@ -69,10 +69,12 @@ class SettingsActivity : BaseActivity() {
     private fun refreshMultiListLabel() {
         findViewById<TextView>(R.id.multiListStateTv).text = MultiListPref.label(this)
         val dl = Downloads.list(this)
-        findViewById<TextView>(R.id.downloadsStateTv).text =
-            if (dl.isEmpty()) "Aucun titre t\u00e9l\u00e9charg\u00e9"
+        val enCours = Downloads.pending(this).size
+        val base = if (dl.isEmpty()) "Aucun titre t\u00e9l\u00e9charg\u00e9"
             else dl.size.toString() + (if (dl.size > 1) " titres" else " titre") +
                 "  \u2022  " + Downloads.human(Downloads.totalSize(this))
+        findViewById<TextView>(R.id.downloadsStateTv).text =
+            if (enCours > 0) base + "  \u2022  " + enCours.toString() + " en cours" else base
     }
 
     // Choix du mode : une seule liste (historique) ou toutes en meme temps.

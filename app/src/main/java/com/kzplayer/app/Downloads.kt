@@ -70,6 +70,36 @@ object Downloads {
     // v368 : suppression d un titre telecharge.
     fun remove(f: java.io.File): Boolean = try { f.delete() } catch (e: Exception) { false }
 
+    // v370 : suppression COMPLETE d un titre.
+    // Avant, seul le fichier etait efface : le gestionnaire Android gardait la
+    // tache et reecrivait le fichier (le film supprime revenait tout seul).
+    // Ici on annule d abord toutes les taches liees a ce fichier, puis on efface.
+    fun removeAll(ctx: Context, f: java.io.File): Boolean {
+        val nom = f.name
+        val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+        if (dm != null) {
+            for (t in tasks(ctx)) {
+                if (t.fileName == nom || t.name == nom) {
+                    try { dm.remove(t.id) } catch (e: Exception) {}
+                }
+            }
+        }
+        // Le gestionnaire peut avoir deja efface le fichier : c est bien aussi.
+        if (!f.exists()) return true
+        return remove(f)
+    }
+
+    // v370 : annulation d une tache ET nettoyage du fichier partiel restant.
+    fun cancelTask(ctx: Context, t: Task): Boolean {
+        val ok = cancel(ctx, t.id)
+        val d = dir(ctx)
+        if (d != null && t.fileName.isNotBlank()) {
+            val f = java.io.File(d, t.fileName)
+            if (f.exists()) remove(f)
+        }
+        return ok
+    }
+
     // v368 : taille lisible (Mo / Go).
     fun human(bytes: Long): String {
         val mo = bytes.toDouble() / (1024.0 * 1024.0)
@@ -78,6 +108,72 @@ object Downloads {
     }
 
     fun totalSize(ctx: Context): Long = list(ctx).sumOf { it.length() }
+
+    // v369 : un telechargement en cours (gestionnaire Android).
+    class Task(
+        val id: Long,
+        val name: String,
+        val status: Int,
+        val done: Long,
+        val total: Long,
+        val fileName: String
+    )
+
+    // v369 : liste des telechargements connus du gestionnaire Android.
+    fun tasks(ctx: Context): List<Task> {
+        val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+            ?: return emptyList()
+        val out = ArrayList<Task>()
+        try {
+            val c = dm.query(DownloadManager.Query()) ?: return emptyList()
+            c.use { cur ->
+                while (cur.moveToNext()) {
+                    val id = cur.getLong(cur.getColumnIndexOrThrow(DownloadManager.COLUMN_ID))
+                    val st = cur.getInt(cur.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                    val done = cur.getLong(cur.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                    val tot = cur.getLong(cur.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                    val uri = cur.getString(cur.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI)) ?: ""
+                    var nom = cur.getString(cur.getColumnIndexOrThrow(DownloadManager.COLUMN_TITLE)) ?: ""
+                    val fic = Uri.decode(uri.substringAfterLast(chr47()))
+                    if (nom.isBlank()) nom = fic
+                    out.add(Task(id, nom, st, done, tot, fic))
+                }
+            }
+        } catch (e: Exception) {}
+        return out
+    }
+
+    private fun chr47(): Char = 47.toChar()
+
+    // Telechargements pas encore termines (en attente, en cours, en pause, echoues).
+    fun pending(ctx: Context): List<Task> = tasks(ctx).filter {
+        it.status == DownloadManager.STATUS_PENDING ||
+            it.status == DownloadManager.STATUS_RUNNING ||
+            it.status == DownloadManager.STATUS_PAUSED ||
+            it.status == DownloadManager.STATUS_FAILED
+    }
+
+    fun percent(t: Task): Int {
+        if (t.total <= 0L) return 0
+        val p = (t.done.toDouble() * 100.0 / t.total.toDouble()).toInt()
+        return if (p < 0) 0 else if (p > 100) 100 else p
+    }
+
+    // Texte affiche sous le titre pendant le telechargement.
+    fun statusText(t: Task): String {
+        if (t.status == DownloadManager.STATUS_FAILED) return "\u00c9chec du t\u00e9l\u00e9chargement"
+        if (t.status == DownloadManager.STATUS_PAUSED) return "En pause  \u2022  " + human(t.done)
+        if (t.status == DownloadManager.STATUS_PENDING) return "En attente de d\u00e9marrage..."
+        val tot = if (t.total > 0L) human(t.total) else "taille inconnue"
+        return "T\u00e9l\u00e9chargement " + percent(t).toString() + " %  \u2022  " +
+            human(t.done) + " / " + tot
+    }
+
+    // Annulation d un telechargement en cours (supprime aussi le fichier partiel).
+    fun cancel(ctx: Context, id: Long): Boolean {
+        val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return false
+        return try { dm.remove(id) > 0 } catch (e: Exception) { false }
+    }
 
     // Renvoie le message a afficher a l utilisateur.
     fun enqueue(ctx: Context, title: String, url: String): String {
@@ -95,7 +191,8 @@ object Downloads {
             req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             req.setDestinationInExternalFilesDir(ctx, Environment.DIRECTORY_MOVIES, name)
             dm.enqueue(req)
-            "Téléchargement lancé : " + name
+            "T\u00e9l\u00e9chargement lanc\u00e9 : " + name +
+                " - suis la progression dans Param\u00e8tres > T\u00e9l\u00e9chargement"
         } catch (e: Exception) {
             "Téléchargement impossible : " + (e.message ?: "erreur")
         }

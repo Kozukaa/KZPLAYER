@@ -80,6 +80,19 @@ class BrowseActivity : BaseActivity() {
         kind = intent.getStringExtra("kind") ?: "live"
         findViewById<TextView>(R.id.titleTv).text = Session.browseTitle
 
+        // v376 : si l application s est fermee d un coup pendant la lecture, on affiche
+        // ici la cause exacte (une seule fois). Photographie cette fenetre si elle sort.
+        try {
+            val crash = CrashLog.take(this)
+            if (!crash.isNullOrBlank()) {
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Derniere erreur (a photographier)")
+                    .setMessage(crash)
+                    .setPositiveButton("OK") { d, _ -> d.dismiss() }
+                    .show()
+            }
+        } catch (e: Throwable) {}
+
         catRv = findViewById(R.id.catRv)
         itemRv = findViewById(R.id.itemRv)
         progress = findViewById(R.id.progress)

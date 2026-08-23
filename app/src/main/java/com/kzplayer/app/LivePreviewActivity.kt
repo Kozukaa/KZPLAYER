@@ -249,22 +249,31 @@ class LivePreviewActivity : BaseActivity() {
         // v373 : on libere le mini-lecteur AVANT d ouvrir le plein ecran.
         // Sinon deux lecteurs lisent le meme flux en meme temps : l appareil sature
         // et tue l application (retour "Chargement des serveurs...").
+        // v376 : on detache d abord la surface video, PUIS on libere le lecteur.
+        // Sans ca la puce video restait accrochee a l ancienne image.
+        try { playerView.player = null } catch (e: Throwable) {}
         try { player?.stop() } catch (e: Throwable) {}
         try { player?.release() } catch (e: Throwable) {}
         player = null
-        startActivity(
-            Intent(this, PlayerActivity::class.java)
-                .putExtra("url", url)
-                .putExtra("title", title)
-                .putExtra("logo", logo)
-                .putExtra("historyKind", "live")
-                .putExtra("mode", "live")
-                .putExtra("historySourceStreamId", streamId)
-                .putExtra("zapIndex", Session.zapIndex)
-        )
-        // v375 : on ferme l apercu en passant en plein ecran. Il ne reste plus d ecran
-        // inutile en memoire derriere le lecteur (c est ce qui faisait tuer l appli).
-        finish()
+        val go = Intent(this, PlayerActivity::class.java)
+            .putExtra("url", url)
+            .putExtra("title", title)
+            .putExtra("logo", logo)
+            .putExtra("historyKind", "live")
+            .putExtra("mode", "live")
+            .putExtra("historySourceStreamId", streamId)
+            .putExtra("zapIndex", Session.zapIndex)
+        // v376 : la puce video (decodeur materiel) n est pas liberee instantanement.
+        // On laissait le plein ecran en ouvrir un second dans la meme seconde : sur les
+        // box, le decodeur refusait et l application se fermait d un coup ("paf") au bout
+        // de ~3 s. On attend un court instant que la puce soit libre avant d ouvrir.
+        uiHandler.postDelayed({
+            try {
+                startActivity(go)
+            } catch (e: Throwable) {}
+            // v375 : l apercu se ferme, il ne reste plus d ecran inutile derriere le lecteur.
+            finish()
+        }, 450L)
     }
 
     override fun onStop() {

@@ -198,13 +198,15 @@ object ReplayApi {
             }
             val tried = ArrayList<String>()
             for (u in cands) {
-                val ok = verify(u, p.startMs)
-                tried.add((if (ok) "OK   " else "NON  ") + u)
-                if (ok) {
+                val r = probe(u, p.startMs)
+                tried.add(r.tag + "  " + u)
+                if (r.ok) {
+                    lastArchiveMime = r.mime
                     lastArchiveLog = tried.joinToString(System.lineSeparator())
                     return@withContext u
                 }
             }
+            lastArchiveMime = ""
             lastArchiveLog = tried.joinToString(System.lineSeparator())
             ""
         }
@@ -230,11 +232,23 @@ object ReplayApi {
                 "&stream=" + enc(streamId) + "&start=" + enc(stamp) + "&duration=" + dur)
             out.add(srv + "/timeshift.php?username=" + u + "&password=" + w +
                 "&stream=" + enc(streamId) + "&start=" + enc(stamp) + "&duration=" + dur)
+            out.add(srv + "/streaming/timeshift.php?username=" + u + "&password=" + w +
+                "&stream=" + enc(streamId) + "&start=" + enc(stamp) + "&duration=" + dur + "&type=m3u8")
+            out.add(srv + "/timeshift/" + u + "/" + w + "/" + dur + "/" + stamp + "/" + streamId)
+            out.add(srv + "/live/" + u + "/" + w + "/" + streamId + ".m3u8?utc=" + startSec +
+                "&lutc=" + nowSec)
             return out.distinct()
         }
-        if (pl.type != "stalker" || cmd.isBlank()) return out
+        if (pl.type != "stalker") return out
+        // v365 : ETAPE 1 - le vrai protocole d archive du portail (tv_archive).
+        val real = try {
+            Api.stalkerArchiveLinks(pl, streamId, cmd, startSec, durSec)
+        } catch (e: Exception) { emptyList<String>() }
+        for (u in real) if (u.isNotBlank() && !out.contains(u)) out.add(u)
+        if (cmd.isBlank()) return out.distinct()
+        // ETAPE 2 - repli : lien de la chaine + parametres d archive.
         val base = try { Api.stalkerLink(pl, cmd, "live") } catch (e: Exception) { null }
-        if (base.isNullOrBlank()) return out
+        if (base.isNullOrBlank()) return out.distinct()
         val clean = base.trim()
         // Essai A : parametres utc et lutc - Ministra, Astra, Flussonic
         out.add(withArchiveParams(clean, p))
@@ -257,62 +271,59 @@ object ReplayApi {
 
     private fun chr47(): Char = 47.toChar()
 
-    // v364 : controle STRICT de l archive.
-    // Avant, une URL qui repondait "200 OK" etait acceptee... meme quand le serveur
-    // ignorait la demande d archive et renvoyait le DIRECT (on cliquait sur lundi 23h
-    // et on tombait sur le direct d aujourd hui). Maintenant :
-    //  - page d erreur (HTML / JSON) = refuse ;
-    //  - playlist HLS : on lit la date reelle du flux (#EXT-X-PROGRAM-DATE-TIME) et on
-    //    refuse si elle ne correspond pas au jour demande ; une playlist de direct
-    //    (sans date, sans fin de liste) est refusee ;
-    //  - flux binaire : accepte seulement sur une vraie adresse d archive
-    //    (/timeshift..., timeshift_abs-..., /archive-...).
-    private fun verify(url: String, wantStartMs: Long): Boolean = try {
-        val req = Request.Builder().url(url)
-            .header("Range", "bytes=0-16384")
-            .header("User-Agent", "IPTVSmartersPro")
-            .build()
-        Api.imageClient().newCall(req).execute().use { r ->
-            val ct = (r.header("Content-Type") ?: "").lowercase()
-            if (!r.isSuccessful) false
-            else if (ct.contains("html") || ct.contains("json") || ct.contains("/xml")) false
-            else {
-                val isPlaylist = ct.contains("mpegurl") || url.contains(".m3u8")
-                if (isPlaylist) {
-                    val body = try { r.body?.string() ?: "" } catch (e: Exception) { "" }
-                    checkPlaylist(body, wantStartMs)
-                } else dedicatedArchivePath(url)
-            }
-        }
-    } catch (e: Exception) { false }
+    // v365 : controle de l archive, souple mais sur.
+    // On accepte tout ce qui est de la VRAIE video (playlist HLS ou flux MPEG-TS).
+    // On refuse : les erreurs HTTP, les pages HTML/JSON, et les playlists dont la date
+    // reelle du flux ne correspond pas au jour demande (= c est le direct).
+    var lastArchiveMime: String = ""
 
-    // Une playlist est acceptee seulement si elle prouve qu il s agit bien de l archive
-    // du bon jour (date du flux) ou d un enregistrement termine (fin de liste / VOD).
-    private fun checkPlaylist(body: String, wantStartMs: Long): Boolean {
-        if (body.isBlank()) return false
-        if (!body.contains("#EXTM3U")) return false
-        val m = Regex("EXT-X-PROGRAM-DATE-TIME:([0-9]{4})-([0-9]{2})-([0-9]{2})").find(body)
-        if (m != null) {
-            val want = try {
-                SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(wantStartMs))
-            } catch (e: Exception) { "" }
-            val got = m.groupValues[1] + "-" + m.groupValues[2] + "-" + m.groupValues[3]
-            if (want.isBlank()) return false
-            // meme jour, ou jour voisin (programme a cheval sur minuit / decalage horaire)
-            val dayMs = 24L * 3600L * 1000L
-            val prev = try { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(wantStartMs - dayMs)) } catch (e: Exception) { "" }
-            val next = try { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(wantStartMs + dayMs)) } catch (e: Exception) { "" }
-            return got == want || got == prev || got == next
-        }
-        val vod = body.contains("#EXT-X-ENDLIST") || body.uppercase().contains("PLAYLIST-TYPE:VOD")
-        return vod
+    private class Verdict(val ok: Boolean, val mime: String, val tag: String)
+
+    private fun probe(url: String, wantStartMs: Long): Verdict {
+        return try {
+            val req = Request.Builder().url(url)
+                .header("Range", "bytes=0-65535")
+                .header("User-Agent", "IPTVSmartersPro")
+                .build()
+            Api.imageClient().newCall(req).execute().use { r ->
+                if (!r.isSuccessful) return@use Verdict(false, "", "HTTP" + r.code)
+                val ct = (r.header("Content-Type") ?: "").lowercase()
+                if (ct.contains("html") || ct.contains("json") || ct.contains("/xml")) {
+                    return@use Verdict(false, "", "PAGE ")
+                }
+                val bytes = try { r.body?.bytes() } catch (e: Exception) { null }
+                if (bytes == null || bytes.size < 8) return@use Verdict(false, "", "VIDE ")
+                val head = String(bytes, 0, if (bytes.size > 4096) 4096 else bytes.size, Charsets.ISO_8859_1)
+                val t = head.trimStart()
+                if (t.startsWith("<") || t.startsWith("{") || t.startsWith("[")) {
+                    return@use Verdict(false, "", "PAGE ")
+                }
+                if (t.startsWith("#EXTM3U")) {
+                    val body = String(bytes, Charsets.ISO_8859_1)
+                    if (isLivePlaylist(body, wantStartMs)) Verdict(false, "", "DIRECT")
+                    else Verdict(true, "application/x-mpegURL", "OK-HLS")
+                } else if (bytes[0] == 0x47.toByte()) {
+                    Verdict(true, "video/mp2t", "OK-TS ")
+                } else {
+                    // autre conteneur video (mp4, mkv...) : on laisse le lecteur decider
+                    Verdict(true, "", "OK-VID")
+                }
+            }
+        } catch (e: Exception) { Verdict(false, "", "ERR  ") }
     }
 
-    // Vraies adresses d archive (elles ne renvoient jamais le direct).
-    private fun dedicatedArchivePath(url: String): Boolean {
-        val u = url.lowercase()
-        return u.contains("/timeshift/") || u.contains("timeshift.php") ||
-            u.contains("timeshift_abs-") || u.contains("/archive-")
+    // true = cette playlist est le DIRECT (mauvais jour) et non l archive demandee.
+    private fun isLivePlaylist(body: String, wantStartMs: Long): Boolean {
+        val m = Regex("EXT-X-PROGRAM-DATE-TIME:([0-9]{4})-([0-9]{2})-([0-9]{2})").find(body)
+            ?: return false
+        val got = m.groupValues[1] + "-" + m.groupValues[2] + "-" + m.groupValues[3]
+        val dayMs = 24L * 3600L * 1000L
+        val f = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val want = try { f.format(Date(wantStartMs)) } catch (e: Exception) { "" }
+        if (want.isBlank()) return false
+        val prev = try { f.format(Date(wantStartMs - dayMs)) } catch (e: Exception) { "" }
+        val next = try { f.format(Date(wantStartMs + dayMs)) } catch (e: Exception) { "" }
+        return !(got == want || got == prev || got == next)
     }
 
     // Ajoute utc=<debut> & lutc=<maintenant> (+ duree) sans casser les parametres deja presents.

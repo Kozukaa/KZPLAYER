@@ -1502,6 +1502,95 @@ object Api {
         repaired
     }
 
+    // v365 : ARCHIVE (replay) Stalker / Ministra avec le VRAI protocole du portail.
+    // 100% additif : aucun appel LIVE existant n est modifie.
+    var lastArchiveStalkerLog: String = ""
+
+    suspend fun stalkerArchiveLinks(
+        pl: Playlist,
+        chId: String,
+        cmd: String,
+        startSec: Long,
+        durSec: Long
+    ): List<String> = withContext(Dispatchers.IO) {
+        val out = ArrayList<String>()
+        val log = StringBuilder()
+        val portal = ensureStalker(pl)
+        if (portal == null) {
+            lastArchiveStalkerLog = "Portail Stalker injoignable."
+            return@withContext out
+        }
+        // A) liste reelle des enregistrements de la chaine, puis lien du bon enregistrement
+        if (chId.isNotBlank()) {
+            val q1 = "type=tv_archive&action=get_ordered_list&ch_id=" + enc(chId) +
+                "&size=200&p=1&JsHttpRequest=1-xml"
+            val t1 = stbCall(pl, portal, q1)
+            log.append("get_ordered_list -> ").append(t1.take(140)).append(nl1())
+            val recCmd = pickArchiveRecord(t1, startSec)
+            if (recCmd != null && recCmd.isNotBlank()) {
+                val t2 = stbCall(
+                    pl, portal,
+                    "type=tv_archive&action=create_link&cmd=" + enc(recCmd) + "&JsHttpRequest=1-xml"
+                )
+                val raw = try { JSONObject(t2).optJSONObject("js")?.optString("cmd") } catch (e: Exception) { null }
+                log.append("create_link(record) -> ").append((raw ?: "(vide)").take(140)).append(nl1())
+                if (!raw.isNullOrBlank()) {
+                    val u = cleanCmdUrl(raw, pl)
+                    if (u.isNotBlank() && !out.contains(u)) out.add(u)
+                }
+            }
+        }
+        // B) create_link direct en donnant la position demandee
+        if (cmd.isNotBlank()) {
+            val variants = ArrayList<String>()
+            variants.add(
+                "type=tv_archive&action=create_link&cmd=" + enc(cmd) + "&stream=" + enc(chId) +
+                    "&start=" + startSec + "&duration=" + durSec + "&JsHttpRequest=1-xml"
+            )
+            variants.add(
+                "type=itv&action=create_link&cmd=" + enc(cmd) + "&start=" + startSec +
+                    "&duration=" + durSec + "&JsHttpRequest=1-xml"
+            )
+            variants.add(
+                "type=tv_archive&action=create_link&cmd=" + enc(cmd) + "&JsHttpRequest=1-xml"
+            )
+            for (q in variants) {
+                val t = stbCall(pl, portal, q)
+                val raw = try { JSONObject(t).optJSONObject("js")?.optString("cmd") } catch (e: Exception) { null }
+                log.append("create_link -> ").append((raw ?: "(vide)").take(140)).append(nl1())
+                if (!raw.isNullOrBlank()) {
+                    val u = cleanCmdUrl(raw, pl)
+                    if (u.isNotBlank() && !out.contains(u)) out.add(u)
+                }
+            }
+        }
+        lastArchiveStalkerLog = log.toString()
+        out
+    }
+
+    private fun nl1(): Char = 10.toChar()
+
+    // Choisit l enregistrement dont l heure de debut colle a celle demandee.
+    private fun pickArchiveRecord(txt: String, startSec: Long): String? = try {
+        val js = JSONObject(txt).optJSONObject("js")
+        val arr = js?.optJSONArray("data")
+        var best: String? = null
+        var bestDiff = Long.MAX_VALUE
+        if (arr != null) {
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                val c = o.optString("cmd")
+                if (c.isBlank()) continue
+                var st = o.optString("start_timestamp").toLongOrNull() ?: 0L
+                if (st <= 0L) st = o.optLong("start_timestamp", 0L)
+                if (st <= 0L) continue
+                val diff = if (st > startSec) st - startSec else startSec - st
+                if (diff < bestDiff) { bestDiff = diff; best = c }
+            }
+        }
+        if (best != null && bestDiff <= 5400L) best else null
+    } catch (e: Exception) { null }
+
     private fun stripLivePlayToken(cmd: String): String {
         return cmd
             .replace(Regex("(?i)([?&])play_token=[^&]*&?")) { m -> if (m.groupValues[1] == "?") "?" else "&" }

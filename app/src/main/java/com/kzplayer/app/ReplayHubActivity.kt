@@ -209,10 +209,12 @@ class ReplayHubActivity : BaseActivity() {
             } catch (e: Exception) { "" }
             progress.visibility = View.GONE
             if (url.isBlank()) {
-                msgTv.text = "Ce serveur ne fournit pas l archive de ce programme " +
-                    "(il renverrait le direct). Essaie un autre horaire ou une autre chaine."
+                msgTv.text = "Archive introuvable pour ce programme sur ce serveur. " +
+                    "Essaie un autre horaire ou une autre chaine."
                 if (AdminMode.diagEnabled(this@ReplayHubActivity)) {
-                    msgTv.text = "Archive indisponible." + System.lineSeparator() + ReplayApi.lastArchiveLog
+                    msgTv.text = "Archive indisponible." + System.lineSeparator() +
+                        ReplayApi.lastArchiveLog + System.lineSeparator() +
+                        Api.lastArchiveStalkerLog
                 }
                 return@launch
             }
@@ -223,6 +225,8 @@ class ReplayHubActivity : BaseActivity() {
                     .putExtra("logo", ch.logo)
                     .putExtra("historyKind", "live")
                     .putExtra("mode", "vod")
+                    .putExtra("mime", ReplayApi.lastArchiveMime)
+                    .putExtra("forceUa", "IPTVSmartersPro")
             )
         }
     }

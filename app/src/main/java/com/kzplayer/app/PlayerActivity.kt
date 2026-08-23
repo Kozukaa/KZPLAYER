@@ -134,6 +134,7 @@ class PlayerActivity : AppCompatActivity() {
         // Securite : on detecte aussi automatiquement les VOD par URL, au cas ou un ecran
         // n'envoie pas l'extra mode=vod (ex: series M3U /series/... ou fichiers mp4/mkv/avi).
         val mode = intent.getStringExtra("mode") ?: "live"
+        forcedMime = intent.getStringExtra("mime") ?: ""
         val lowerUrl = url.lowercase()
         val pathOnly = lowerUrl.substringBefore('?')
         val looksVod = lowerUrl.contains("/series/") || lowerUrl.contains("/movie/") ||
@@ -404,8 +405,16 @@ class PlayerActivity : AppCompatActivity() {
 
     // ---- Sous-titres externes multilangues (OpenSubtitles) ----
     // Construit le MediaItem en y greffant, si demande, une piste de sous-titres externe.
+    // v365 : type de flux detecte par ReplayApi (HLS ou MPEG-TS). Sans lui, ExoPlayer
+    // devine avec l extension et echoue en ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED.
+    private var forcedMime: String = ""
+
     private fun buildMediaItem(u: String): MediaItem {
         val b = MediaItem.Builder().setUri(Uri.parse(u))
+        val fm = if (forcedMime.isNotBlank()) forcedMime
+            else if (u.contains(".m3u8")) "application/x-mpegURL"
+            else ""
+        if (fm.isNotBlank()) b.setMimeType(fm)
         val sub = currentSubUrl
         if (!sub.isNullOrBlank()) {
             val mime = when (currentSubFormat.lowercase()) {

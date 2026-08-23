@@ -46,9 +46,6 @@ class DownloadsActivity : BaseActivity() {
         rv = findViewById(R.id.dlRv)
         rv.layoutManager = LinearLayoutManager(this)
         rv.adapter = DlAdapter()
-        // v372 : on efface les vieilles taches du gestionnaire Android des versions
-        // precedentes, celles qui tournaient en boucle sur "En attente pour reessayer".
-        try { Downloads.purgeLegacy(this) } catch (e: Exception) {}
         refresh()
     }
 
@@ -157,7 +154,7 @@ class DownloadsActivity : BaseActivity() {
                 h.progBar.visibility = View.VISIBLE
                 h.progBar.isIndeterminate = t.total <= 0L
                 if (t.total > 0L) h.progBar.progress = Downloads.percent(t)
-                val echec = t.status == DownloadService.ST_FAILED
+                val echec = t.status == android.app.DownloadManager.STATUS_FAILED
                 h.playBtn.text = if (echec) "Relancer" else "En cours"
                 h.playBtn.setOnClickListener {
                     if (echec) {

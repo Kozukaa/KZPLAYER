@@ -20,12 +20,12 @@ import okhttp3.Request
  * v372 : TELECHARGEUR INTERNE KZ PLAYER.
  *
  * Pourquoi : le gestionnaire de telechargement d Android (DownloadManager) ne
- * supporte pas les serveurs IPTV. Resultat : "En attente de connexion",
+ * supporte pas les serveurs IPTV. Resultat en v371 : "En attente de connexion",
  * "Echec du telechargement" ou "En attente pour reessayer" en boucle.
  *
  * Ici on telecharge nous-memes, avec :
  *  - reprise exacte a l octet ou on s est arrete (en-tete Range) au lieu de tout refaire,
- *  - relance silencieuse sur coupure reseau,
+ *  - relance illimitee et silencieuse sur coupure reseau,
  *  - lien du serveur refabrique automatiquement quand le jeton expire (Stalker),
  *  - service au premier plan : la copie continue quand on quitte l ecran.
  */
@@ -48,10 +48,10 @@ class DownloadService : Service() {
             annules.remove(fic)
             val p = jobs[fic]
             if (p == null) {
-                jobs[fic] = Prog(fic, if (titre.isBlank()) fic else titre, 0L, 0L, ST_PENDING, url, cmd)
+                jobs[fic] = Prog(fic, titre.ifBlank { fic }, 0L, 0L, ST_PENDING, url, cmd)
                 pool.execute { travailler(fic) }
             } else {
-                // Deja connu : on met a jour le lien et on relance si besoin.
+                // Deja connu : on remet a jour le lien et on relance si besoin.
                 p.url = url
                 if (cmd.isNotBlank()) p.cmd = cmd
                 if (p.status != ST_RUNNING) {
@@ -79,14 +79,12 @@ class DownloadService : Service() {
     }
 
     private fun texteNotif(): String {
-        val actifs = jobs.values.filter {
-            it.status == ST_RUNNING || it.status == ST_PENDING || it.status == ST_PAUSED
-        }
+        val actifs = jobs.values.filter { it.status == ST_RUNNING || it.status == ST_PENDING || it.status == ST_PAUSED }
         if (actifs.isEmpty()) return "Telechargements termines"
         val p = actifs.first()
         val pc = if (p.total > 0L) (p.done * 100L / p.total).toInt() else 0
-        val reste = if (actifs.size > 1) "  (+" + (actifs.size - 1).toString() + ")" else ""
-        return p.title + "  " + pc.toString() + " %" + reste
+        val reste = if (actifs.size > 1) "  (+" + (actifs.size - 1) + ")" else ""
+        return p.title + "  " + pc + " %" + reste
     }
 
     private fun majNotif() {
@@ -99,11 +97,7 @@ class DownloadService : Service() {
             b.setOngoing(true)
             val n = b.build()
             if (Build.VERSION.SDK_INT >= 29) {
-                startForeground(
-                    NOTIF_ID,
-                    n,
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                )
+                startForeground(NOTIF_ID, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
             } else {
                 startForeground(NOTIF_ID, n)
             }
@@ -146,7 +140,7 @@ class DownloadService : Service() {
                 val rb = Request.Builder().url(p.url)
                     .header("User-Agent", Config.USER_AGENT)
                     .header("Accept", "*/*")
-                if (deja > 0L) rb.header("Range", "bytes=" + deja.toString() + "-")
+                if (deja > 0L) rb.header("Range", "bytes=" + deja + "-")
                 val rep = client.newCall(rb.build()).execute()
                 val code = rep.code
                 if (code == 416) {
@@ -164,32 +158,33 @@ class DownloadService : Service() {
                         p.status = ST_PAUSED
                         majNotif()
                         dormir(5000L)
+                        continue
                     }
                     continue
                 }
                 val corps = rep.body
-                if (corps == null) {
-                    rep.close()
-                    p.status = ST_PAUSED
-                    dormir(3000L)
-                    continue
-                }
+                if (corps == null) { rep.close(); p.status = ST_PAUSED; dormir(3000L); continue }
                 val longueur = corps.contentLength()
-                val partiel = code == 206 && deja > 0L
-                p.total = if (longueur > 0L) (if (partiel) deja + longueur else longueur) else 0L
-                var recu = if (partiel) deja else 0L
-                p.done = recu
+                p.total = if (longueur > 0L) deja + longueur else 0L
+                val reprise = code == 206 || deja == 0L
+                val sortie = java.io.FileOutputStream(f, reprise && deja > 0L)
+                if (!reprise) p.done = 0L
+                var recu = if (reprise) deja else 0L
                 val buf = ByteArray(131072)
-                val sortie = java.io.FileOutputStream(f, partiel)
-                var coupe = false
                 corps.byteStream().use { entree ->
                     sortie.use { out ->
                         while (true) {
-                            if (annules.contains(fic)) { coupe = true; break }
+                            if (annules.contains(fic)) {
+                                rep.close()
+                                try { f.delete() } catch (e: Throwable) {}
+                                jobs.remove(fic)
+                                finirSiPlusRien()
+                                return
+                            }
                             val n = entree.read(buf)
                             if (n <= 0) break
                             out.write(buf, 0, n)
-                            recu += n.toLong()
+                            recu += n
                             p.done = recu
                             p.status = ST_RUNNING
                             val maintenant = System.currentTimeMillis()
@@ -201,12 +196,6 @@ class DownloadService : Service() {
                     }
                 }
                 rep.close()
-                if (coupe) {
-                    try { f.delete() } catch (e: Throwable) {}
-                    jobs.remove(fic)
-                    finirSiPlusRien()
-                    return
-                }
                 // Fin de flux : termine si on a tout recu, ou si le serveur
                 // n annonce pas de taille (il ferme quand c est fini).
                 if (p.total <= 0L || p.done >= p.total) {
@@ -269,8 +258,7 @@ class DownloadService : Service() {
         )
 
         val jobs = ConcurrentHashMap<String, Prog>()
-        private val annules =
-            java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+        private val annules = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
         // Deux telechargements en parallele au maximum : plus, ca sature les serveurs IPTV.
         private val pool = Executors.newFixedThreadPool(2)
@@ -293,8 +281,7 @@ class DownloadService : Service() {
                 .putExtra("url", url)
                 .putExtra("cmd", cmd)
             try {
-                if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i)
-                else ctx.startService(i)
+                if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i)
             } catch (e: Throwable) {
                 try { ctx.startService(i) } catch (e2: Throwable) {}
             }

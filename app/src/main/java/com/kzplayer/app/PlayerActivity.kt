@@ -288,13 +288,14 @@ class PlayerActivity : AppCompatActivity() {
             // v359 : le buffer de 1,5 s etait trop juste sur les serveurs lents :
             // au premier trou de reseau l image se figeait. On garde un demarrage rapide
             // (1,2 s avant de lancer l image) mais on remplit jusqu a 30 s d avance.
-            // v372 : les 8 s de tampon minimum de la v371 retardaient l image. Demarrage
-            // rapide (1,2 s) + 40 s d avance : absorbe les trous reseau sans figer.
+            // v373 : CORRECTION SACCADES. Le reglage v372 (tampon arriere de 10 s,
+            // priorite au temps sur la taille, taille de tampon illimitee) saturait
+            // la memoire des boitiers : image au ralenti et tres saccadee.
+            // On revient a un tampon simple et leger, avec juste assez d avance
+            // (2,5 s avant de lancer l image, 30 s d avance max) pour absorber les
+            // trous reseau sans figer et sans saccader.
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(3000, 40000, 1200, 2500)
-                .setPrioritizeTimeOverSizeThresholds(true)
-                .setTargetBufferBytes(-1)
-                .setBackBuffer(10000, true)
+                .setBufferDurationsMs(2500, 30000, 2500, 3000)
                 .build()
         }
         playerBuilder.setLoadControl(loadControl)

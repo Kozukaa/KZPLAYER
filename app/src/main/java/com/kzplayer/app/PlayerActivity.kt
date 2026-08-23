@@ -68,35 +68,40 @@ class PlayerActivity : AppCompatActivity() {
     private var lastReconnectTs = 0L
     // v372 : surveillance de l image figee, en DIRECT ET EN VOD.
     // Correctif du bug v371 : le chien de garde se declenchait pendant le tampon normal
-    // (demarrage / petit trou reseau) -> la chaine repartait en "recherche de serveur"
-    // en boucle. Maintenant on ne relance QUE si l image est vraiment morte :
-    //  - on laisse un temps de grace apres chaque lancement / reconnexion,
-    //  - on considere que ca travaille si le tampon se remplit encore,
-    //  - les seuils sont beaucoup plus tolerants.
+    // (demarrage / petit trou reseau) -> la chaine se relancait sans arret. Maintenant on
+    // ne relance QUE si l image est vraiment morte :
+    //  - temps de grace apres chaque lancement / reconnexion,
+    //  - si le tampon se remplit encore, on ne touche a rien,
+    //  - seuils beaucoup plus tolerants.
     private var playStartTs = 0L
     private var lastBuffered = -1L
     private val stallWatchdog = object : Runnable {
         override fun run() {
+            try { tick() } catch (e: Throwable) {}
+            recoveryHandler.postDelayed(this, 2000)
+        }
+        private fun tick() {
             val p = player
             if (p != null && p.playWhenReady && p.playbackState != Player.STATE_ENDED) {
                 val now = SystemClock.elapsedRealtime()
                 val pos = p.currentPosition
                 val buffered = try { p.totalBufferedDuration } catch (e: Exception) { 0L }
-                // Temps de grace : on ne touche a rien pendant les 20 premieres secondes
-                // qui suivent un lancement ou une reconnexion (chargement normal).
+                // Chargement normal : on ne relance rien pendant 20 s apres un demarrage.
                 val grace = playStartTs == 0L || now - playStartTs < 20000L
-                // Le tampon avance = le serveur envoie des donnees = on ne coupe pas.
+                // Le tampon avance = le serveur envoie des donnees = on laisse tourner.
                 val networkAlive = buffered > lastBuffered + 300L
                 lastBuffered = buffered
-                if (pos != lastPos || networkAlive) {
-                    if (pos != lastPos) lastPos = pos
+                if (pos != lastPos) {
+                    lastPos = pos
                     lastProgressTs = now
-                    if (pos != lastPos) liveRetries = 0
+                    liveRetries = 0
+                } else if (networkAlive) {
+                    lastProgressTs = now
                 } else if (!grace) {
                     val stalled = now - lastProgressTs
                     val buffering = p.playbackState == Player.STATE_BUFFERING
                     if (isLiveMode) {
-                        // Direct : image vraiment figee (rien ne bouge depuis 15 s) -> nouveau lien.
+                        // Direct : image vraiment morte depuis 15 s -> nouveau lien.
                         if (lastProgressTs > 0L && ((buffering && stalled > 15000L) || stalled > 20000L)) {
                             reconnectLive()
                         }
@@ -108,7 +113,6 @@ class PlayerActivity : AppCompatActivity() {
                     }
                 }
             }
-            recoveryHandler.postDelayed(this, 2000)
         }
     }
 
@@ -268,9 +272,10 @@ class PlayerActivity : AppCompatActivity() {
 
         val playerBuilder = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
-            // v371 : garde le reseau actif pendant la lecture (box / telephone en veille
-            // Wi-Fi = image figee au bout de quelques secondes).
-            .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
+            // v372 : le setWakeMode n est PLUS pose ici. En v371 il etait dans le builder
+            // sans la permission WAKE_LOCK -> l appli plantait au bout de ~3 s de lecture.
+            // Il est maintenant applique apres construction, protege par un try/catch :
+            // meme si le boitier refuse le wake lock, la lecture continue normalement.
         val loadControl = if (isVod) {
             // VOD/films/series : buffer equilibre.
             // v38 etait tres stable mais un peu lent au demarrage ; ici on garde assez de marge
@@ -283,9 +288,8 @@ class PlayerActivity : AppCompatActivity() {
             // v359 : le buffer de 1,5 s etait trop juste sur les serveurs lents :
             // au premier trou de reseau l image se figeait. On garde un demarrage rapide
             // (1,2 s avant de lancer l image) mais on remplit jusqu a 30 s d avance.
-            // v372 : les 8 s de tampon minimum de la v371 retardaient l image et faisaient
-            // croire a un blocage. On revient a un demarrage rapide (1,2 s) avec une bonne
-            // reserve d avance (40 s) : ca absorbe les trous reseau sans figer ni relancer.
+            // v372 : les 8 s de tampon minimum de la v371 retardaient l image. Demarrage
+            // rapide (1,2 s) + 40 s d avance : absorbe les trous reseau sans figer.
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
                 .setBufferDurationsMs(3000, 40000, 1200, 2500)
                 .setPrioritizeTimeOverSizeThresholds(true)
@@ -309,6 +313,9 @@ class PlayerActivity : AppCompatActivity() {
             true
         )
         p.volume = 1.0f
+        // v372 : garde le reseau actif pendant la lecture, mais SANS jamais faire planter
+        // l appli si la permission ou le boitier ne le permet pas.
+        try { p.setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK) } catch (e: Throwable) {}
         if (isVod) {
             // Optimisation audio VOD : si plusieurs pistes existent, ExoPlayer prefere une piste compatible
             // avec peu de canaux (stereo) plutot qu'une piste 5.1/DTS que le boitier ne sort pas.
@@ -422,7 +429,7 @@ class PlayerActivity : AppCompatActivity() {
         p.playWhenReady = true
         p.prepare()
         p.play()
-        // v372 : point de depart du temps de grace (pas de relance pendant le chargement).
+        // v372 : depart du temps de grace (aucune relance pendant le chargement).
         playStartTs = SystemClock.elapsedRealtime()
         lastBuffered = -1L
         lastPos = -1L
@@ -651,16 +658,13 @@ class PlayerActivity : AppCompatActivity() {
         val p = player ?: return
         if (!isLiveMode) return
         val now = SystemClock.elapsedRealtime()
-        // v372 : on ne se rebranche plus en boucle (c est ce qui faisait "recherche de
-        // serveur" toutes les 2 s). 10 s minimum entre deux reconnexions, et on reste sur
-        // la variante d URL qui fonctionnait au lieu de changer sans arret.
+        // v372 : plus de reconnexions en boucle (10 s minimum entre deux essais) et on
+        // reste sur la variante d URL qui fonctionnait au lieu de changer sans arret.
         if (now - lastReconnectTs < 10000L) return
         lastReconnectTs = now
         liveRetries++
         if (liveRetries > 30) return
         val safeMax = (candidates.size - 1).coerceAtLeast(0)
-        // Seulement apres 3 reconnexions ratees de suite on essaie une autre variante
-        // (.ts / .m3u8 / sans extension).
         candIdx = if (liveRetries >= 3 && liveRetries % 3 == 0 && candidates.size > 1)
             (candIdx + 1) % candidates.size
         else

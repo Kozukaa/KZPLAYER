@@ -3,6 +3,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- v372 : indispensable pour setWakeMode(WAKE_MODE_NETWORK) du lecteur.
+         Sans elle, l'appli plantait apres ~3 s de lecture (SecurityException) et
+         revenait a l'ecran des serveurs. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- v145 : telechargement + installation en direct des mises a jour -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

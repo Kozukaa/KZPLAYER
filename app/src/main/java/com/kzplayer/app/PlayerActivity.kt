@@ -66,10 +66,13 @@ class PlayerActivity : AppCompatActivity() {
     private var liveRetries = 0
     private var workingCandIdx = 0
     private var lastReconnectTs = 0L
+    // v371 : surveillance de l image figee, en DIRECT ET EN VOD.
+    // Verification chaque seconde ; des que la lecture n avance plus, on relance
+    // tout seul (nouveau lien en direct, reprise a la meme seconde en film/serie).
     private val stallWatchdog = object : Runnable {
         override fun run() {
             val p = player
-            if (p != null && isLiveMode && p.playWhenReady && p.playbackState != Player.STATE_ENDED) {
+            if (p != null && p.playWhenReady && p.playbackState != Player.STATE_ENDED) {
                 val now = SystemClock.elapsedRealtime()
                 val pos = p.currentPosition
                 if (pos != lastPos) {
@@ -79,15 +82,38 @@ class PlayerActivity : AppCompatActivity() {
                 } else {
                     val stalled = now - lastProgressTs
                     val buffering = p.playbackState == Player.STATE_BUFFERING
-                    // Image figee / son coupe : la lecture n'avance plus depuis trop longtemps.
-                    // v359 : detection plus rapide (avant : 12 s / 20 s).
-                    if (lastProgressTs > 0L && ((buffering && stalled > 5000L) || stalled > 9000L)) {
-                        reconnectLive()
+                    if (isLiveMode) {
+                        // Direct : on se rebranche vite, c est ce qui debloque la chaine.
+                        if (lastProgressTs > 0L && ((buffering && stalled > 3500L) || stalled > 6000L)) {
+                            reconnectLive()
+                        }
+                    } else {
+                        // Film / episode : on relance a la meme seconde, sans perdre la place.
+                        if (lastProgressTs > 0L && ((buffering && stalled > 12000L) || stalled > 18000L)) {
+                            resumeVod()
+                        }
                     }
                 }
             }
-            recoveryHandler.postDelayed(this, 2000)
+            recoveryHandler.postDelayed(this, 1000)
         }
+    }
+
+    // v371 : reprise d un film / episode bloque, a la seconde ou il s est arrete.
+    private var lastVodResumeTs = 0L
+    private fun resumeVod() {
+        val p = player ?: return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastVodResumeTs < 8000L) return
+        lastVodResumeTs = now
+        val at = p.currentPosition
+        lastPos = -1L
+        lastProgressTs = now
+        try {
+            p.prepare()
+            if (at > 0L) p.seekTo(at)
+            p.play()
+        } catch (e: Exception) {}
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -189,10 +215,14 @@ class PlayerActivity : AppCompatActivity() {
         val srcFactory: androidx.media3.datasource.DataSource.Factory =
             if (isLocalFile) androidx.media3.datasource.DefaultDataSource.Factory(this)
             else httpFactory
+        // v371 : un morceau de flux qui repond mal est reessaye plusieurs fois
+        // au lieu de figer l image tout de suite.
+        val errPolicy = androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy(6)
         val mediaSourceFactory = if (isVod) {
             // Films / episodes : lecteur VOD standard. Pas de flags TS live, sinon certains VOD
             // chargent la duree mais restent figes sans son.
             androidx.media3.exoplayer.source.DefaultMediaSourceFactory(srcFactory)
+                .setLoadErrorHandlingPolicy(errPolicy)
         } else {
             // Live IPTV : beaucoup de flux sont du MPEG-TS brut sans IDR/AUD.
             val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
@@ -201,6 +231,7 @@ class PlayerActivity : AppCompatActivity() {
                         androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
                 )
             androidx.media3.exoplayer.source.DefaultMediaSourceFactory(srcFactory, extractors)
+                .setLoadErrorHandlingPolicy(errPolicy)
         }
         // v147 : usine de renderers KZ qui donne la priorite au decodeur video LOGICIEL
         // (fixe l'image figee sur les box dont le decodeur materiel plante silencieusement).
@@ -222,6 +253,9 @@ class PlayerActivity : AppCompatActivity() {
 
         val playerBuilder = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
+            // v371 : garde le reseau actif pendant la lecture (box / telephone en veille
+            // Wi-Fi = image figee au bout de quelques secondes).
+            .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
         val loadControl = if (isVod) {
             // VOD/films/series : buffer equilibre.
             // v38 etait tres stable mais un peu lent au demarrage ; ici on garde assez de marge
@@ -234,10 +268,14 @@ class PlayerActivity : AppCompatActivity() {
             // v359 : le buffer de 1,5 s etait trop juste sur les serveurs lents :
             // au premier trou de reseau l image se figeait. On garde un demarrage rapide
             // (1,2 s avant de lancer l image) mais on remplit jusqu a 30 s d avance.
+            // v371 : la chaine se figeait au bout de quelques secondes chez certains
+            // clients (serveur qui envoie par paquets). On garde un demarrage rapide
+            // mais on remplit jusqu a 60 s d avance et on redemarre avec 3,5 s de reserve.
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(3000, 30000, 1200, 2500)
+                .setBufferDurationsMs(8000, 60000, 1500, 3500)
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .setTargetBufferBytes(-1)
+                .setBackBuffer(10000, true)
                 .build()
         }
         playerBuilder.setLoadControl(loadControl)
@@ -356,7 +394,8 @@ class PlayerActivity : AppCompatActivity() {
         })
         playCurrent()
         lastProgressTs = SystemClock.elapsedRealtime()
-        if (isLiveMode) recoveryHandler.postDelayed(stallWatchdog, 2000)
+        // v371 : la surveillance tourne aussi sur les films et les episodes.
+        recoveryHandler.postDelayed(stallWatchdog, 2000)
     }
 
     private fun playCurrent() {
@@ -594,7 +633,7 @@ class PlayerActivity : AppCompatActivity() {
         val now = SystemClock.elapsedRealtime()
         // v359 : on se rebranche plus vite et beaucoup plus longtemps qu avant
         // (avant : 5 s d attente et 12 essais seulement, la chaine restait figee).
-        if (now - lastReconnectTs < 2500L) return
+        if (now - lastReconnectTs < 2000L) return
         lastReconnectTs = now
         liveRetries++
         if (liveRetries > 60) return
@@ -608,6 +647,8 @@ class PlayerActivity : AppCompatActivity() {
         lastPos = -1L
         lastProgressTs = now
         playCurrent()
+        // v371 : on saute au bord du direct pour ne pas repartir sur un buffer mort.
+        try { p.seekToDefaultPosition() } catch (e: Exception) {}
     }
 
     // Variantes VOD/episodes : certains portails Stalker renvoient un container non decodeable

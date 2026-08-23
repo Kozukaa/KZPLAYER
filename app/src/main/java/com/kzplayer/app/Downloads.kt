@@ -188,6 +188,9 @@ object Downloads {
             req.setTitle(if (title.isBlank()) name else title)
             req.setDescription("KZ Player")
             req.setAllowedOverRoaming(false)
+            // v371 : Wi-Fi ET donnees mobiles autorises, sinon le telechargement
+            // restait bloque en attente sur certains appareils.
+            try { req.setAllowedOverMetered(true) } catch (e: Exception) {}
             req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             req.setDestinationInExternalFilesDir(ctx, Environment.DIRECTORY_MOVIES, name)
             dm.enqueue(req)

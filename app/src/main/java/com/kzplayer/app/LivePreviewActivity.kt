@@ -246,6 +246,12 @@ class LivePreviewActivity : BaseActivity() {
     private fun openFullscreen() {
         autoFsDone = true
         uiHandler.removeCallbacks(autoFsRunnable)
+        // v373 : on libere le mini-lecteur AVANT d ouvrir le plein ecran.
+        // Sinon deux lecteurs lisent le meme flux en meme temps : l appareil sature
+        // et tue l application (retour "Chargement des serveurs...").
+        try { player?.stop() } catch (e: Throwable) {}
+        try { player?.release() } catch (e: Throwable) {}
+        player = null
         startActivity(
             Intent(this, PlayerActivity::class.java)
                 .putExtra("url", url)

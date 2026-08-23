@@ -36,7 +36,11 @@ class KzApp : Application(), ImageLoaderFactory {
             .respectCacheHeaders(false)
             .memoryCache {
                 MemoryCache.Builder(this)
-                    .maxSizePercent(0.25)
+                    // v375 : 12% au lieu de 25%. Les logos/affiches gardes en memoire
+                    // prenaient la place dont le lecteur video a besoin : sur les box,
+                    // Android tuait l appli quelques secondes apres le lancement d une
+                    // chaine. Le cache disque (250 Mo) garde l affichage rapide.
+                    .maxSizePercent(0.12)
                     .build()
             }
             .diskCache {

@@ -262,6 +262,9 @@ class LivePreviewActivity : BaseActivity() {
                 .putExtra("historySourceStreamId", streamId)
                 .putExtra("zapIndex", Session.zapIndex)
         )
+        // v375 : on ferme l apercu en passant en plein ecran. Il ne reste plus d ecran
+        // inutile en memoire derriere le lecteur (c est ce qui faisait tuer l appli).
+        finish()
     }
 
     override fun onStop() {

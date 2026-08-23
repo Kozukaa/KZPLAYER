@@ -66,36 +66,49 @@ class PlayerActivity : AppCompatActivity() {
     private var liveRetries = 0
     private var workingCandIdx = 0
     private var lastReconnectTs = 0L
-    // v371 : surveillance de l image figee, en DIRECT ET EN VOD.
-    // Verification chaque seconde ; des que la lecture n avance plus, on relance
-    // tout seul (nouveau lien en direct, reprise a la meme seconde en film/serie).
+    // v372 : surveillance de l image figee, en DIRECT ET EN VOD.
+    // Correctif du bug v371 : le chien de garde se declenchait pendant le tampon normal
+    // (demarrage / petit trou reseau) -> la chaine repartait en "recherche de serveur"
+    // en boucle. Maintenant on ne relance QUE si l image est vraiment morte :
+    //  - on laisse un temps de grace apres chaque lancement / reconnexion,
+    //  - on considere que ca travaille si le tampon se remplit encore,
+    //  - les seuils sont beaucoup plus tolerants.
+    private var playStartTs = 0L
+    private var lastBuffered = -1L
     private val stallWatchdog = object : Runnable {
         override fun run() {
             val p = player
             if (p != null && p.playWhenReady && p.playbackState != Player.STATE_ENDED) {
                 val now = SystemClock.elapsedRealtime()
                 val pos = p.currentPosition
-                if (pos != lastPos) {
-                    lastPos = pos
+                val buffered = try { p.totalBufferedDuration } catch (e: Exception) { 0L }
+                // Temps de grace : on ne touche a rien pendant les 20 premieres secondes
+                // qui suivent un lancement ou une reconnexion (chargement normal).
+                val grace = playStartTs == 0L || now - playStartTs < 20000L
+                // Le tampon avance = le serveur envoie des donnees = on ne coupe pas.
+                val networkAlive = buffered > lastBuffered + 300L
+                lastBuffered = buffered
+                if (pos != lastPos || networkAlive) {
+                    if (pos != lastPos) lastPos = pos
                     lastProgressTs = now
-                    liveRetries = 0
-                } else {
+                    if (pos != lastPos) liveRetries = 0
+                } else if (!grace) {
                     val stalled = now - lastProgressTs
                     val buffering = p.playbackState == Player.STATE_BUFFERING
                     if (isLiveMode) {
-                        // Direct : on se rebranche vite, c est ce qui debloque la chaine.
-                        if (lastProgressTs > 0L && ((buffering && stalled > 3500L) || stalled > 6000L)) {
+                        // Direct : image vraiment figee (rien ne bouge depuis 15 s) -> nouveau lien.
+                        if (lastProgressTs > 0L && ((buffering && stalled > 15000L) || stalled > 20000L)) {
                             reconnectLive()
                         }
                     } else {
                         // Film / episode : on relance a la meme seconde, sans perdre la place.
-                        if (lastProgressTs > 0L && ((buffering && stalled > 12000L) || stalled > 18000L)) {
+                        if (lastProgressTs > 0L && ((buffering && stalled > 25000L) || stalled > 35000L)) {
                             resumeVod()
                         }
                     }
                 }
             }
-            recoveryHandler.postDelayed(this, 1000)
+            recoveryHandler.postDelayed(this, 2000)
         }
     }
 
@@ -109,6 +122,8 @@ class PlayerActivity : AppCompatActivity() {
         val at = p.currentPosition
         lastPos = -1L
         lastProgressTs = now
+        playStartTs = now
+        lastBuffered = -1L
         try {
             p.prepare()
             if (at > 0L) p.seekTo(at)
@@ -268,11 +283,11 @@ class PlayerActivity : AppCompatActivity() {
             // v359 : le buffer de 1,5 s etait trop juste sur les serveurs lents :
             // au premier trou de reseau l image se figeait. On garde un demarrage rapide
             // (1,2 s avant de lancer l image) mais on remplit jusqu a 30 s d avance.
-            // v371 : la chaine se figeait au bout de quelques secondes chez certains
-            // clients (serveur qui envoie par paquets). On garde un demarrage rapide
-            // mais on remplit jusqu a 60 s d avance et on redemarre avec 3,5 s de reserve.
+            // v372 : les 8 s de tampon minimum de la v371 retardaient l image et faisaient
+            // croire a un blocage. On revient a un demarrage rapide (1,2 s) avec une bonne
+            // reserve d avance (40 s) : ca absorbe les trous reseau sans figer ni relancer.
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(8000, 60000, 1500, 3500)
+                .setBufferDurationsMs(3000, 40000, 1200, 2500)
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .setTargetBufferBytes(-1)
                 .setBackBuffer(10000, true)
@@ -407,6 +422,11 @@ class PlayerActivity : AppCompatActivity() {
         p.playWhenReady = true
         p.prepare()
         p.play()
+        // v372 : point de depart du temps de grace (pas de relance pendant le chargement).
+        playStartTs = SystemClock.elapsedRealtime()
+        lastBuffered = -1L
+        lastPos = -1L
+        lastProgressTs = playStartTs
     }
 
     // Lecture a la suite : a la fin d'un episode, on enchaine automatiquement sur le suivant
@@ -631,24 +651,25 @@ class PlayerActivity : AppCompatActivity() {
         val p = player ?: return
         if (!isLiveMode) return
         val now = SystemClock.elapsedRealtime()
-        // v359 : on se rebranche plus vite et beaucoup plus longtemps qu avant
-        // (avant : 5 s d attente et 12 essais seulement, la chaine restait figee).
-        if (now - lastReconnectTs < 2000L) return
+        // v372 : on ne se rebranche plus en boucle (c est ce qui faisait "recherche de
+        // serveur" toutes les 2 s). 10 s minimum entre deux reconnexions, et on reste sur
+        // la variante d URL qui fonctionnait au lieu de changer sans arret.
+        if (now - lastReconnectTs < 10000L) return
         lastReconnectTs = now
         liveRetries++
-        if (liveRetries > 60) return
+        if (liveRetries > 30) return
         val safeMax = (candidates.size - 1).coerceAtLeast(0)
-        // Si la meme variante d URL echoue 3 fois de suite, on essaie la suivante
-        // (.ts / .m3u8 / sans extension) au lieu de s acharner sur celle qui ne repond plus.
-        candIdx = if (liveRetries % 3 == 0 && candidates.size > 1)
+        // Seulement apres 3 reconnexions ratees de suite on essaie une autre variante
+        // (.ts / .m3u8 / sans extension).
+        candIdx = if (liveRetries >= 3 && liveRetries % 3 == 0 && candidates.size > 1)
             (candIdx + 1) % candidates.size
         else
             workingCandIdx.coerceIn(0, safeMax)
         lastPos = -1L
         lastProgressTs = now
+        playStartTs = now
+        lastBuffered = -1L
         playCurrent()
-        // v371 : on saute au bord du direct pour ne pas repartir sur un buffer mort.
-        try { p.seekToDefaultPosition() } catch (e: Exception) {}
     }
 
     // Variantes VOD/episodes : certains portails Stalker renvoient un container non decodeable

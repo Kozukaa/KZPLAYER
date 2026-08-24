@@ -127,13 +127,18 @@ class PlayerActivity : AppCompatActivity() {
     }
 
 
-    // v382 : detecte les chaines Full HD (categorie FHD, nom contenant FHD / 1080 /
-    // FULL HD). Sert uniquement a choisir le decodeur video. Aucune autre incidence.
+    // v383 : detecte les contenus lourds (Full HD, 4K/UHD, HDR, Dolby Vision).
+    // Sert uniquement a choisir le decodeur video : ces flux doivent etre decodes
+    // par la puce video, le decodeur logiciel n en est pas capable (saccades) et
+    // rend en plus l image tres sombre sur les contenus HDR/Dolby.
     private fun estFullHd(nom: String): Boolean {
         val t = (nom + " " + (try { Session.browseTitle } catch (e: Throwable) { "" }))
             .uppercase()
         return t.contains("FHD") || t.contains("1080") ||
-            t.contains("FULL HD") || t.contains("FULLHD")
+            t.contains("FULL HD") || t.contains("FULLHD") ||
+            t.contains("UHD") || t.contains("4K") || t.contains("2160") ||
+            t.contains("HDR") || t.contains("DOLBY") || t.contains("DV ") ||
+            t.contains("HEVC") || t.contains("H265") || t.contains("H.265")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -255,6 +260,11 @@ class PlayerActivity : AppCompatActivity() {
                     androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
             )
 
+        // v383 : IMAGE TRES SOMBRE sur les contenus HDR / Dolby Vision.
+        // Si le flux propose plusieurs pistes video, on prefere la piste HEVC ou H264
+        // classique plutot que la piste Dolby Vision, que la plupart des boitiers ne
+        // savent pas convertir (resultat : image tres sombre et delavee).
+        // Simple preference : si le flux n a qu une seule piste, rien ne change.
         val playerBuilder = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
         val loadControl = if (isVod) {
@@ -299,6 +309,14 @@ class PlayerActivity : AppCompatActivity() {
             }
             p.trackSelectionParameters = vodParams.build()
         }
+        try {
+            p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                .setPreferredVideoMimeTypes(
+                    androidx.media3.common.MimeTypes.VIDEO_H265,
+                    androidx.media3.common.MimeTypes.VIDEO_H264
+                )
+                .build()
+        } catch (e: Throwable) {}
         player = p
         playerView.player = p
         playerView.keepScreenOn = true
@@ -310,10 +328,15 @@ class PlayerActivity : AppCompatActivity() {
         // il ne faut PAS lui coller des variantes .ts/.m3u8 (faux 404 qui masquent la vraie reponse).
         // On la joue telle quelle et on suit la redirection, exactement comme un vrai boitier.
         candidates = when {
-            // VOD/episodes : on garde l'URL propre, mais si le portail renvoie du .avi non decodable
-            // par Android, on tente automatiquement les containers alternatifs courants.
-            isVod -> buildVodCandidates(url)
+            // v384 : STALKER, films et series compris. Le lien renvoye par create_link est
+            // valable une seule fois et le portail refuse toute URL differente (HTTP 405).
+            // On joue donc EXACTEMENT l'URL donnee par le portail, sans jamais changer
+            // l'extension. Avant, l'appli essayait .ts / .mp4 / .avi a la place du .mkv
+            // fourni : le serveur repondait 405 et le film ne partait pas.
             plCur?.type == "stalker" -> listOf(url)
+            // VOD/episodes (Xtream, M3U) : on garde l'URL propre, mais si le portail renvoie du
+            // .avi non decodable par Android, on tente automatiquement les containers alternatifs.
+            isVod -> buildVodCandidates(url)
             else -> buildCandidates(url)
         }
         candIdx = 0

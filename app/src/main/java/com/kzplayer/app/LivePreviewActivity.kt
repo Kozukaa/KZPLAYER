@@ -48,13 +48,18 @@ class LivePreviewActivity : BaseActivity() {
     private val autoFsRunnable = Runnable { openFullscreen() }
 
 
-    // v382 : detecte les chaines Full HD (categorie FHD, nom contenant FHD / 1080 /
-    // FULL HD). Sert uniquement a choisir le decodeur video. Aucune autre incidence.
+    // v383 : detecte les contenus lourds (Full HD, 4K/UHD, HDR, Dolby Vision).
+    // Sert uniquement a choisir le decodeur video : ces flux doivent etre decodes
+    // par la puce video, le decodeur logiciel n en est pas capable (saccades) et
+    // rend en plus l image tres sombre sur les contenus HDR/Dolby.
     private fun estFullHd(nom: String): Boolean {
         val t = (nom + " " + (try { Session.browseTitle } catch (e: Throwable) { "" }))
             .uppercase()
         return t.contains("FHD") || t.contains("1080") ||
-            t.contains("FULL HD") || t.contains("FULLHD")
+            t.contains("FULL HD") || t.contains("FULLHD") ||
+            t.contains("UHD") || t.contains("4K") || t.contains("2160") ||
+            t.contains("HDR") || t.contains("DOLBY") || t.contains("DV ") ||
+            t.contains("HEVC") || t.contains("H265") || t.contains("H.265")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

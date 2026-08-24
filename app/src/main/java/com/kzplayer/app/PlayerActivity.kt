@@ -29,6 +29,12 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var playerView: PlayerView
     private var candidates: List<String> = emptyList()
     private var candIdx = 0
+    // v386 : retenu le temps de la session. true = les films/series Stalker sont demandes
+    // sans les en-tetes MAG (repli automatique quand le serveur les refuse).
+    companion object {
+        private var stalkerVodSansEntetes = false
+    }
+    private var repliEntetesFait = false
     private var watchUrl: String = ""
     private var watchTitle: String = ""
     private var watchLogo: String = ""
@@ -117,6 +123,22 @@ class PlayerActivity : AppCompatActivity() {
                             playerView.player = null
                             playerView.player = p
                         } catch (e: Throwable) {}
+                    } else if (lastFramesTs > 0L && now - lastFramesTs > 5000L) {
+                        // v387 : rebrancher l affichage n a pas suffi (3 essais) => l image est
+                        // vraiment bloquee. On relance le flux au lieu de laisser l ecran fige.
+                        // En direct : reconnexion silencieuse. En film/serie : on reprend a la
+                        // seconde ou on etait, sans rien afficher a l ecran.
+                        lastFramesTs = now
+                        surfaceKicks = 0
+                        try {
+                            if (isLiveMode) {
+                                reconnectLive()
+                            } else {
+                                val pos = p.currentPosition
+                                playCurrent()
+                                if (pos > 0L) p.seekTo(pos)
+                            }
+                        } catch (e: Throwable) {}
                     }
                 } else {
                     lastFramesTs = SystemClock.elapsedRealtime()
@@ -127,10 +149,10 @@ class PlayerActivity : AppCompatActivity() {
     }
 
 
-    // v383 : detecte les contenus lourds (Full HD, 4K/UHD, HDR, Dolby Vision).
-    // Sert uniquement a choisir le decodeur video : ces flux doivent etre decodes
-    // par la puce video, le decodeur logiciel n en est pas capable (saccades) et
-    // rend en plus l image tres sombre sur les contenus HDR/Dolby.
+    // v385 : detecte les contenus lourds (Full HD, 4K/UHD, HDR, Dolby Vision, HEVC).
+    // Sert uniquement a choisir le decodeur video : ces flux doivent etre decodes par
+    // la puce video. Le decodeur logiciel n arrive pas a suivre (saccades) et rend en
+    // plus les contenus HDR/Dolby tres sombres.
     private fun estFullHd(nom: String): Boolean {
         val t = (nom + " " + (try { Session.browseTitle } catch (e: Throwable) { "" }))
             .uppercase()
@@ -228,7 +250,31 @@ class PlayerActivity : AppCompatActivity() {
             // Xtream / M3U : UA VLC (accepte par la quasi-totalite des panels IPTV).
             "VLC/3.0.20 LibVLC/3.0.20"
         }
-        val httpFactory = KzHttpDataSource.factory(this, userAgent = streamUa, allowCrossProtocolRedirects = true)
+// v386 : FILMS / SERIES STALKER refuses par le serveur (HTTP 458, 403, 405...).
+        // Le lien de create_link est bon, mais certains portails n acceptent le flux que si
+        // la requete arrive avec les MEMES en-tetes que le boitier MAG (Cookie mac, Referer,
+        // X-User-Agent, jeton). On les ajoute donc pour les films et series Stalker.
+        // Le DIRECT n est pas touche : il continue a partir avec le User-Agent seul, comme
+        // avant (y ajouter Cookie/Referer cassait la redirection 302 du live).
+        // Si le serveur refuse quand meme, l appli reessaie automatiquement une fois sans ces
+        // en-tetes (voir plus bas) : les deux methodes sont donc couvertes.
+        val streamHeaders: Map<String, String> =
+            if (plCur != null && plCur.type == "stalker" && isVod && !stalkerVodSansEntetes) {
+                try {
+                    val h = LinkedHashMap<String, String>()
+                    for ((k, v) in Api.stalkerHeaders(plCur)) {
+                        if (!k.equals("User-Agent", true) && v.isNotBlank()) h[k] = v
+                    }
+                    h["Accept"] = "*/*"
+                    h
+                } catch (e: Throwable) { emptyMap() }
+            } else emptyMap()
+        val httpFactory = KzHttpDataSource.factory(
+            this,
+            userAgent = streamUa,
+            allowCrossProtocolRedirects = true,
+            headers = streamHeaders
+        )
         val mediaSourceFactory = if (isVod) {
             // Films / episodes : lecteur VOD standard. Pas de flags TS live, sinon certains VOD
             // chargent la duree mais restent figes sans son.
@@ -245,7 +291,12 @@ class PlayerActivity : AppCompatActivity() {
         // v147 : usine de renderers KZ qui donne la priorite au decodeur video LOGICIEL
         // (fixe l'image figee sur les box dont le decodeur materiel plante silencieusement).
         // setEnableDecoderFallback(true) est deja active dans KzRenderersFactory.
-        val renderersFactory = KzRenderersFactory(this, estFullHd(title))
+// v385 : en DIRECT, c est la puce video qui decode (sauf si tu as choisi
+        // "logiciel" dans les reglages). Les chaines Xtream n indiquent pas leur qualite
+        // dans leur nom : beaucoup de chaines 1080i / 50 images ne contenaient ni "FHD"
+        // ni "4K", elles partaient donc sur le decodeur logiciel, incapable de suivre
+        // -> saccades. Le decodeur logiciel reste juste derriere, en secours automatique.
+        val renderersFactory = KzRenderersFactory(this, estFullHd(title) || isLiveMode)
             // CORRECTION SYNC SON/IMAGE (v86) :
             // - VOD/series : EXTENSION_RENDERER_MODE_ON => on prefere le decodeur AUDIO MATERIEL
             //   (AAC/H264 parfaitement synchronises). Avant, le mode PREFER forcait FFmpeg logiciel
@@ -260,11 +311,6 @@ class PlayerActivity : AppCompatActivity() {
                     androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
             )
 
-        // v383 : IMAGE TRES SOMBRE sur les contenus HDR / Dolby Vision.
-        // Si le flux propose plusieurs pistes video, on prefere la piste HEVC ou H264
-        // classique plutot que la piste Dolby Vision, que la plupart des boitiers ne
-        // savent pas convertir (resultat : image tres sombre et delavee).
-        // Simple preference : si le flux n a qu une seule piste, rien ne change.
         val playerBuilder = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
         val loadControl = if (isVod) {
@@ -272,12 +318,19 @@ class PlayerActivity : AppCompatActivity() {
             // v38 etait tres stable mais un peu lent au demarrage ; ici on garde assez de marge
             // pour l'audio Stalker/FFmpeg tout en reduisant la latence de lancement et de reprise.
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(4000, 30000, 700, 1500)
+                .setBufferDurationsMs(8000, 60000, 1500, 3000)
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .setTargetBufferBytes(androidx.media3.common.C.LENGTH_UNSET)
                 .build()
         } else {
-            // Live TV / zapping : buffer court pour demarrer vite et reduire la latence.
+            // v387 : le direct demarrait avec seulement 1,5 s d avance et relancait des 0,5 s.
+            // Au moindre a-coup du serveur l avance tombait a zero => saccades puis image figee.
+            // On garde une vraie reserve d avance (comme un boitier) : demarrage a peine plus
+            // long (~1 s) mais lecture fluide et plus de blocage.
             androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(1500, 8000, 500, 1000)
+                .setBufferDurationsMs(10000, 60000, 2500, 5000)
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .setTargetBufferBytes(androidx.media3.common.C.LENGTH_UNSET)
                 .build()
         }
         playerBuilder.setLoadControl(loadControl)
@@ -309,6 +362,11 @@ class PlayerActivity : AppCompatActivity() {
             }
             p.trackSelectionParameters = vodParams.build()
         }
+        // v385 : IMAGE TRES SOMBRE sur les contenus HDR / Dolby Vision. Si le flux
+        // propose plusieurs pistes video, on prefere la piste HEVC ou H264 classique
+        // plutot que la piste Dolby Vision, que la plupart des boitiers ne savent pas
+        // convertir (resultat : image tres sombre et delavee).
+        // Simple preference : si le flux n a qu une seule piste, rien ne change.
         try {
             p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
                 .setPreferredVideoMimeTypes(
@@ -328,14 +386,14 @@ class PlayerActivity : AppCompatActivity() {
         // il ne faut PAS lui coller des variantes .ts/.m3u8 (faux 404 qui masquent la vraie reponse).
         // On la joue telle quelle et on suit la redirection, exactement comme un vrai boitier.
         candidates = when {
-            // v384 : STALKER, films et series compris. Le lien renvoye par create_link est
+            // v385 : STALKER, films et series compris. Le lien renvoye par create_link est
             // valable une seule fois et le portail refuse toute URL differente (HTTP 405).
             // On joue donc EXACTEMENT l'URL donnee par le portail, sans jamais changer
             // l'extension. Avant, l'appli essayait .ts / .mp4 / .avi a la place du .mkv
             // fourni : le serveur repondait 405 et le film ne partait pas.
             plCur?.type == "stalker" -> listOf(url)
-            // VOD/episodes (Xtream, M3U) : on garde l'URL propre, mais si le portail renvoie du
-            // .avi non decodable par Android, on tente automatiquement les containers alternatifs.
+            // VOD/episodes (Xtream, M3U) : on garde l'URL propre, mais si le portail renvoie
+            // du .avi non decodable par Android, on tente les containers alternatifs.
             isVod -> buildVodCandidates(url)
             else -> buildCandidates(url)
         }
@@ -366,6 +424,9 @@ class PlayerActivity : AppCompatActivity() {
                 if (playbackState == Player.STATE_READY && p.playWhenReady && !p.isPlaying) {
                     p.play()
                 }
+                // v386 : la lecture demarre -> la methode d en-tetes utilisee est la bonne,
+                // on la garde pour les prochains films de la session.
+                if (playbackState == Player.STATE_READY) repliEntetesFait = false
                 if (playbackState == Player.STATE_READY && isLiveMode) {
                     // Direct reparti : on memorise la variante qui marche et on remet le compteur
                     // de reconnexions a zero.
@@ -392,6 +453,15 @@ class PlayerActivity : AppCompatActivity() {
                     val c = error.cause
                     val detail = if (c is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)
                         "HTTP ${c.responseCode}" else error.errorCodeName
+                    // v386 : film/serie Stalker refuse par le serveur -> on retente UNE fois
+                    // avec l autre methode d en-tetes, automatiquement et sans rien demander.
+                    if (!isLiveMode && Session.current?.type == "stalker" && !repliEntetesFait &&
+                        c is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
+                    ) {
+                        repliEntetesFait = true
+                        stalkerVodSansEntetes = !stalkerVodSansEntetes
+                        try { recreate(); return } catch (e: Throwable) {}
+                    }
                     val u = candidates.getOrNull(candIdx) ?: ""
                     // Fenetre lisible (au lieu d'un toast fugace) avec le diagnostic complet :
                     // l'utilisateur peut lire / photographier l'URL exacte et la reponse du serveur.

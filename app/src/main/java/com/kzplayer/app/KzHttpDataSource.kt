@@ -23,18 +23,31 @@ import javax.net.ssl.X509TrustManager
 //        hebergeurs IPTV a certificats incomplets) sinon on aurait des flux qui
 //        cassent uniquement pour les utilisateurs de DNS custom.
 object KzHttpDataSource {
+    // v386 : parametre "headers" facultatif. Vide par defaut => comportement identique
+    // a avant pour TOUS les appels existants (direct Stalker, Xtream, M3U).
+    // Utilise uniquement pour les films/series Stalker, dont certains portails refusent
+    // le flux si la requete n a pas les memes en-tetes que le boitier MAG.
     fun factory(
         ctx: Context,
         userAgent: String,
-        allowCrossProtocolRedirects: Boolean = true
+        allowCrossProtocolRedirects: Boolean = true,
+        headers: Map<String, String> = emptyMap()
     ): HttpDataSource.Factory {
         return if (DnsPref.current(ctx) == DnsPref.SYSTEM) {
-            androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            val f = androidx.media3.datasource.DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(allowCrossProtocolRedirects)
                 .setUserAgent(userAgent)
+            if (headers.isNotEmpty()) {
+                try { f.setDefaultRequestProperties(headers) } catch (e: Throwable) {}
+            }
+            f
         } else {
-            androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(buildStreamClient())
+            val f = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(buildStreamClient())
                 .setUserAgent(userAgent)
+            if (headers.isNotEmpty()) {
+                try { f.setDefaultRequestProperties(headers) } catch (e: Throwable) {}
+            }
+            f
         }
     }
 

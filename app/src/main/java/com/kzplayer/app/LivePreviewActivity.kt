@@ -48,10 +48,10 @@ class LivePreviewActivity : BaseActivity() {
     private val autoFsRunnable = Runnable { openFullscreen() }
 
 
-    // v383 : detecte les contenus lourds (Full HD, 4K/UHD, HDR, Dolby Vision).
-    // Sert uniquement a choisir le decodeur video : ces flux doivent etre decodes
-    // par la puce video, le decodeur logiciel n en est pas capable (saccades) et
-    // rend en plus l image tres sombre sur les contenus HDR/Dolby.
+    // v385 : detecte les contenus lourds (Full HD, 4K/UHD, HDR, Dolby Vision, HEVC).
+    // Sert uniquement a choisir le decodeur video : ces flux doivent etre decodes par
+    // la puce video. Le decodeur logiciel n arrive pas a suivre (saccades) et rend en
+    // plus les contenus HDR/Dolby tres sombres.
     private fun estFullHd(nom: String): Boolean {
         val t = (nom + " " + (try { Session.browseTitle } catch (e: Throwable) { "" }))
             .uppercase()
@@ -165,10 +165,11 @@ class LivePreviewActivity : BaseActivity() {
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
         // v148 : meme fix que le plein ecran (decodeur video logiciel prioritaire
         // pour ne pas rester fige sur la premiere frame sur les box TV cassees).
-        val renderersFactory = KzRenderersFactory(this, estFullHd(title))
+// v385 : l apercu ne joue que du direct -> meme regle que le plein ecran.
+        val renderersFactory = KzRenderersFactory(this, true)
             .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(1500, 8000, 500, 1000)
+            .setBufferDurationsMs(6000, 40000, 2000, 3500) // v387 : reserve d avance, fin des saccades
             .build()
         val p = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)

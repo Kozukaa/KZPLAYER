@@ -49,6 +49,47 @@ class PlayerActivity : AppCompatActivity() {
     private var repliEntetesFait = false
     // v388 : un seul nouvel essai immediat par lecture (limite de connexions du serveur).
     private var reessai401Fait = false
+
+    // v389 : ROND DE CHARGEMENT QUI TOURNE EN BOUCLE SANS AFFICHER LA CHAINE.
+    // Le serveur accepte la connexion mais n envoie jamais d image : ExoPlayer reste
+    // en chargement indefiniment et aucune erreur n arrive, donc rien ne se declenchait.
+    // On surveille donc le demarrage : si rien ne s affiche au bout de 9 s, on essaie
+    // automatiquement l adresse suivante, puis une autre signature de lecteur.
+    private var demarrageOk = false
+    private var demarrageEssais = 0
+    private val startupWatchdog = object : Runnable {
+        override fun run() {
+            val p = player ?: return
+            if (demarrageOk) return
+            val demarre = p.playbackState == Player.STATE_READY &&
+                (p.videoSize.width > 0 || p.currentPosition > 0L)
+            if (demarre) { demarrageOk = true; return }
+            demarrageEssais++
+            val nb = candidates.size.coerceAtLeast(1)
+            if (demarrageEssais <= nb) {
+                // Adresse suivante du meme flux (.ts, .m3u8, sans extension, sans /live/...).
+                candIdx = (candIdx + 1) % nb
+                playCurrent()
+                recoveryHandler.postDelayed(this, 9000)
+                return
+            }
+            if (vodUaIdx < UAS_VOD.size - 1) {
+                // Toutes les adresses ont ete essayees : on se presente autrement au serveur.
+                vodUaIdx++
+                try { recreate(); return } catch (e: Throwable) {}
+            }
+            // Vraiment rien ne part : on arrete le rond et on le dit clairement.
+            try {
+                p.pause()
+                androidx.appcompat.app.AlertDialog.Builder(this@PlayerActivity)
+                    .setTitle("Chaine indisponible")
+                    .setMessage("Le serveur ne renvoie aucune image pour cette chaine. " +
+                        "Essaie une autre chaine ou recharge ta liste.")
+                    .setPositiveButton("OK") { d, _ -> d.dismiss() }
+                    .show()
+            } catch (e: Throwable) {}
+        }
+    }
     private var watchUrl: String = ""
     private var watchTitle: String = ""
     private var watchLogo: String = ""
@@ -266,8 +307,10 @@ class PlayerActivity : AppCompatActivity() {
             // l appli change toute seule de signature si le serveur refuse (HTTP 401/403).
             UAS_VOD[vodUaIdx.coerceIn(0, UAS_VOD.size - 1)]
         } else {
-            // Direct Xtream / M3U : UA VLC (accepte par la quasi-totalite des panels IPTV).
-            "VLC/3.0.20 LibVLC/3.0.20"
+            // v389 : le DIRECT aussi. On demarre sur VLC (comportement identique a avant
+            // pour tous ceux chez qui ca marche) et on ne change de signature que si la
+            // chaine refuse de partir.
+            UAS_VOD[vodUaIdx.coerceIn(0, UAS_VOD.size - 1)]
         }
 // v386 : FILMS / SERIES STALKER refuses par le serveur (HTTP 458, 403, 405...).
         // Le lien de create_link est bon, mais certains portails n acceptent le flux que si
@@ -294,9 +337,11 @@ class PlayerActivity : AppCompatActivity() {
             allowCrossProtocolRedirects = true,
             headers = streamHeaders
         )
+        // v389 : 2 essais suffisent pour un morceau de flux ; au dela, le rond de
+        // chargement tournait pendant des dizaines de secondes sans rien afficher.
         // v388 : un morceau de flux qui repond mal est reessaye plusieurs fois avant
         // d abandonner (sur les connexions instables l image se figeait tout de suite).
-        val errPolicy = androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy(6)
+        val errPolicy = androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy(3)
         val mediaSourceFactory = if (isVod) {
             // Films / episodes : lecteur VOD standard. Pas de flags TS live, sinon certains VOD
             // chargent la duree mais restent figes sans son.
@@ -454,6 +499,11 @@ class PlayerActivity : AppCompatActivity() {
                 // v386 : la lecture demarre -> la methode d en-tetes utilisee est la bonne,
                 // on la garde pour les prochains films de la session.
                 if (playbackState == Player.STATE_READY) repliEntetesFait = false
+                // v389 : la chaine est partie -> plus besoin de surveiller le demarrage.
+                if (playbackState == Player.STATE_READY && p.videoSize.width > 0) {
+                    demarrageOk = true
+                    recoveryHandler.removeCallbacks(startupWatchdog)
+                }
                 if (playbackState == Player.STATE_READY && isLiveMode) {
                     // Direct reparti : on memorise la variante qui marche et on remet le compteur
                     // de reconnexions a zero.
@@ -528,6 +578,8 @@ class PlayerActivity : AppCompatActivity() {
         playCurrent()
         lastProgressTs = SystemClock.elapsedRealtime()
         if (isLiveMode) recoveryHandler.postDelayed(stallWatchdog, 2000)
+        // v389 : surveillance du demarrage (rond de chargement sans fin).
+        recoveryHandler.postDelayed(startupWatchdog, 9000)
         // v380 : surveillance de l image (direct ET films/series). Ne touche pas au flux.
         lastFramesTs = SystemClock.elapsedRealtime()
         recoveryHandler.postDelayed(frozenImageWatchdog, 4000)

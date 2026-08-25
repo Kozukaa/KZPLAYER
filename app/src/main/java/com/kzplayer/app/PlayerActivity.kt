@@ -33,63 +33,8 @@ class PlayerActivity : AppCompatActivity() {
     // sans les en-tetes MAG (repli automatique quand le serveur les refuse).
     companion object {
         private var stalkerVodSansEntetes = false
-        // v388 : certains panels IPTV refusent le flux (HTTP 401 / 403) quand le lecteur
-        // ne se presente pas comme celui qu ils attendent. Selon le serveur du client, ce
-        // n est pas la meme signature qui passe : on les essaie donc toutes, automatiquement.
-        private val UAS_VOD = listOf(
-            "VLC/3.0.20 LibVLC/3.0.20",
-            "Lavf/60.16.100",
-            "IPTVSmartersPro",
-            "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "okhttp/4.12.0",
-            "Dalvik/2.1.0 (Linux; U; Android 12)"
-        )
-        private var vodUaIdx = 0
     }
     private var repliEntetesFait = false
-    // v388 : un seul nouvel essai immediat par lecture (limite de connexions du serveur).
-    private var reessai401Fait = false
-
-    // v389 : ROND DE CHARGEMENT QUI TOURNE EN BOUCLE SANS AFFICHER LA CHAINE.
-    // Le serveur accepte la connexion mais n envoie jamais d image : ExoPlayer reste
-    // en chargement indefiniment et aucune erreur n arrive, donc rien ne se declenchait.
-    // On surveille donc le demarrage : si rien ne s affiche au bout de 9 s, on essaie
-    // automatiquement l adresse suivante, puis une autre signature de lecteur.
-    private var demarrageOk = false
-    private var demarrageEssais = 0
-    private val startupWatchdog = object : Runnable {
-        override fun run() {
-            val p = player ?: return
-            if (demarrageOk) return
-            val demarre = p.playbackState == Player.STATE_READY &&
-                (p.videoSize.width > 0 || p.currentPosition > 0L)
-            if (demarre) { demarrageOk = true; return }
-            demarrageEssais++
-            val nb = candidates.size.coerceAtLeast(1)
-            if (demarrageEssais <= nb) {
-                // Adresse suivante du meme flux (.ts, .m3u8, sans extension, sans /live/...).
-                candIdx = (candIdx + 1) % nb
-                playCurrent()
-                recoveryHandler.postDelayed(this, 9000)
-                return
-            }
-            if (vodUaIdx < UAS_VOD.size - 1) {
-                // Toutes les adresses ont ete essayees : on se presente autrement au serveur.
-                vodUaIdx++
-                try { recreate(); return } catch (e: Throwable) {}
-            }
-            // Vraiment rien ne part : on arrete le rond et on le dit clairement.
-            try {
-                p.pause()
-                androidx.appcompat.app.AlertDialog.Builder(this@PlayerActivity)
-                    .setTitle("Chaine indisponible")
-                    .setMessage("Le serveur ne renvoie aucune image pour cette chaine. " +
-                        "Essaie une autre chaine ou recharge ta liste.")
-                    .setPositiveButton("OK") { d, _ -> d.dismiss() }
-                    .show()
-            } catch (e: Throwable) {}
-        }
-    }
     private var watchUrl: String = ""
     private var watchTitle: String = ""
     private var watchLogo: String = ""
@@ -137,13 +82,12 @@ class PlayerActivity : AppCompatActivity() {
                     val stalled = now - lastProgressTs
                     val buffering = p.playbackState == Player.STATE_BUFFERING
                     // Image figee / son coupe : la lecture n'avance plus depuis trop longtemps.
-                    // v388 : detection plus rapide (avant : 12 s / 20 s d image figee).
-                    if (lastProgressTs > 0L && ((buffering && stalled > 6000L) || stalled > 10000L)) {
+                    if (lastProgressTs > 0L && ((buffering && stalled > 12000L) || stalled > 20000L)) {
                         reconnectLive()
                     }
                 }
             }
-            recoveryHandler.postDelayed(this, 1500)
+            recoveryHandler.postDelayed(this, 3000)
         }
     }
 
@@ -302,15 +246,9 @@ class PlayerActivity : AppCompatActivity() {
             // la redirection 302 vers le vrai serveur de streaming avec token dans l'URL).
             Api.stalkerHeaders(plCur)["User-Agent"]?.takeIf { it.isNotBlank() }
                 ?: "VLC/3.0.20 LibVLC/3.0.20"
-        } else if (isVod) {
-            // v388 : films / episodes Xtream et M3U. On part sur VLC (le plus accepte) et
-            // l appli change toute seule de signature si le serveur refuse (HTTP 401/403).
-            UAS_VOD[vodUaIdx.coerceIn(0, UAS_VOD.size - 1)]
         } else {
-            // v389 : le DIRECT aussi. On demarre sur VLC (comportement identique a avant
-            // pour tous ceux chez qui ca marche) et on ne change de signature que si la
-            // chaine refuse de partir.
-            UAS_VOD[vodUaIdx.coerceIn(0, UAS_VOD.size - 1)]
+            // Xtream / M3U : UA VLC (accepte par la quasi-totalite des panels IPTV).
+            "VLC/3.0.20 LibVLC/3.0.20"
         }
 // v386 : FILMS / SERIES STALKER refuses par le serveur (HTTP 458, 403, 405...).
         // Le lien de create_link est bon, mais certains portails n acceptent le flux que si
@@ -337,16 +275,10 @@ class PlayerActivity : AppCompatActivity() {
             allowCrossProtocolRedirects = true,
             headers = streamHeaders
         )
-        // v389 : 2 essais suffisent pour un morceau de flux ; au dela, le rond de
-        // chargement tournait pendant des dizaines de secondes sans rien afficher.
-        // v388 : un morceau de flux qui repond mal est reessaye plusieurs fois avant
-        // d abandonner (sur les connexions instables l image se figeait tout de suite).
-        val errPolicy = androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy(3)
         val mediaSourceFactory = if (isVod) {
             // Films / episodes : lecteur VOD standard. Pas de flags TS live, sinon certains VOD
             // chargent la duree mais restent figes sans son.
             androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory)
-                .setLoadErrorHandlingPolicy(errPolicy)
         } else {
             // Live IPTV : beaucoup de flux sont du MPEG-TS brut sans IDR/AUD.
             val extractors = androidx.media3.extractor.DefaultExtractorsFactory()
@@ -355,7 +287,6 @@ class PlayerActivity : AppCompatActivity() {
                         androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
                 )
             androidx.media3.exoplayer.source.DefaultMediaSourceFactory(httpFactory, extractors)
-                .setLoadErrorHandlingPolicy(errPolicy)
         }
         // v147 : usine de renderers KZ qui donne la priorite au decodeur video LOGICIEL
         // (fixe l'image figee sur les box dont le decodeur materiel plante silencieusement).
@@ -382,9 +313,6 @@ class PlayerActivity : AppCompatActivity() {
 
         val playerBuilder = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
-            // v388 : empeche le boitier / telephone de mettre le Wi-Fi en veille pendant
-            // la lecture (cause frequente d image figee au bout de quelques secondes).
-            .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
         val loadControl = if (isVod) {
             // VOD/films/series : buffer equilibre.
             // v38 etait tres stable mais un peu lent au demarrage ; ici on garde assez de marge
@@ -499,11 +427,6 @@ class PlayerActivity : AppCompatActivity() {
                 // v386 : la lecture demarre -> la methode d en-tetes utilisee est la bonne,
                 // on la garde pour les prochains films de la session.
                 if (playbackState == Player.STATE_READY) repliEntetesFait = false
-                // v389 : la chaine est partie -> plus besoin de surveiller le demarrage.
-                if (playbackState == Player.STATE_READY && p.videoSize.width > 0) {
-                    demarrageOk = true
-                    recoveryHandler.removeCallbacks(startupWatchdog)
-                }
                 if (playbackState == Player.STATE_READY && isLiveMode) {
                     // Direct reparti : on memorise la variante qui marche et on remet le compteur
                     // de reconnexions a zero.
@@ -539,29 +462,6 @@ class PlayerActivity : AppCompatActivity() {
                         stalkerVodSansEntetes = !stalkerVodSansEntetes
                         try { recreate(); return } catch (e: Throwable) {}
                     }
-                    // v388 : le serveur a refuse le flux (401 Unauthorized, 403, trop de
-                    // connexions...). Avant d afficher quoi que ce soit, on retente une fois
-                    // le lien (la connexion precedente n est parfois pas encore liberee cote
-                    // serveur), puis on rejoue le meme lien avec une autre signature de
-                    // lecteur. C est ce qui bloquait chez certains clients seulement.
-                    if (!isLiveMode && Session.current?.type != "stalker" &&
-                        c is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
-                    ) {
-                        val code = c.responseCode
-                        if (code == 401 || code == 403 || code == 429 || code == 503 || code == 512) {
-                            if (!reessai401Fait) {
-                                reessai401Fait = true
-                                candIdx = 0
-                                recoveryHandler.postDelayed({ playCurrent() }, 2500)
-                                return
-                            }
-                            if (vodUaIdx < UAS_VOD.size - 1) {
-                                vodUaIdx++
-                                reessai401Fait = false
-                                try { recreate(); return } catch (e: Throwable) {}
-                            }
-                        }
-                    }
                     val u = candidates.getOrNull(candIdx) ?: ""
                     // Fenetre lisible (au lieu d'un toast fugace) avec le diagnostic complet :
                     // l'utilisateur peut lire / photographier l'URL exacte et la reponse du serveur.
@@ -577,9 +477,7 @@ class PlayerActivity : AppCompatActivity() {
         })
         playCurrent()
         lastProgressTs = SystemClock.elapsedRealtime()
-        if (isLiveMode) recoveryHandler.postDelayed(stallWatchdog, 2000)
-        // v389 : surveillance du demarrage (rond de chargement sans fin).
-        recoveryHandler.postDelayed(startupWatchdog, 9000)
+        if (isLiveMode) recoveryHandler.postDelayed(stallWatchdog, 3000)
         // v380 : surveillance de l image (direct ET films/series). Ne touche pas au flux.
         lastFramesTs = SystemClock.elapsedRealtime()
         recoveryHandler.postDelayed(frozenImageWatchdog, 4000)
@@ -810,20 +708,14 @@ class PlayerActivity : AppCompatActivity() {
         val p = player ?: return
         if (!isLiveMode) return
         val now = SystemClock.elapsedRealtime()
-        if (now - lastReconnectTs < 2500L) return
+        if (now - lastReconnectTs < 5000L) return
         lastReconnectTs = now
         liveRetries++
-        // v388 : on n abandonne plus la chaine au bout de 12 essais (avant, l image restait
-        // figee definitivement). Toutes les 3 tentatives on change de variante d URL.
-        if (liveRetries > 200) return
-        candIdx = if (liveRetries % 3 == 0 && candidates.size > 1)
-            (workingCandIdx + 1) % candidates.size
-        else workingCandIdx.coerceIn(0, (candidates.size - 1).coerceAtLeast(0))
+        if (liveRetries > 12) return
+        candIdx = workingCandIdx.coerceIn(0, (candidates.size - 1).coerceAtLeast(0))
         lastPos = -1L
         lastProgressTs = now
         playCurrent()
-        // On repart au bord du direct : sinon on rejoue un buffer deja mort.
-        try { p.seekToDefaultPosition() } catch (e: Exception) {}
     }
 
     // Variantes VOD/episodes : certains portails Stalker renvoient un container non decodeable
@@ -839,17 +731,17 @@ class PlayerActivity : AppCompatActivity() {
             if (replaced != url) list.add(replaced)
         }
 
-        // v388 : le panel indique souvent une extension qui n est pas celle du fichier
-        // (ex : .ts alors que le film est en .mkv) et le serveur repond 401 ou 404.
-        // On essaie donc toutes les extensions courantes, puis le lien sans extension.
-        for (e in listOf("mkv", "mp4", "ts", "avi", "m4v")) {
-            replaceExt("mkv", e); replaceExt("mp4", e); replaceExt("ts", e)
-            replaceExt("avi", e); replaceExt("m4v", e)
-        }
-        for (x in listOf("mkv", "mp4", "ts", "avi", "m4v")) {
-            val re = Regex("(?i)\\." + x + "(?=(&|\\?|$))")
-            val sans = url.replace(re, "")
-            if (sans != url) list.add(sans)
+        val lower = url.lowercase()
+        when {
+            lower.contains(".avi&") || lower.contains(".avi?") || lower.endsWith(".avi") -> {
+                replaceExt("avi", "mp4"); replaceExt("avi", "mkv"); replaceExt("avi", "ts")
+            }
+            lower.contains(".mkv&") || lower.contains(".mkv?") || lower.endsWith(".mkv") -> {
+                replaceExt("mkv", "mp4"); replaceExt("mkv", "avi"); replaceExt("mkv", "ts")
+            }
+            lower.contains(".mp4&") || lower.contains(".mp4?") || lower.endsWith(".mp4") -> {
+                replaceExt("mp4", "mkv"); replaceExt("mp4", "avi"); replaceExt("mp4", "ts")
+            }
         }
         return list.toList()
     }

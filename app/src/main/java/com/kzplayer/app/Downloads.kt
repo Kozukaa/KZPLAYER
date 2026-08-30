@@ -259,11 +259,11 @@ object Downloads {
     // cmd : commande du serveur (Stalker) qui permet de refabriquer un lien frais
     // si le jeton expire pendant le telechargement.
     fun enqueue(ctx: Context, title: String, url: String, cmd: String = ""): String {
-        if (url.isBlank()) return "Lien de téléchargement introuvable."
-        if (url.contains(".m3u8")) return "Ce contenu est diffusé en direct : téléchargement impossible."
+        if (url.isBlank()) return "Lien de t\u00e9l\u00e9chargement introuvable."
+        if (url.contains(".m3u8")) return "Ce contenu est diffus\u00e9 en direct : t\u00e9l\u00e9chargement impossible."
         return try {
             val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
-            if (dm == null) return "Téléchargement indisponible sur cet appareil."
+            if (dm == null) return "T\u00e9l\u00e9chargement indisponible sur cet appareil."
             val name = safeName(title, url)
             val req = DownloadManager.Request(Uri.parse(url))
             req.addRequestHeader("User-Agent", Config.USER_AGENT)
@@ -294,7 +294,7 @@ object Downloads {
             "T\u00e9l\u00e9chargement lanc\u00e9 : " + name +
                 " - suis la progression dans Param\u00e8tres > T\u00e9l\u00e9chargement"
         } catch (e: Exception) {
-            "Téléchargement impossible : " + (e.message ?: "erreur")
+            "T\u00e9l\u00e9chargement impossible : " + (e.message ?: "erreur")
         }
     }
 }

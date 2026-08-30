@@ -21,7 +21,7 @@ abstract class NtBase : BaseActivity() {
                 )
                 if (res.ok && res.active) {
                     LicenseGuard.rememberOk(this@NtBase, res.expiration)
-                    Session.playlists = res.playlists
+                    Session.playlists = LocalPlaylists.merge(res.playlists)
                     Session.expiration = res.expiration
                     Session.current = res.playlists.firstOrNull()
                 }

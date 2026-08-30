@@ -79,10 +79,10 @@ class ReplayHubActivity : BaseActivity() {
         shown = emptyList()
         progs = emptyList()
         searchEt.setText("")
-        leftTitle.text = "Catégories"
+        leftTitle.text = "Cat\u00e9gories"
         progRv.adapter?.notifyDataSetChanged()
         chRv.adapter?.notifyDataSetChanged()
-        msgTv.text = "Choisis une catégorie."
+        msgTv.text = "Choisis une cat\u00e9gorie."
     }
 
     // Barre des jours : Aujourd hui, Hier, puis les jours precedents.
@@ -139,9 +139,9 @@ class ReplayHubActivity : BaseActivity() {
                 "Veuillez l'utiliser via un Xtream ou un M3U"
             return
         }
-        leftTitle.text = "Catégories"
+        leftTitle.text = "Cat\u00e9gories"
         progress.visibility = View.VISIBLE
-        msgTv.text = "Chargement des catégories..."
+        msgTv.text = "Chargement des cat\u00e9gories..."
         lifecycleScope.launch {
             val base = try {
                 if (pl.type == "stalker") Api.stalkerCategories(pl, "live")
@@ -150,8 +150,8 @@ class ReplayHubActivity : BaseActivity() {
             cats = base.filter { !it.id.startsWith("__") }
             progress.visibility = View.GONE
             chRv.adapter?.notifyDataSetChanged()
-            msgTv.text = if (cats.isEmpty()) "Aucune catégorie sur ce serveur."
-                else "Choisis une catégorie."
+            msgTv.text = if (cats.isEmpty()) "Aucune cat\u00e9gorie sur ce serveur."
+                else "Choisis une cat\u00e9gorie."
         }
     }
 
@@ -177,8 +177,8 @@ class ReplayHubActivity : BaseActivity() {
             channels = if (withCatchup.isNotEmpty()) withCatchup else items
             applyFilter()
             progress.visibility = View.GONE
-            msgTv.text = if (channels.isEmpty()) "Aucune chaine dans cette catégorie."
-                else if (withCatchup.isEmpty()) "Aucun replay signalé : toutes les chaines sont affichées."
+            msgTv.text = if (channels.isEmpty()) "Aucune chaine dans cette cat\u00e9gorie."
+                else if (withCatchup.isEmpty()) "Aucun replay signal\u00e9 : toutes les chaines sont affich\u00e9es."
                 else "Choisis une chaine, puis un jour."
         }
     }
@@ -276,7 +276,7 @@ class ReplayHubActivity : BaseActivity() {
                 return
             }
             if (position == 0) {
-                holder.name.text = "◀  Retour aux catégories"
+                holder.name.text = "\u25c0  Retour aux cat\u00e9gories"
                 holder.logo.setImageResource(R.drawable.ic_chevron)
                 holder.v.isSelected = false
                 holder.v.setOnClickListener { backToCategories() }

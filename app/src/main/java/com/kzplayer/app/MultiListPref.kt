@@ -18,5 +18,5 @@ object MultiListPref {
     }
 
     fun label(ctx: Context): String =
-        if (isAll(ctx)) "Toutes les listes en même temps" else "Une seule liste (liste active)"
+        if (isAll(ctx)) "Toutes les listes en m\u00eame temps" else "Une seule liste (liste active)"
 }

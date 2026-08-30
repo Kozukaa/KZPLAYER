@@ -12,7 +12,7 @@ import java.security.MessageDigest
 object SecurityChecks {
     fun enforce(activity: Activity): Boolean {
         // En debug, on laisse l'app fonctionner pour les tests.
-        // On évite BuildConfig pour ne pas casser certains builds Gradle/AGP.
+        // On \u00e9vite BuildConfig pour ne pas casser certains builds Gradle/AGP.
         if (isDebuggable(activity)) return true
 
         if (Debug.isDebuggerConnected()) {
@@ -24,7 +24,7 @@ object SecurityChecks {
         if (expected.isNotBlank()) {
             val current = currentSignatureSha256(activity).uppercase()
             if (current.isBlank() || current != expected) {
-                block(activity, "Application modifiée ou non officielle")
+                block(activity, "Application modifi\u00e9e ou non officielle")
                 return false
             }
         }

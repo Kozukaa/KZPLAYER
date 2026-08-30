@@ -125,7 +125,9 @@ abstract class NtCatalogActivity : NtBase() {
         setLoading(true); msgTv.text = ""
         lifecycleScope.launch {
             try {
-                val base = when (pl.type) {
+                // v391 : mode multiliste (toutes les listes) aussi dans le theme NewTivi.
+                val multiLists = MultiListPref.isAll(this@NtCatalogActivity) && Session.playlists.size > 1
+                val base = if (multiLists) catsAllLists() else when (pl.type) {
                     "m3u" -> Api.m3uCategories(pl, kind)
                     "stalker" -> Api.stalkerCategories(pl, kind)
                     else -> Api.xtreamCategories(pl, kind)
@@ -155,6 +157,25 @@ abstract class NtCatalogActivity : NtBase() {
         }
     }
 
+    // v391 : categories de TOUTES les listes, id = "<categorie>@@<idListe>".
+    private suspend fun catsAllLists(): List<Category> {
+        val out = ArrayList<Category>()
+        for (p in Session.playlists) {
+            val cats = try {
+                when (p.type) {
+                    "m3u" -> Api.m3uCategories(p, kind)
+                    "stalker" -> Api.stalkerCategories(p, kind)
+                    else -> Api.xtreamCategories(p, kind)
+                }
+            } catch (e: Exception) { emptyList<Category>() }
+            for (c in cats) {
+                if (c.id.startsWith("__")) continue
+                out.add(Category(c.id + "@@" + p.id, c.name + "   -   " + p.nom))
+            }
+        }
+        return out
+    }
+
     private fun selectCategory(cat: Category) {
         // Choisir une categorie = navigation : on quitte le mode recherche multi-serveurs.
         multiMode = false
@@ -163,6 +184,13 @@ abstract class NtCatalogActivity : NtBase() {
         // filtrer la categorie choisie avec un ancien texte -> sinon "Tout" semble ne rien afficher.
         if (searchEt.text.isNotEmpty()) { ignoreSearchChange = true; searchEt.setText(""); ignoreSearchChange = false }
         selectedCat = cat.id
+        // v391 : categorie issue du multiliste -> on bascule sur sa liste.
+        val atSep = cat.id.indexOf("@@")
+        val realCat = if (atSep > 0) cat.id.substring(0, atSep) else cat.id
+        if (atSep > 0) {
+            val owner = Session.playlists.firstOrNull { it.id == cat.id.substring(atSep + 2) }
+            if (owner != null && owner.id != Session.current?.id) Session.current = owner
+        }
         catAdapter?.notifyDataSetChanged()
         val pl = Session.current ?: return
         if (cat.id == "__favorites__") {
@@ -179,14 +207,14 @@ abstract class NtCatalogActivity : NtBase() {
                 when (pl.type) {
                     "stalker" -> {
                         val acc = ArrayList<Item>()
-                        Api.stalkerItemsPaged(pl, kind, cat.id) { batch ->
+                        Api.stalkerItemsPaged(pl, kind, realCat) { batch ->
                             // On passe la reference (pas de copie complete a chaque lot) : combine a
                             // l'insertion incrementale de l'adaptateur, l'affichage reste fluide.
                             withContext(Dispatchers.Main) { acc.addAll(batch); items = acc; applyFilter(); setLoading(false) }
                         }
                     }
-                    "m3u" -> { items = Api.m3uItems(pl, kind, cat.id); applyFilter(); setLoading(false) }
-                    else -> { items = Api.xtreamItems(pl, kind, cat.id); applyFilter(); setLoading(false) }
+                    "m3u" -> { items = Api.m3uItems(pl, kind, realCat); applyFilter(); setLoading(false) }
+                    else -> { items = Api.xtreamItems(pl, kind, realCat); applyFilter(); setLoading(false) }
                 }
                 if (items.isEmpty()) msgTv.text = "Aucun contenu." else msgTv.text = ""
             } catch (e: Exception) { setLoading(false); msgTv.text = "Erreur : ${e.message}" }

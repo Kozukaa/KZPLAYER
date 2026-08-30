@@ -25,6 +25,26 @@ object VideoDecoderPref {
         return when (v) { SOFTWARE, HARDWARE -> v; else -> AUTO }
     }
 
+    // v390 : repli automatique. Si l image se fige durablement 2 fois sur CET appareil,
+    // l appli passe elle-meme en decodeur logiciel et le retient. Aucun reglage a faire.
+    private const val KEY_AUTO_SW = "auto_software_fallback"
+    private const val KEY_GELS = "auto_freeze_count"
+
+    fun autoSoftware(ctx: Context): Boolean =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_AUTO_SW, false)
+
+    fun setAutoSoftware(ctx: Context, on: Boolean) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_AUTO_SW, on).apply()
+    }
+
+    fun noteFreeze(ctx: Context): Int {
+        val sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val n = sp.getInt(KEY_GELS, 0) + 1
+        sp.edit().putInt(KEY_GELS, n).apply()
+        return n
+    }
+
     fun set(ctx: Context, value: String) {
         val v = when (value) { SOFTWARE, HARDWARE -> value; else -> AUTO }
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, v).apply()

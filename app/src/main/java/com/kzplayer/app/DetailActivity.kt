@@ -39,12 +39,12 @@ class DetailActivity : BaseActivity() {
         if (item == null || pl == null) { finish(); return }
 
         fun refreshFav() {
-            favBtn.text = if (Favorites.isFavorite(this, item)) "★ Favori" else "☆ Favori"
+            favBtn.text = if (Favorites.isFavorite(this, item)) "\u2605 Favori" else "\u2606 Favori"
         }
         refreshFav()
         favBtn.setOnClickListener {
             val added = Favorites.toggle(this, item)
-            favBtn.text = if (added) "★ Favori" else "☆ Favori"
+            favBtn.text = if (added) "\u2605 Favori" else "\u2606 Favori"
         }
 
         title.text = item.name
@@ -54,7 +54,7 @@ class DetailActivity : BaseActivity() {
             crossfade(true)
         }
         val meta = findViewById<TextView>(R.id.detailMeta)
-        meta.text = if (item.duration.isNotBlank()) "Durée : ${item.duration}" else ""
+        meta.text = if (item.duration.isNotBlank()) "Dur\u00e9e : ${item.duration}" else ""
         desc.text = "Chargement du resume..."
 
         lifecycleScope.launch {
@@ -63,7 +63,7 @@ class DetailActivity : BaseActivity() {
                 if (pl.type == "xtream" && !sid.isNullOrBlank()) Api.xtreamVodInfo(pl, sid) else null
             } catch (e: Exception) { null }
             if (info != null) {
-                if (info.duration.isNotBlank()) meta.text = "Durée : ${info.duration}"
+                if (info.duration.isNotBlank()) meta.text = "Dur\u00e9e : ${info.duration}"
                 val p = Api.cleanPlot(info.plot).ifBlank { Api.cleanPlot(item.description) }
                 desc.text = if (p.isBlank()) "Pas de resume disponible pour ce titre." else p
             } else {

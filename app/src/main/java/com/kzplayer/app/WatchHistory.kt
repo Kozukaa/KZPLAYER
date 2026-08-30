@@ -108,8 +108,8 @@ object WatchHistory {
 
     fun progressForSeries(ctx: Context, seriesTitle: String): Int {
         if (seriesTitle.isBlank()) return 0
-        // Les episodes sont sauvegardes sous la forme "Nom de la série - Episode X".
-        // La tuile de la série doit donc afficher la progression du dernier episode vu.
+        // Les episodes sont sauvegardes sous la forme "Nom de la s\u00e9rie - Episode X".
+        // La tuile de la s\u00e9rie doit donc afficher la progression du dernier episode vu.
         val prefix = "$seriesTitle - "
         val e = all(ctx).firstOrNull { it.kind == "series" && (it.title == seriesTitle || it.title.startsWith(prefix)) } ?: return 0
         return percent(e)

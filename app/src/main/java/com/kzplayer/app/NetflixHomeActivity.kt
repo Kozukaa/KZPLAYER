@@ -68,21 +68,21 @@ open class NetflixHomeActivity : NtBase() {
     private fun buildRows() {
         val newRows = ArrayList<Row>()
         // v340 : en haut, les derniers ajouts du catalogue (Films recents puis Series recentes).
-        if (recentMovies.isNotEmpty()) newRows.add(Row("Films récents", recentMovies, false))
-        if (recentSeries.isNotEmpty()) newRows.add(Row("Séries récentes", recentSeries, false))
+        if (recentMovies.isNotEmpty()) newRows.add(Row("Films r\u00e9cents", recentMovies, false))
+        if (recentSeries.isNotEmpty()) newRows.add(Row("S\u00e9ries r\u00e9centes", recentSeries, false))
         val continueMovies = safe { WatchHistory.recentItems(this, "movie") }
         val continueSeries = safe { WatchHistory.recentItems(this, "series") }
         val continueAll = (continueMovies + continueSeries)
             .sortedByDescending { it.added }
             .take(20)
-        if (continueAll.isNotEmpty()) newRows.add(Row("Continuer à regarder", continueAll, true))
+        if (continueAll.isNotEmpty()) newRows.add(Row("Continuer \u00e0 regarder", continueAll, true))
 
         val favMovies = safe { Favorites.forKind(this, "movie") }
         val favSeries = safe { Favorites.forKind(this, "series") }
         val favLive = safe { Favorites.forKind(this, "live") }
         val myList = (favMovies + favSeries).take(20)
         if (myList.isNotEmpty()) newRows.add(Row("Ma liste", myList, false))
-        if (favLive.isNotEmpty()) newRows.add(Row("Chaînes favorites", favLive.take(20), true))
+        if (favLive.isNotEmpty()) newRows.add(Row("Cha\u00eenes favorites", favLive.take(20), true))
 
         rows.clear()
         rows.addAll(newRows)
@@ -269,8 +269,8 @@ open class NetflixHomeActivity : NtBase() {
                 posterCard?.visibility = View.VISIBLE
                 img.visibility = View.VISIBLE
                 meta.text = when {
-                    h.kind == "live" || h.kind == "channel" -> "En direct • ${h.name}"
-                    h.duration.isNotBlank() -> "Reprendre • ${h.duration}"
+                    h.kind == "live" || h.kind == "channel" -> "En direct \u2022 ${h.name}"
+                    h.duration.isNotBlank() -> "Reprendre \u2022 ${h.duration}"
                     else -> "Reprendre la lecture"
                 }
                 if (h.logo.isNotBlank() && h.logo != lastLogo) {

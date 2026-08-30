@@ -11,12 +11,12 @@ object DeviceIdentity {
     private val WIDEVINE_UUID = UUID(-0x121074568629b532L, -0x5c37d8232ae2de13L)
 
     fun stableId(ctx: Context): String {
-        // 1) Le plus stable sur Android TV/boîtiers : identifiant matériel DRM Widevine.
-        // Il reste normalement identique après désinstallation/réinstallation de l'app.
+        // 1) Le plus stable sur Android TV/bo\u00eetiers : identifiant mat\u00e9riel DRM Widevine.
+        // Il reste normalement identique apr\u00e8s d\u00e9sinstallation/r\u00e9installation de l'app.
         widevineId()?.let { return "wv:$it" }
 
         // 2) Fallback Android. Sur certains appareils il peut changer selon signature/profil,
-        // mais il reste meilleur qu'un UUID stocké dans l'app.
+        // mais il reste meilleur qu'un UUID stock\u00e9 dans l'app.
         val androidId = try {
             Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID)
         } catch (e: Exception) { null }
@@ -24,7 +24,7 @@ object DeviceIdentity {
             return "android:$androidId"
         }
 
-        // 3) Dernier fallback matériel. Moins unique, mais stable sur l'appareil.
+        // 3) Dernier fallback mat\u00e9riel. Moins unique, mais stable sur l'appareil.
         return "hw:${Build.MANUFACTURER}|${Build.BRAND}|${Build.MODEL}|${Build.DEVICE}|${Build.PRODUCT}|${Build.BOARD}|${Build.HARDWARE}|${Build.FINGERPRINT}"
     }
 

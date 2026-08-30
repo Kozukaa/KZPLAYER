@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v391 : ajout manuel d une liste de lecture depuis l application. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/kzBg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:id="@+id/backBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="\u2190  Retour"
+            android:textColor="@color/text"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_ghost_btn"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ajouter une liste de lecture"
+            android:textColor="@color/text"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginTop="18dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cette liste est enregistr\u00e9e sur cet appareil et envoy\u00e9e au panel utilisateur."
+            android:textColor="@color/muted"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="14dp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/typeXtream"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Xtream"
+                android:textColor="@color/text"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_cat"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:layout_marginEnd="10dp"
+                android:clickable="true"
+                android:focusable="true" />
+            <TextView
+                android:id="@+id/typeM3u"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="M3U"
+                android:textColor="@color/text"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_cat"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:layout_marginEnd="10dp"
+                android:clickable="true"
+                android:focusable="true" />
+            <TextView
+                android:id="@+id/typeStalker"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Stalker"
+                android:textColor="@color/text"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_cat"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:layout_marginEnd="10dp"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NOM DE LA LISTE (optionnel)"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp" />
+        <EditText
+            android:id="@+id/nameEt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Mon serveur"
+            android:inputType="text"
+            android:textColor="@color/text"
+            android:textColorHint="@color/muted"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:layout_marginTop="4dp" />
+
+        <LinearLayout
+            android:id="@+id/xtreamBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ADRESSE DU SERVEUR"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp" />
+        <EditText
+            android:id="@+id/serverEt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="http://exemple.com:8080"
+            android:inputType="textUri"
+            android:textColor="@color/text"
+            android:textColorHint="@color/muted"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:layout_marginTop="4dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="IDENTIFIANT"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp" />
+        <EditText
+            android:id="@+id/userEt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="utilisateur"
+            android:inputType="text"
+            android:textColor="@color/text"
+            android:textColorHint="@color/muted"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:layout_marginTop="4dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MOT DE PASSE"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp" />
+        <EditText
+            android:id="@+id/passEt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="mot de passe"
+            android:inputType="text"
+            android:textColor="@color/text"
+            android:textColorHint="@color/muted"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/m3uBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ADRESSE DE LA LISTE M3U"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp" />
+        <EditText
+            android:id="@+id/m3uEt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="http://exemple.com/get.php?..."
+            android:inputType="textUri"
+            android:textColor="@color/text"
+            android:textColorHint="@color/muted"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/stalkerBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PORTAIL"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp" />
+        <EditText
+            android:id="@+id/portalEt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="http://exemple.com/c/"
+            android:inputType="textUri"
+            android:textColor="@color/text"
+            android:textColorHint="@color/muted"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:layout_marginTop="4dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ADRESSE MAC"
+            android:textColor="@color/muted"
+            android:textSize="12sp"
+            android:layout_marginTop="12dp" />
+        <EditText
+            android:id="@+id/macEt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="00:1A:79:XX:XX:XX"
+            android:inputType="text"
+            android:textColor="@color/text"
+            android:textColorHint="@color/muted"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/saveBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enregistrer la liste"
+            android:textColor="@color/text"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_ghost_btn"
+            android:paddingStart="26dp"
+            android:paddingEnd="26dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:layout_marginTop="22dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+</ScrollView>

@@ -685,5 +685,35 @@
                 android:contentDescription="@null" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/exitMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_tile"
+            android:padding="18dp"
+            android:layout_marginTop="12dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Quitter l\u2019application"
+                android:textColor="@color/text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/exitStateTv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Fermer compl\u00e8tement KZ Player"
+                android:textColor="@color/muted"
+                android:textSize="13sp"
+                android:layout_marginTop="4dp" />
+
+        </LinearLayout>
+
     </LinearLayout>
 </ScrollView>

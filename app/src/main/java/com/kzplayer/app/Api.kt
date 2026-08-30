@@ -585,6 +585,105 @@ object Api {
         Unit
     }
 
+    // ---------------- v391 : listes ajoutees a la main + etat de sante ----------------
+
+    // Enregistre sur le panel une liste ajoutee a la main depuis l application, afin
+    // qu elle apparaisse aussi cote panel utilisateur. Best-effort : plusieurs noms
+    // d action sont essayes, l app fonctionne meme si le backend ne les connait pas.
+    suspend fun addPlaylistRemote(license: String, pl: Playlist): Boolean = withContext(Dispatchers.IO) {
+        var done = false
+        for (action in listOf("clientPlAdd", "addPlaylist", "clientAddPlaylist")) {
+            try {
+                val payload = FormBody.Builder()
+                    .add("action", action)
+                    .add("license", license)
+                    .add("id", pl.id)
+                    .add("type", pl.type)
+                    .add("nom", pl.nom)
+                    .add("name", pl.nom)
+                    .add("server", pl.serverUrl)
+                    .add("server_url", pl.serverUrl)
+                    .add("username", pl.username)
+                    .add("password", pl.password)
+                    .add("mac", pl.mac)
+                    .add("m3u", pl.m3uUrl)
+                    .add("m3u_url", pl.m3uUrl)
+                    .add("source", "app")
+                    .build()
+                val (code, txt) = callText(Request.Builder().url(Config.LOGIN_URL).post(payload).build())
+                val obj = try { JSONObject(txt) } catch (e: Exception) { JSONObject() }
+                if (code in 200..299 && (obj.optBoolean("ok", false) || obj.optString("status") == "ok")) {
+                    done = true; break
+                }
+            } catch (e: Exception) {}
+        }
+        done
+    }
+
+    // Signale au panel qu une liste est expiree ou ne repond plus. Best-effort.
+    suspend fun reportPlaylistStatus(license: String, playlistId: String, status: String, message: String) = withContext(Dispatchers.IO) {
+        try {
+            if (license.isBlank() || playlistId.isBlank()) return@withContext
+            for (action in listOf("clientPlStatus", "clientPlHealth", "playlistStatus")) {
+                val payload = FormBody.Builder()
+                    .add("action", action)
+                    .add("license", license)
+                    .add("id", playlistId)
+                    .add("status", status)
+                    .add("message", message)
+                    .build()
+                val (code, txt) = callText(Request.Builder().url(Config.LOGIN_URL).post(payload).build())
+                val obj = try { JSONObject(txt) } catch (e: Exception) { JSONObject() }
+                if (code in 200..299 && (obj.optBoolean("ok", false) || obj.optString("status") == "ok")) break
+            }
+        } catch (e: Exception) {}
+        Unit
+    }
+
+    private fun frDate(ms: Long): String = try {
+        java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.FRANCE).format(java.util.Date(ms))
+    } catch (e: Exception) { "" }
+
+    // Verifie si une liste est active, expiree, ou ne repond plus.
+    // Retourne (statut, message) avec statut = "ok" / "expired" / "down".
+    suspend fun playlistHealth(pl: Playlist): Pair<String, String> = withContext(Dispatchers.IO) {
+        try {
+            when (pl.type) {
+                "m3u" -> {
+                    val cats = m3uCategories(pl, "live")
+                    if (cats.isEmpty()) Pair("down", "Aucune cha\u00eene renvoy\u00e9e") else Pair("ok", "")
+                }
+                "stalker" -> {
+                    val cats = stalkerCategories(pl, "live")
+                    if (cats.isEmpty()) Pair("down", "Portail sans r\u00e9ponse") else Pair("ok", "")
+                }
+                else -> {
+                    val url = pl.serverUrl.trimEnd(chr47()) + "/player_api.php?username=" + enc(pl.username) + "&password=" + enc(pl.password)
+                    val obj = httpObject(url)
+                    val info = obj.optJSONObject("user_info")
+                    if (info == null) Pair("down", "Serveur injoignable")
+                    else {
+                        val auth = info.optInt("auth", 1)
+                        val st = info.optString("status", "")
+                        val expMs = (info.optString("exp_date", "").toLongOrNull() ?: 0L) * 1000L
+                        val date = if (expMs > 0L) frDate(expMs) else ""
+                        when {
+                            auth == 0 -> Pair("expired", "Identifiants refus\u00e9s")
+                            st.equals("Expired", true) -> Pair("expired", if (date.isBlank()) "" else "Fin : " + date)
+                            st.equals("Banned", true) || st.equals("Disabled", true) -> Pair("expired", "Compte bloqu\u00e9")
+                            expMs > 0L && expMs < System.currentTimeMillis() -> Pair("expired", "Fin : " + date)
+                            else -> Pair("ok", if (date.isBlank()) "" else "Jusqu au " + date)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Pair("down", e.message ?: "Erreur r\u00e9seau")
+        }
+    }
+
+    private fun chr47(): Char = 47.toChar()
+
     // ---------------- LOGIN (ton panel) ----------------
     suspend fun login(username: String, password: String, deviceId: String): LoginResult =
         withContext(Dispatchers.IO) {
@@ -1718,6 +1817,9 @@ object Api {
 
     // ---------------- M3U ----------------
     // Cache de la playlist M3U complete (classee live/movie/series) : telechargee une seule fois.
+    // v390 : User-Agent impose par la playlist (#EXTVLCOPT:http-user-agent / #EXTHTTP).
+    // Certains fournisseurs ne renvoient RIEN sans lui : la chaine ne demarrait jamais.
+    val m3uUserAgents = java.util.Collections.synchronizedMap(HashMap<String, String>())
     private var m3uCacheKey: String? = null
     private var m3uCache: List<Item> = emptyList()
 
@@ -1781,14 +1883,33 @@ object Api {
         for (it in all) if (it.kind == kind && it.description.isNotBlank()) groups.add(it.description)
         val out = ArrayList<Category>()
         out.add(Category("__all__", "Tout"))
-        for (g in groups.sorted()) out.add(Category(g, g))
+        if (groups.isEmpty()) {
+            // v390 : playlist sans group-title -> AUCUNE categorie ne s affichait.
+            // On fabrique les categories a partir du prefixe du nom (FR, BE, UK...)
+            // ou, a defaut, par lettre. Il y a donc toujours quelque chose a ouvrir.
+            val prefixes = LinkedHashSet<String>()
+            for (e in all) {
+                if (e.kind != kind) continue
+                val p = m3uPrefix(e.name)
+                if (p.isNotBlank()) prefixes.add(p)
+            }
+            for (g in prefixes.sorted()) out.add(Category("__pfx__" + g, g))
+        } else {
+            for (g in groups.sorted()) out.add(Category(g, g))
+        }
         out
     }
 
     // Elements M3U filtres par type + categorie ; les series sont regroupees par nom.
     suspend fun m3uItems(pl: Playlist, kind: String, categoryId: String): List<Item> = withContext(Dispatchers.Default) {
         val all = m3uAll(pl)
-        val matchCat = { it: Item -> categoryId == "__all__" || it.description == categoryId }
+        val matchCat = { it: Item ->
+            categoryId == "__all__" ||
+                it.description == categoryId ||
+                // v390 : categories fabriquees a partir du prefixe du nom.
+                (categoryId.startsWith("__pfx__") &&
+                    m3uPrefix(it.name) == categoryId.removePrefix("__pfx__"))
+        }
         if (kind == "series") {
             val map = LinkedHashMap<String, Item>()
             for (e in all) {
@@ -1812,30 +1933,70 @@ object Api {
             .map { it.copy(kind = "episode") }
     }
 
+    // v390 : PARSEUR M3U UNIVERSEL.
+    // Corrige les playlists qui ne donnaient rien du tout ou aucune categorie :
+    // - fins de ligne Windows et Mac (CRLF, CR seul) et marque BOM en debut de fichier
+    // - URL collee sur la meme ligne que #EXTINF
+    // - group-title sans guillemets, tvg-group, category
+    // - #EXTVLCOPT:http-user-agent et #EXTHTTP (User-Agent impose par le fournisseur)
     fun parseM3u(txt: String): List<Item> {
         val out = ArrayList<Item>()
         var name = ""
         var logo = ""
         var group = ""
         var summary = ""
-        for (raw in txt.split('\n')) {
-            val line = raw.trim()
+        var ua = ""
+        fun ajoute(u: String) {
+            val kind = classifyM3u(group, u)
+            val catchup = group.contains("catch", true) || group.contains("replay", true) || group.contains("archive", true)
+            out.add(Item(name = name.ifBlank { u }, logo = logo, kind = kind, directUrl = u, description = group, summary = summary, catchup = catchup))
+            if (ua.isNotBlank()) { try { m3uUserAgents[u] = ua } catch (e: Throwable) {} }
+            name = ""; logo = ""; group = ""; summary = ""; ua = ""
+        }
+        val propre = txt.replace("\r\n", "\n").replace('\r', '\n')
+        for (raw in propre.split('\n')) {
+            val line = raw.trim().removePrefix("\uFEFF").trim()
             if (line.startsWith("#EXTINF")) {
-                name = line.substringAfterLast(',').trim()
-                logo = Regex("tvg-logo=\"([^\"]*)\"").find(line)?.groupValues?.get(1) ?: ""
-                group = Regex("group-title=\"([^\"]*)\"").find(line)?.groupValues?.get(1) ?: ""
-                summary = Regex("(?:plot|description|desc|overview|synopsis)=\"([^\"]*)\"").find(line)?.groupValues?.get(1) ?: ""
-                if (name.isBlank()) {
-                    name = Regex("tvg-name=\"([^\"]*)\"").find(line)?.groupValues?.get(1) ?: ""
+                var info = line
+                var urlCollee = ""
+                val m = Regex("(?i)\\s(https?://[^\\s]+)$").find(line)
+                if (m != null) {
+                    urlCollee = m.groupValues[1]
+                    info = line.substring(0, m.range.first).trim()
                 }
+                name = info.substringAfterLast(',').trim()
+                logo = Regex("tvg-logo=\"([^\"]*)\"").find(info)?.groupValues?.get(1) ?: ""
+                group = Regex("group-title=\"([^\"]*)\"").find(info)?.groupValues?.get(1)
+                    ?: Regex("(?i)group-title=([^\\s\",]+)").find(info)?.groupValues?.get(1)
+                    ?: Regex("(?i)tvg-group=\"([^\"]*)\"").find(info)?.groupValues?.get(1)
+                    ?: Regex("(?i)category=\"([^\"]*)\"").find(info)?.groupValues?.get(1) ?: ""
+                summary = Regex("(?:plot|description|desc|overview|synopsis)=\"([^\"]*)\"").find(info)?.groupValues?.get(1) ?: ""
+                if (name.isBlank()) {
+                    name = Regex("tvg-name=\"([^\"]*)\"").find(info)?.groupValues?.get(1) ?: ""
+                }
+                if (urlCollee.isNotBlank()) ajoute(urlCollee)
+            } else if (line.startsWith("#EXTVLCOPT", true)) {
+                val v = Regex("(?i)http-user-agent\\s*=\\s*(.+)$").find(line)?.groupValues?.get(1)?.trim()
+                if (!v.isNullOrBlank()) ua = v.trim('\'').trim()
+            } else if (line.startsWith("#EXTHTTP", true)) {
+                val v = Regex("(?i)\"user-agent\"\\s*:\\s*\"([^\"]+)\"").find(line)?.groupValues?.get(1)
+                if (!v.isNullOrBlank()) ua = v
             } else if (line.isNotEmpty() && !line.startsWith("#")) {
-                val kind = classifyM3u(group, line)
-                val catchup = group.contains("catch", true) || group.contains("replay", true) || group.contains("archive", true)
-                out.add(Item(name = name.ifBlank { line }, logo = logo, kind = kind, directUrl = line, description = group, summary = summary, catchup = catchup))
-                name = ""; logo = ""; group = ""; summary = ""
+                ajoute(line)
             }
         }
         return out
+    }
+
+    // v390 : prefixe de pays / groupe deduit du nom (|FR| ..., FR: ..., [FR] ...).
+    // Sert a fabriquer des categories quand la playlist n en fournit aucune.
+    fun m3uPrefix(nom: String): String {
+        val n = nom.trim()
+        val m = Regex("^[\\[|(]?\\s*([A-Za-z]{2,12})\\s*[\\]|):.-]").find(n)
+        val p = m?.groupValues?.get(1)?.uppercase().orEmpty()
+        if (p.isNotBlank()) return p
+        val c = n.firstOrNull() ?: return ""
+        return if (c.isLetter()) c.uppercaseChar().toString() else "#"
     }
 
     // ---------------- RECHERCHE GLOBALE (multi-serveurs) ----------------

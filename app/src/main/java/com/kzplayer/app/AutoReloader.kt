@@ -22,7 +22,7 @@ object AutoReloader {
                 val res = Api.checkLicense(DeviceIdentity.stableId(app), DeviceIdentity.licenseCode(app), android.os.Build.MODEL ?: "Android TV", "3.2.0")
                 if (res.ok && res.active) {
                     LicenseGuard.rememberOk(app, res.expiration)
-                    Session.playlists = res.playlists
+                    Session.playlists = LocalPlaylists.merge(res.playlists)
                     Session.expiration = res.expiration
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) Session.current = Session.playlists.firstOrNull()
                     prefs.edit().putLong(KEY_LAST, System.currentTimeMillis()).apply()

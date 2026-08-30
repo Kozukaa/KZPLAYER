@@ -34,12 +34,12 @@ class SeriesActivity : BaseActivity() {
 
         val favBtn = findViewById<TextView>(R.id.favBtn)
         fun refreshFav() {
-            favBtn.text = if (Favorites.isFavorite(this, series)) "★" else "☆"
+            favBtn.text = if (Favorites.isFavorite(this, series)) "\u2605" else "\u2606"
         }
         refreshFav()
         favBtn.setOnClickListener {
             val added = Favorites.toggle(this, series)
-            favBtn.text = if (added) "★" else "☆"
+            favBtn.text = if (added) "\u2605" else "\u2606"
         }
 
         // v360 : bouton Telecharger : choix de la saison puis des episodes.

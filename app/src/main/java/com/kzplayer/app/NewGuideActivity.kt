@@ -120,7 +120,9 @@ open class NewGuideActivity : NtBase() {
         setLoading(true); msgTv.text = ""
         lifecycleScope.launch {
             try {
-                val base = when (pl.type) {
+                // v391 : mode multiliste (toutes les listes) aussi dans le direct NewTivi.
+                val multiLists = MultiListPref.isAll(this@NewGuideActivity) && Session.playlists.size > 1
+                val base = if (multiLists) catsAllLive() else when (pl.type) {
                     "m3u" -> Api.m3uCategories(pl, "live")
                     "stalker" -> Api.stalkerCategories(pl, "live")
                     else -> Api.xtreamCategories(pl, "live")
@@ -138,8 +140,34 @@ open class NewGuideActivity : NtBase() {
         }
     }
 
+    // v391 : categories direct de TOUTES les listes, id = "<categorie>@@<idListe>".
+    private suspend fun catsAllLive(): List<Category> {
+        val out = ArrayList<Category>()
+        for (p in Session.playlists) {
+            val cats = try {
+                when (p.type) {
+                    "m3u" -> Api.m3uCategories(p, "live")
+                    "stalker" -> Api.stalkerCategories(p, "live")
+                    else -> Api.xtreamCategories(p, "live")
+                }
+            } catch (e: Exception) { emptyList<Category>() }
+            for (c in cats) {
+                if (c.id.startsWith("__")) continue
+                out.add(Category(c.id + "@@" + p.id, c.name + "   -   " + p.nom))
+            }
+        }
+        return out
+    }
+
     private fun selectCategory(cat: Category) {
         selectedCat = cat.id
+        // v391 : categorie issue du multiliste -> on bascule sur sa liste.
+        val atSep = cat.id.indexOf("@@")
+        val realCat = if (atSep > 0) cat.id.substring(0, atSep) else cat.id
+        if (atSep > 0) {
+            val owner = Session.playlists.firstOrNull { it.id == cat.id.substring(atSep + 2) }
+            if (owner != null && owner.id != Session.current?.id) Session.current = owner
+        }
         val src = Session.current?.nom?.takeIf { it.isNotBlank() }
         sourceTv.text = if (src != null) "$src  /  ${cat.name}" else cat.name
         catAdapter?.notifyDataSetChanged()
@@ -157,14 +185,14 @@ open class NewGuideActivity : NtBase() {
                 when (pl.type) {
                     "stalker" -> {
                         val acc = ArrayList<Item>()
-                        Api.stalkerItemsPaged(pl, "live", cat.id) { batch ->
+                        Api.stalkerItemsPaged(pl, "live", realCat) { batch ->
                             withContext(Dispatchers.Main) {
                                 acc.addAll(batch); channels = acc.toList(); bindChannels(); setLoading(false)
                             }
                         }
                     }
-                    "m3u" -> { channels = Api.m3uItems(pl, "live", cat.id); bindChannels(); setLoading(false) }
-                    else -> { channels = Api.xtreamItems(pl, "live", cat.id); bindChannels(); setLoading(false) }
+                    "m3u" -> { channels = Api.m3uItems(pl, "live", realCat); bindChannels(); setLoading(false) }
+                    else -> { channels = Api.xtreamItems(pl, "live", realCat); bindChannels(); setLoading(false) }
                 }
                 if (channels.isEmpty()) msgTv.text = "Aucune cha\u00eene." else msgTv.text = ""
             } catch (e: Exception) { setLoading(false); msgTv.text = "Erreur : ${e.message}" }

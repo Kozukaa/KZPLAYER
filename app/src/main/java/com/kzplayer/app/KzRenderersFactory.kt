@@ -81,9 +81,18 @@ class KzRenderersFactory(
                         if (sw.isNotEmpty()) sw else all
                     }
                     else -> {
-                        // AUTO : logiciel prioritaire, materiel en secours.
-                        // C'est ce qui repare les box dont le decodeur HW se fige.
-                        if (sw.isNotEmpty()) sw + hw else all
+                        // v390 : AUTO = MATERIEL en premier pour TOUT LE MONDE.
+                        // Avant, le logiciel passait devant : c est lui qui provoquait
+                        // les saccades sur les chaines HD et Full HD (le nom de la chaine
+                        // ne permet pas de deviner sa qualite). Le logiciel reste juste
+                        // derriere en secours immediat, et si l image se fige vraiment
+                        // 2 fois sur cet appareil, l appli bascule elle-meme en logiciel
+                        // et le retient (VideoDecoderPref.autoSoftware).
+                        if (VideoDecoderPref.autoSoftware(ctx)) {
+                            if (sw.isNotEmpty()) sw + hw else all
+                        } else {
+                            if (hw.isNotEmpty()) hw + sw else all
+                        }
                     }
                 }
             }

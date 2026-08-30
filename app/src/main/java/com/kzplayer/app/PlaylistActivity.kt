@@ -19,6 +19,28 @@ class PlaylistActivity : BaseActivity() {
         val d = resources.displayMetrics.density
         val pad = (16 * d).toInt()
         val mb = (12 * d).toInt()
+
+        // v391 : ajout manuel d une liste de lecture.
+        val addBtn = TextView(this)
+        addBtn.text = "+   Ajouter une liste de lecture"
+        addBtn.setTextColor(ContextCompat.getColor(this, R.color.text))
+        addBtn.textSize = 16f
+        addBtn.setPadding(pad, pad, pad, pad)
+        addBtn.background = ContextCompat.getDrawable(this, R.drawable.bg_ghost_btn)
+        val alp = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        alp.bottomMargin = mb
+        addBtn.layoutParams = alp
+        addBtn.isClickable = true
+        addBtn.isFocusable = true
+        addBtn.setOnClickListener {
+            startActivity(android.content.Intent(this, AddPlaylistActivity::class.java))
+        }
+        container.addView(addBtn)
+        FocusFx.apply(addBtn)
+
         for (pl in Session.playlists) {
             val row = LinearLayout(this)
             row.orientation = LinearLayout.VERTICAL
@@ -44,6 +66,18 @@ class PlaylistActivity : BaseActivity() {
             sub.setTextColor(ContextCompat.getColor(this, R.color.muted))
             sub.textSize = 12f
             row.addView(sub)
+
+
+            // v391 : etat de la liste.
+            val healthTxt = PlaylistHealth.label(this, pl.id)
+            if (healthTxt.isNotBlank()) {
+                val stTv = TextView(this)
+                stTv.text = healthTxt
+                stTv.setTextColor(if (PlaylistHealth.isProblem(this, pl.id)) 0xFFFF6B6B.toInt() else 0xFF4CD07D.toInt())
+                stTv.textSize = 12f
+                row.addView(stTv)
+            }
+            FocusFx.apply(row)
 
             row.setOnClickListener {
                 Session.current = pl

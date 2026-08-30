@@ -217,7 +217,7 @@ class VoiceActivity : Activity() {
                 )
             } catch (e: Exception) { null }
             if (res != null && res.ok && res.active) {
-                Session.playlists = res.playlists
+                Session.playlists = LocalPlaylists.merge(res.playlists)
                 Session.expiration = res.expiration
                 if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                     Session.current = Session.playlists.firstOrNull()

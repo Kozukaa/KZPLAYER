@@ -213,7 +213,7 @@ class LivePreviewActivity : BaseActivity() {
         if (pl == null || sid.isBlank() || (pl.type != "xtream" && pl.type != "stalker")) {
             nowTitle.text = title
             nowTime.visibility = View.GONE
-            nowDesc.text = "Programme TV indisponible pour cette source.\nOK pour passer en plein écran."
+            nowDesc.text = "Programme TV indisponible pour cette source.\nOK pour passer en plein \u00e9cran."
             return
         }
         nowTitle.text = title
@@ -226,7 +226,7 @@ class LivePreviewActivity : BaseActivity() {
             if (cur == null) {
                 nowTitle.text = title
                 nowTime.visibility = View.GONE
-                nowDesc.text = "Aucun programme EPG trouvé.\nOK pour passer en plein écran."
+                nowDesc.text = "Aucun programme EPG trouv\u00e9.\nOK pour passer en plein \u00e9cran."
             } else {
                 nowTitle.text = cur.title
                 nowTime.text = cur.time
@@ -246,11 +246,11 @@ class LivePreviewActivity : BaseActivity() {
             url = direct; startMiniPlayer(); loadNowInfo(); return
         }
         if (pl != null && pl.type == "stalker" && !item.cmd.isNullOrBlank()) {
-            nowDesc.text = "Ouverture de la chaîne..."
+            nowDesc.text = "Ouverture de la cha\u00eene..."
             lifecycleScope.launch {
                 val link = try { Api.stalkerLink(pl, item.cmd!!, "live") } catch (e: Exception) { null }
                 if (!link.isNullOrBlank()) { url = link; startMiniPlayer(); loadNowInfo() }
-                else nowDesc.text = "Impossible d'ouvrir cette chaîne."
+                else nowDesc.text = "Impossible d'ouvrir cette cha\u00eene."
             }
         }
     }
@@ -316,7 +316,7 @@ class LivePreviewActivity : BaseActivity() {
         override fun onBindViewHolder(holder: VH, position: Int) {
             val ch = channels[position]
             val playing = (ch.streamId ?: "") == streamId && streamId.isNotBlank()
-            holder.name.text = (if (playing) "▶ " else "") + ch.name
+            holder.name.text = (if (playing) "\u25b6 " else "") + ch.name
             holder.name.setTextColor(if (playing) KzColors.accent(this@LivePreviewActivity) else ContextCompat.getColor(this@LivePreviewActivity, R.color.text))
             holder.logo.load(ch.logo) {
                 crossfade(false)

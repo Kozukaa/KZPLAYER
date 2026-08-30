@@ -103,6 +103,8 @@ class BrowseActivity : BaseActivity() {
         val catBtn = findViewById<TextView>(R.id.catBtn)
         catBtn.visibility = if (kind == "favorites") View.GONE else View.VISIBLE
         catBtn.setOnClickListener { showManageCategoriesDialog() }
+        // v391 : curseur bien visible sur les boutons Tri / Vue / Categories.
+        FocusFx.apply(sortBtn, viewBtn, catBtn)
 
         catRv.layoutManager = LinearLayoutManager(this)
         catRv.setHasFixedSize(true)
@@ -169,7 +171,7 @@ class BrowseActivity : BaseActivity() {
                         android.os.Build.MODEL ?: "Android TV", "1.0"
                     )
                     if (res.ok && res.active) {
-                        Session.playlists = res.playlists
+                        Session.playlists = LocalPlaylists.merge(res.playlists)
                         Session.expiration = res.expiration
                         Session.current = Session.playlists.firstOrNull()
                         SessionCache.save(this@BrowseActivity)
@@ -196,8 +198,8 @@ class BrowseActivity : BaseActivity() {
                 if (kind == "favorites") {
                     categories = listOf(
                         Category("__fav_movie__", "Films favoris"),
-                        Category("__fav_series__", "Séries favorites"),
-                        Category("__fav_live__", "Chaînes favorites")
+                        Category("__fav_series__", "S\u00e9ries favorites"),
+                        Category("__fav_live__", "Cha\u00eenes favorites")
                     )
                     bindCategories()
                     setLoading(false)
@@ -210,7 +212,7 @@ class BrowseActivity : BaseActivity() {
                         bindCategories()
                         if (categories.size > 1) {
                             setLoading(false)
-                            msgTv.text = if (kind == "replay") "Choisis une catégorie replay à gauche." else "Choisis une categorie a gauche."
+                            msgTv.text = if (kind == "replay") "Choisis une cat\u00e9gorie replay \u00e0 gauche." else "Choisis une categorie a gauche."
                             selectCategory(categories[0])
                         } else if (categories.isNotEmpty()) {
                             selectCategory(categories[0])
@@ -230,14 +232,14 @@ class BrowseActivity : BaseActivity() {
                             else
                                 "Aucune cat\u00e9gorie disponible sur ce serveur."
                         } else {
-                            if (kind == "replay") "Choisis une catégorie replay à gauche." else "Choisis une categorie a gauche."
+                            if (kind == "replay") "Choisis une cat\u00e9gorie replay \u00e0 gauche." else "Choisis une categorie a gauche."
                         }
                     }
                     else -> {
                         categories = prepareCategories(Api.xtreamCategories(pl, realKind), pl)
                         bindCategories()
                         setLoading(false)
-                        msgTv.text = if (kind == "replay") "Choisis une catégorie replay à gauche." else "Choisis une categorie a gauche."
+                        msgTv.text = if (kind == "replay") "Choisis une cat\u00e9gorie replay \u00e0 gauche." else "Choisis une categorie a gauche."
                     }
                 }
                 maybeStartVoicePlay()
@@ -339,7 +341,7 @@ class BrowseActivity : BaseActivity() {
             if (res != null && res.ok && res.active && res.playlists.isNotEmpty()) {
                 val cur = res.playlists.firstOrNull { it.id == plId }
                 if (cur != null) {
-                    Session.playlists = res.playlists
+                    Session.playlists = LocalPlaylists.merge(res.playlists)
                     Session.current = cur
                     if (!multiMode && lastBaseCategories.isNotEmpty()) {
                         categories = filterHiddenCategories(withSpecialCategories(lastBaseCategories), cur)
@@ -352,7 +354,7 @@ class BrowseActivity : BaseActivity() {
 
     private fun withSpecialCategories(base: List<Category>): List<Category> {
         if (kind == "movie" || kind == "series") {
-            return listOf(Category("__favorites__", "Favoris"), Category("__recent__", "Vu récemment")) + base
+            return listOf(Category("__favorites__", "Favoris"), Category("__recent__", "Vu r\u00e9cemment")) + base
         }
         if (kind == "live") return listOf(Category("__favorites__", "Favoris")) + base
         return base
@@ -537,7 +539,7 @@ class BrowseActivity : BaseActivity() {
         if (cat.id == "__recent__") {
             items = WatchHistory.recentItems(this, kind)
             applyFilter()
-            msgTv.text = if (items.isEmpty()) "Aucun contenu vu récemment." else ""
+            msgTv.text = if (items.isEmpty()) "Aucun contenu vu r\u00e9cemment." else ""
             setLoading(false)
             return
         }
@@ -735,8 +737,8 @@ class BrowseActivity : BaseActivity() {
     private fun updateSortLabel() {
         sortBtn.text = when (sortMode) {
             1 -> "Tri : A-Z"
-            2 -> "Tri : Récents"
-            else -> "Tri : Défaut"
+            2 -> "Tri : R\u00e9cents"
+            else -> "Tri : D\u00e9faut"
         }
     }
 
@@ -946,7 +948,7 @@ class BrowseActivity : BaseActivity() {
     private fun toggleLiveFavorite(item: Item) {
         if (item.kind != "live") return
         val added = Favorites.toggle(this, item)
-        Toast.makeText(this, if (added) "Ajouté aux favoris" else "Retiré des favoris", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, if (added) "Ajout\u00e9 aux favoris" else "Retir\u00e9 des favoris", Toast.LENGTH_SHORT).show()
         if (selectedCat == "__favorites__") selectCategory(Category("__favorites__", "Favoris"))
         else itemAdapter?.notifyDataSetChanged()
     }
@@ -1016,13 +1018,13 @@ class BrowseActivity : BaseActivity() {
             }
             if (holder is ListVH) {
                 holder.name.text = item.name
-                holder.sub.text = "OK : aperçu + EPG"
+                holder.sub.text = "OK : aper\u00e7u + EPG"
                 holder.logo.load(item.logo) {
                     crossfade(false)
                     placeholder(R.drawable.bg_tile)
                     error(R.drawable.ic_live_tv)
                 }
-                holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "★" else "☆"
+                holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "\u2605" else "\u2606"
                 holder.favBtn.setOnClickListener { v ->
                     v.parent?.requestDisallowInterceptTouchEvent(true)
                     toggleLiveFavorite(item)
@@ -1079,7 +1081,7 @@ class BrowseActivity : BaseActivity() {
                 tmdbFallback()
             } else {
                 holder.poster.load(item.logo) {
-                    // Pas de crossfade dans les grandes grilles TV : ça crée de la latence et des saccades.
+                    // Pas de crossfade dans les grandes grilles TV : \u00e7a cr\u00e9e de la latence et des saccades.
                     crossfade(false)
                     placeholder(R.drawable.bg_tile)
                     error(fallback)
@@ -1087,7 +1089,7 @@ class BrowseActivity : BaseActivity() {
                     listener(onError = { _, _ -> tmdbFallback() })
                 }
             }
-            holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "★" else "☆"
+            holder.favBtn.text = if (Favorites.isFavorite(this@BrowseActivity, item)) "\u2605" else "\u2606"
             holder.favBtn.visibility = if (item.kind == "live") View.VISIBLE else View.GONE
             holder.favBtn.setOnClickListener { v ->
                 v.parent?.requestDisallowInterceptTouchEvent(true)

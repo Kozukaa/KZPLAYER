@@ -69,7 +69,7 @@ abstract class NflxCatalogActivity : NtBase() {
     private fun addLocalRows() {
         if (kind == "movie" || kind == "series") {
             val cont = try { WatchHistory.recentItems(this, kind) } catch (e: Exception) { emptyList() }
-            if (cont.isNotEmpty()) addRow("Continuer à regarder", cont.take(maxPerRow))
+            if (cont.isNotEmpty()) addRow("Continuer \u00e0 regarder", cont.take(maxPerRow))
         }
         val favs = try { Favorites.forKind(this, kind) } catch (e: Exception) { emptyList() }
         if (favs.isNotEmpty()) addRow("Ma liste", favs.take(maxPerRow))
@@ -77,7 +77,7 @@ abstract class NflxCatalogActivity : NtBase() {
 
     private fun loadCategories() {
         val pl = Session.current ?: run {
-            msgTv.text = "Aucun serveur. Ajoute une liste dans les Paramètres."
+            msgTv.text = "Aucun serveur. Ajoute une liste dans les Param\u00e8tres."
             return
         }
         setLoading(true)
@@ -185,7 +185,7 @@ abstract class NflxCatalogActivity : NtBase() {
             title.text = item.name
             meta.text = item.duration
             val d = item.summary.ifBlank { item.description }
-            desc.text = if (d.length > 220) d.take(220) + "…" else d
+            desc.text = if (d.length > 220) d.take(220) + "\u2026" else d
             if (item.logo != lastLogo) {
                 lastLogo = item.logo
                 if (item.logo.isNotBlank()) {

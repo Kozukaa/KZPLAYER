@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+<!-- v391 : curseur telecommande visible (focus) sur les fonds plats. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/kzAccentSoft" />
+            <corners android:radius="16dp" />
+            <stroke android:width="2dp" android:color="?attr/kzAccent" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/kzAccent" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    <item>
+    <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <solid android:color="?attr/kzCard" />
     <corners android:radius="16dp" />
 </shape>
+    </item>
+</selector>

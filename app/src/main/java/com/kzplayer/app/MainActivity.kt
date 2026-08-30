@@ -38,7 +38,7 @@ class MainActivity : BaseActivity() {
 
     private fun checkLicense() {
         setLoading(true)
-        statusTv.text = "Vérification de la licence..."
+        statusTv.text = "V\u00e9rification de la licence..."
         lifecycleScope.launch {
             try {
                 val res = Api.checkLicense(
@@ -49,7 +49,7 @@ class MainActivity : BaseActivity() {
                 )
                 if (res.ok && res.active) {
                     LicenseGuard.rememberOk(this@MainActivity, res.expiration)
-                    Session.playlists = res.playlists
+                    Session.playlists = LocalPlaylists.merge(res.playlists)
                     Session.expiration = res.expiration
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                         Session.current = Session.playlists.firstOrNull()
@@ -64,11 +64,11 @@ class MainActivity : BaseActivity() {
                 } else {
                     codeTv.text = res.deviceCode.ifBlank { deviceCode() }
                     statusTv.text = res.message.ifBlank {
-                        "Licence en attente d’activation. Ouvre le panel admin pour activer cet appareil."
+                        "Licence en attente d\u2019activation. Ouvre le panel admin pour activer cet appareil."
                     }
                 }
             } catch (e: Exception) {
-                statusTv.text = "Erreur de vérification : ${e.message}"
+                statusTv.text = "Erreur de v\u00e9rification : ${e.message}"
             }
             setLoading(false)
         }

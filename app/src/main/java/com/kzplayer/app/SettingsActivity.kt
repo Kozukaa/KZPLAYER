@@ -19,6 +19,8 @@ class SettingsActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        // v391 : bouton pour quitter completement l application.
+        findViewById<android.view.View>(R.id.exitMenu)?.setOnClickListener { confirmExit() }
         findViewById<View>(R.id.backBtn).setOnClickListener { finish() }
         findViewById<View>(R.id.themeMenu).setOnClickListener {
             startActivity(Intent(this, ThemeActivity::class.java))
@@ -169,7 +171,7 @@ class SettingsActivity : BaseActivity() {
                 )
                 if (res.ok && res.active) {
                     LicenseGuard.rememberOk(this@SettingsActivity, res.expiration)
-                    Session.playlists = res.playlists
+                    Session.playlists = LocalPlaylists.merge(res.playlists)
                     Session.expiration = res.expiration
                     if (Session.current == null || Session.playlists.none { it.id == Session.current?.id }) {
                         Session.current = Session.playlists.firstOrNull()
@@ -258,13 +260,13 @@ class SettingsActivity : BaseActivity() {
                 val v = input.text?.toString()?.trim().orEmpty()
                 Config.saveCfProxyUrl(this, v)
                 refreshCfProxyLabel()
-                Toast.makeText(this, if (v.isBlank()) "Fallback désactivé" else "URL enregistrée", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, if (v.isBlank()) "Fallback d\u00e9sactiv\u00e9" else "URL enregistr\u00e9e", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Annuler", null)
             .setNeutralButton("Effacer") { _, _ ->
                 Config.saveCfProxyUrl(this, "")
                 refreshCfProxyLabel()
-                Toast.makeText(this, "Fallback désactivé", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Fallback d\u00e9sactiv\u00e9", Toast.LENGTH_SHORT).show()
             }
             .show()
     }
@@ -272,7 +274,7 @@ class SettingsActivity : BaseActivity() {
     private fun refreshCfProxyLabel() {
         val cur = Config.currentCfProxyUrl(this)
         findViewById<TextView>(R.id.panelCfStateTv).text =
-            if (cur.isBlank()) "URL de secours si le DNS est bloqué" else cur
+            if (cur.isBlank()) "URL de secours si le DNS est bloqu\u00e9" else cur
     }
 
     // v147 : selection du decodeur video (Auto / Logiciel / Materiel).
@@ -283,17 +285,17 @@ class SettingsActivity : BaseActivity() {
         val current = VideoDecoderPref.current(this)
         val values = arrayOf(VideoDecoderPref.AUTO, VideoDecoderPref.SOFTWARE, VideoDecoderPref.HARDWARE)
         val labels = arrayOf(
-            VideoDecoderPref.label(VideoDecoderPref.AUTO) + "  —  recommandé",
+            VideoDecoderPref.label(VideoDecoderPref.AUTO) + "  \u2014  recommand\u00e9",
             VideoDecoderPref.label(VideoDecoderPref.SOFTWARE),
             VideoDecoderPref.label(VideoDecoderPref.HARDWARE)
         )
         val checked = values.indexOf(current).coerceAtLeast(0)
         AlertDialog.Builder(this)
-            .setTitle("Décodage vidéo")
+            .setTitle("D\u00e9codage vid\u00e9o")
             .setSingleChoiceItems(labels, checked) { d, which ->
                 VideoDecoderPref.set(this, values[which])
                 refreshVideoDecoderLabel()
-                Toast.makeText(this, "Appliqué au prochain lancement du lecteur", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Appliqu\u00e9 au prochain lancement du lecteur", Toast.LENGTH_SHORT).show()
                 d.dismiss()
             }
             .setNegativeButton("Annuler", null)
@@ -335,9 +337,9 @@ class SettingsActivity : BaseActivity() {
         // prochains appels reseau (portails, panel, updates). Pour un flux VIDEO deja en
         // train de jouer, il faut rouvrir la chaine (le lecteur garde son propre socket ouvert).
         val msg = if (provider == DnsPref.SYSTEM) {
-            "DNS système rétabli - actif immédiatement"
+            "DNS syst\u00e8me r\u00e9tabli - actif imm\u00e9diatement"
         } else {
-            DnsPref.label(provider) + " - actif immédiatement (rouvre la chaîne pour les flux en cours)"
+            DnsPref.label(provider) + " - actif imm\u00e9diatement (rouvre la cha\u00eene pour les flux en cours)"
         }
         Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
     }
@@ -389,5 +391,20 @@ class SettingsActivity : BaseActivity() {
         refreshCfProxyLabel()
         refreshVideoDecoderLabel()
         refreshDnsLabel()
+    }
+
+    // v391 : fermeture complete de KZ Player depuis les parametres.
+    private fun confirmExit() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Quitter KZ Player")
+            .setMessage("Fermer compl\u00e8tement l application ?")
+            .setPositiveButton("Quitter") { _, _ ->
+                try { finishAffinity() } catch (e: Throwable) { finish() }
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    android.os.Process.killProcess(android.os.Process.myPid())
+                }, 200L)
+            }
+            .setNegativeButton("Annuler") { d, _ -> d.dismiss() }
+            .show()
     }
 }
